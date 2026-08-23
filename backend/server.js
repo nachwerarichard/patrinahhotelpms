@@ -338,39 +338,49 @@ async function auth(req, res, next) {
         return res.status(401).json({ error: 'No authorization header' });
     }
 
-    let token;
-    if (authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-    } else if (authHeader.startsWith('Basic ')) {
-        token = authHeader.split(' ')[1];
-    } else {
-        return res.status(401).json({ error: 'Invalid authorization format' });
-    }
-
-    if (!token) {
-        return res.status(401).json({ error: 'Malformed authorization header' });
-    }
-
     try {
-        let credentials;
-        try {
-            credentials = Buffer.from(token, 'base64').toString('ascii');
-        } catch (e) {
-            return res.status(401).json({ error: 'Invalid token encoding' });
+        let username = null;
+        let password = null;
+
+        if (authHeader.startsWith('Basic ')) {
+            // Handle Basic Auth (Base64 decoded username:password)
+            const token = authHeader.split(' ')[1];
+            const credentials = Buffer.from(token, 'base64').toString('utf8');
+            const parts = credentials.split(':');
+            
+            if (parts.length !== 2) {
+                return res.status(401).json({ error: 'Invalid Basic token structure' });
+            }
+            [username, password] = parts;
+
+        } else if (authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+
+            // 1. Try decoding as Base64 username:password
+            try {
+                const decoded = Buffer.from(token, 'base64').toString('utf8');
+                if (decoded.includes(':')) {
+                    [username, password] = decoded.split(':');
+                }
+            } catch (e) {
+                // Not Base64 credentials
+            }
+
+            // 2. Fallback: If token was saved directly as username or session string
+            if (!username) {
+                username = token; 
+            }
+        } else {
+            return res.status(401).json({ error: 'Invalid authorization format' });
         }
 
-        const parts = credentials.split(':');
-        if (parts.length !== 2) {
-            return res.status(401).json({ error: 'Invalid token structure' });
+        if (!username) {
+            return res.status(401).json({ error: 'Unable to extract credentials from header' });
         }
 
-        const [username, password] = parts;
-        let user;
+        // --- Database User Lookup ---
+        let user = await User.findOne({ username, role: 'super-admin' });
 
-        // 1️⃣ Super Admin Check
-        user = await User.findOne({ username, role: 'super-admin' });
-
-        // 2️⃣ Property Tenant Check
         if (!user) {
             if (!hotelId) {
                 return res.status(400).json({ error: 'Hotel ID header required' });
@@ -378,42 +388,45 @@ async function auth(req, res, next) {
             user = await User.findOne({ username, hotelId });
         }
 
-        if (!user || user.password !== password) {
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Verify password if provided in the header credentials
+        if (password && user.password !== password) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Determine context hotel ID safely
-        const activeHotelId = user.role === 'super-admin' ? hotelId : user.hotelId;
-        
-        // 🌍 CRITICAL BUG FIX ZONE: Ultra-safe database extraction
-        let detectedCurrency = 'UGX'; 
+        // Context Hotel ID
+        const activeHotelId = user.role === 'super-admin' ? (hotelId || user.hotelId) : user.hotelId;
 
+        // Dynamic Currency Lookup
+        let detectedCurrency = req.headers['x-hotel-currency'] || 'UGX';
         if (activeHotelId) {
             try {
-                // Querying the collection directly to keep it completely independent
-                const hotelProfile = await mongoose.model('Hotel').findById(activeHotelId);
-                if (hotelProfile && hotelProfile.hotelCurrency) {
+                const HotelModel = mongoose.models.Hotel || mongoose.model('Hotel');
+                const hotelProfile = await HotelModel.findById(activeHotelId);
+                if (hotelProfile?.hotelCurrency) {
                     detectedCurrency = hotelProfile.hotelCurrency;
                 }
             } catch (dbErr) {
-                console.error("Non-fatal background currency resolution failure:", dbErr.message);
-                // Keeps moving with default 'UGX' fallback instead of throwing a 500
+                console.error("Non-fatal currency lookup warning:", dbErr.message);
             }
         }
 
-        // Attach safe user object to request
+        // Attach populated user context to req
         req.user = {
             id: user._id,
             username: user.username,
             role: user.role,
             hotelId: activeHotelId,
-            currency: detectedCurrency // 🌍 Available downstream as req.user.currency
+            currency: detectedCurrency
         };
 
         next();
 
     } catch (err) {
-        console.error('Authentication error:', err);
+        console.error('Authentication middleware error:', err);
         return res.status(500).json({ error: 'Authentication failed' });
     }
 }
@@ -7429,7 +7442,7 @@ saleSchema.pre('save', function(next) {
 });
 
 // Fast querying for audit reports
-saleSchema.index({ hotelId: 1, date: -1, department: 1 });
+saleSchema.index({ hotelId: 1, date: -1, recordedBy: 1, department: 1 });
 const Sale = mongoose.models.Sale || mongoose.model('Sale', saleSchema);
 
 // ==========================================
@@ -8264,19 +8277,23 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, date } = req.query;
         
-        if (!hotelId || !mongoose.Types.ObjectId.isValid(hotelId)) {
-            return res.status(400).json({ error: 'Valid hotelId is required' });
+        if (!hotelId) {
+            return res.status(400).json({ error: 'hotelId is required' });
         }
         if (!date) {
             return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
         }
 
-        // Set local day boundaries accurately
-        const startDate = new Date(`${date}T00:00:00.000`);
-        const endDate = new Date(`${date}T23:59:59.999`);
+        const startDate = new Date(`${date}T00:00:00.000Z`);
+        const endDate = new Date(`${date}T23:59:59.999Z`);
+
+        // Match both ObjectId and String formats for hotelId
+        const hotelIdFilter = mongoose.Types.ObjectId.isValid(hotelId)
+            ? { $in: [new mongoose.Types.ObjectId(hotelId), String(hotelId)] }
+            : String(hotelId);
 
         const matchFilter = { 
-            hotelId: new mongoose.Types.ObjectId(hotelId),
+            hotelId: hotelIdFilter,
             date: { $gte: startDate, $lte: endDate }
         };
 
@@ -8292,14 +8309,12 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
                 
             Sale.countDocuments(matchFilter),
 
-            // Aggregate totals per individual
             Sale.aggregate([
                 { $match: matchFilter },
                 { 
                     $group: {
                         _id: "$recordedBy",
                         totalSales: { $sum: { $multiply: ["$sp", "$number"] } },
-                        // Fallback profit calculation if $profit field is missing/null in legacy records
                         totalProfit: { 
                             $sum: { 
                                 $cond: [
@@ -8330,29 +8345,35 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
     }
 });
 
-// POST: Process Sale & Commit Charge
-// POST: Process Sale & Commit Charge
 app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
     
-    // 1. Resolve tenant & authenticated user credentials
+    // 1. Resolve tenant credentials
     const hotelId = req.user?.hotelId || req.body.hotelId; 
-    const username = req.user?.username || req.user?.email || req.body.recordedBy || 'Staff'; 
+    
+    // Multi-tier check for authenticated user string
+    const username = req.user?.username 
+      || req.user?.name 
+      || req.user?.email 
+      || req.body.recordedBy 
+      || 'Staff'; 
+
     const userRole = req.user?.role || req.body.role || 'Staff'; 
 
     if (!hotelId) {
       return res.status(400).json({ error: 'hotelId is required' });
     }
 
-    // Clean item name by stripping trailing '(xN)' before inventory lookup
     const cleanItemName = String(item || '').replace(/\s*\(x\d+\)$/i, '').trim();
     const qty = Number(number) || 1;
+    const unitSp = Number(sp) || 0;
+    const unitBp = Number(bp) || 0;
 
-    // 2. Fetch Inventory record with clean item name
+    // 2. Fetch Inventory record
     const todayInventory = await getTodayInventory(cleanItemName, 0, hotelId);
 
-    // 3. Dynamic Inventory Logic (Stock Check)
+    // 3. Dynamic Inventory Logic
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
@@ -8376,19 +8397,17 @@ app.post('/api/sales', auth, async (req, res) => {
       await todayInventory.save();
     }
 
-    // 5. Folio Charge Logic (Avoid Double Charging / Duplicate Items)
+    // 5. Folio Charge Logic
     let appliedToAccount = false;
     let updatedAccount = null;
     const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
 
     if (accountId) {
-      // Find the account and update existing draft items as committed instead of pushing a duplicate
       updatedAccount = await AccountModel.findOne({ _id: accountId, hotelId });
 
       if (updatedAccount) {
         appliedToAccount = true;
         
-        // Find matching draft charge and set committed status
         const chargeIndex = updatedAccount.charges.findIndex(c => 
           (c.item === cleanItemName || c.description === cleanItemName || c.item === item) && !c.committed
         );
@@ -8396,23 +8415,24 @@ app.post('/api/sales', auth, async (req, res) => {
         if (chargeIndex !== -1) {
           updatedAccount.charges[chargeIndex].committed = true;
           updatedAccount.charges[chargeIndex].status = 'Sent';
+          updatedAccount.charges[chargeIndex].recordedBy = username;
         } else {
-          // Fallback: If not found as draft, push clean charge
           const validChargeType = ['Bar', 'Restaurant'].includes(department) ? department : 'Other';
-          const totalChargeAmount = sp * qty;
+          const totalChargeAmount = unitSp * qty;
           
           updatedAccount.charges.push({
             item: cleanItemName,
             description: cleanItemName,
             quantity: qty,
             number: qty,
-            sp,
-            bp,
+            sp: unitSp,
+            bp: unitBp,
             amount: totalChargeAmount,
             type: validChargeType,
             department,
             committed: true,
             status: 'Sent',
+            recordedBy: username,
             date: date || new Date()
           });
           updatedAccount.totalCharges = (updatedAccount.totalCharges || 0) + totalChargeAmount;
@@ -8424,44 +8444,40 @@ app.post('/api/sales', auth, async (req, res) => {
           accountId: updatedAccount._id,
           item: cleanItemName,
           quantity: qty,
-          totalCharge: sp * qty,
+          totalCharge: unitSp * qty,
           department,
           role: userRole
         });
       }
     }
 
-    // 6. Create Sale Record with clean item name and explicit recordedBy attribution
+    // 6. Create Sale Record
     const saleData = {
       ...req.body,
       item: cleanItemName,
       number: qty,
       quantity: qty,
-      recordedBy: username, // Explicitly assigned to override req.body
+      sp: unitSp,
+      bp: unitBp,
+      recordedBy: username, // Explicitly assigned
       accountId: accountId || null,
       hotelId,
-      profit: (sp - bp) * qty,
-      percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
+      date: date || new Date()
     };
 
     const sale = await Sale.create(saleData);
 
-    // Audit Log
     await addAuditLog('Sale Created', username, hotelId, { 
       saleId: sale._id,
       item: cleanItemName,
       quantity: qty,
       department,
-      totalRevenue: sp * qty,
+      totalRevenue: unitSp * qty,
       folioCharged: appliedToAccount,
       role: userRole
     });
 
-    // 7. Return response
-    res.status(201).json({
-      sale,
-      updatedAccount
-    });
+    res.status(201).json({ sale, updatedAccount });
 
   } catch (err) {
     console.error('Sale POST Error:', err);

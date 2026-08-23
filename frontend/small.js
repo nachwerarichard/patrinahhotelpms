@@ -8317,8 +8317,36 @@ const completeCurrentOrder = async () => {
     const completeBtn = document.getElementById('completeOrderBtn');
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
 
-    // 1. Extract uncommitted draft charges
-    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
+    // 1. Robust resolution of active username across all storage/DOM layers
+    let resolvedUsername = 'Staff';
+    
+    if (typeof currentUsername !== 'undefined' && currentUsername && currentUsername !== 'Guest') {
+        resolvedUsername = currentUsername;
+    } else if (localStorage.getItem('username')) {
+        resolvedUsername = localStorage.getItem('username');
+    } else {
+        try {
+            const loggedInUserObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+            if (loggedInUserObj.username) {
+                resolvedUsername = loggedInUserObj.username;
+            }
+        } catch (e) {
+            console.warn('Could not parse loggedInUser from localStorage');
+        }
+    }
+
+    // Secondary DOM fallback if global variables failed
+    if (resolvedUsername === 'Staff') {
+        const userDisplayEl = document.getElementById('user-name-display') || document.getElementById('username-display');
+        if (userDisplayEl && userDisplayEl.textContent.trim()) {
+            resolvedUsername = userDisplayEl.textContent.trim();
+        }
+    }
+
+    // 2. Extract uncommitted draft charges
+    const uncommittedCharges = currentActiveAccountData.charges.filter(
+        item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed'
+    );
 
     if (uncommittedCharges.length === 0) {
         return showMessage('Notice', 'All items in this tab have already been processed.', false);
@@ -8330,23 +8358,19 @@ const completeCurrentOrder = async () => {
             completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
         }
 
-        // 2. Send dispatch requests
+        // 3. Send dispatch requests
         for (const item of uncommittedCharges) {
             const department = item.department || item.type || 'Bar';
             const qty = Number(item.number || item.quantity || 1);
             const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
 
-            // --- SANITIZE ITEM NAME: Strip any concatenated quantity strings ---
+            // Clean item name (strip trailing quantity notations)
             const rawName = item.item || item.description || '';
             const cleanItemName = rawName.replace(/\s*\(x\d+\)$/i, '').trim();
-             
-            const activeUsername = (typeof currentUsername !== 'undefined' && currentUsername !== 'Guest')
-    ? currentUsername 
-    : (localStorage.getItem('username') || 'Staff');
 
             const payload = {
                 hotelId: hotelId,
-                item: cleanItemName, // Clean name ensures stock lookup matches inventory DB
+                item: cleanItemName,
                 description: cleanItemName,
                 department: department,
                 number: qty,
@@ -8356,12 +8380,13 @@ const completeCurrentOrder = async () => {
                 amount: Number(item.amount || (unitSp * qty)),
                 profit: Number(item.profit || 0),
                 percentageprofit: Number(item.percentageprofit || 0),
-                accountId: activeAccountId || null,
+                accountId: typeof activeAccountId !== 'undefined' ? activeAccountId : null,
                 tableNumber: item.tableNumber || "N/A",
-                isQuickSale: !activeAccountId,
+                isQuickSale: typeof activeAccountId !== 'undefined' ? !activeAccountId : true,
                 date: item.date || new Date(),
-                recordedBy: activeUsername, // Ensured valid username
-                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'Bar' 
+                recordedBy: resolvedUsername, // Guaranteed active user
+                createdBy: resolvedUsername,  // Included as a fallback alias for backend compatibility
+                role: typeof currentUserRole !== 'undefined' ? currentUserRole : (localStorage.getItem('userRole') || 'Bar')
             };
 
             const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
@@ -8383,14 +8408,17 @@ const completeCurrentOrder = async () => {
         }
 
         showMessage('Success', 'Order completed and inventory updated!', false);
-        fetchSales();
 
-        // 3. Update UI
-        updateActiveAccountUI(currentActiveAccountData);
-
-        // 4. Refresh auxiliary POS stats/tables
-        if (typeof fetchSales === 'function') fetchSales();
-        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
+        // 4. Update UI & POS Stats
+        if (typeof updateActiveAccountUI === 'function') {
+            updateActiveAccountUI(currentActiveAccountData);
+        }
+        if (typeof fetchSales === 'function') {
+            fetchSales();
+        }
+        if (typeof refreshTodayPOSStats === 'function') {
+            refreshTodayPOSStats();
+        }
 
     } catch (err) {
         console.error("Complete Order Error:", err);
