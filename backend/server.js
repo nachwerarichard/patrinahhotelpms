@@ -7412,13 +7412,10 @@ const saleSchema = new mongoose.Schema({
         enum: ['Cash', 'Card', 'MobileMoney', 'Folio', 'M-Pesa', 'Pesapal']
     },
     synced: { type: Boolean, default: false },
-    // Recommendation: Reference User object instead of plain string
-recordedBy: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true,
-    index: true 
-},
+    recordedBy: { 
+    type: String, 
+    trim: true 
+    },
     date: { type: Date, default: Date.now, index: true }
 }, { timestamps: true });
 
