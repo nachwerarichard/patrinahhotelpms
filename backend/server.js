@@ -8264,22 +8264,26 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
     try {
         const { hotelId, page = 1, limit = 15, department, date } = req.query;
         
-        if (!hotelId) return res.status(400).json({ error: 'hotelId required' });
-        if (!date) return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
+        if (!hotelId || !mongoose.Types.ObjectId.isValid(hotelId)) {
+            return res.status(400).json({ error: 'Valid hotelId is required' });
+        }
+        if (!date) {
+            return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
+        }
+
+        // Set local day boundaries accurately
+        const startDate = new Date(`${date}T00:00:00.000`);
+        const endDate = new Date(`${date}T23:59:59.999`);
 
         const matchFilter = { 
             hotelId: new mongoose.Types.ObjectId(hotelId),
-            date: { 
-                $gte: new Date(`${date}T00:00:00.000Z`), 
-                $lte: new Date(`${date}T23:59:59.999Z`) 
-            }
+            date: { $gte: startDate, $lte: endDate }
         };
 
         if (department) matchFilter.department = department;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        // Run query and user sales aggregation concurrently
         const [sales, total, userTotals] = await Promise.all([
             Sale.find(matchFilter)
                 .sort({ date: -1 })
@@ -8288,14 +8292,23 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
                 
             Sale.countDocuments(matchFilter),
 
-            // Aggregate totals per individual for the day
+            // Aggregate totals per individual
             Sale.aggregate([
                 { $match: matchFilter },
                 { 
                     $group: {
                         _id: "$recordedBy",
                         totalSales: { $sum: { $multiply: ["$sp", "$number"] } },
-                        totalProfit: { $sum: "$profit" },
+                        // Fallback profit calculation if $profit field is missing/null in legacy records
+                        totalProfit: { 
+                            $sum: { 
+                                $cond: [
+                                    { $ifNull: ["$profit", false] },
+                                    "$profit",
+                                    { $multiply: [{ $subtract: ["$sp", "$bp"] }, "$number"] }
+                                ]
+                            } 
+                        },
                         itemCount: { $sum: "$number" },
                         transactionCount: { $sum: 1 }
                     }
@@ -8306,12 +8319,13 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
 
         res.status(200).json({
             sales,
-            userTotals, // Total sales per staff member
-            totalPages: Math.ceil(total / limit),
+            userTotals,
+            totalPages: Math.ceil(total / limit) || 1,
             totalItems: total,
             currentPage: parseInt(page)
         });
     } catch (error) {
+        console.error('API Error:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -9868,6 +9868,13 @@ function updateSalesSearchButton(text, iconClass) {
         button.classList.remove('opacity-75', 'cursor-not-allowed');
     }
 }
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // Assumes your modal uses flex for centering
+    }
+}
 
 async function fetchSales() {
     updateSalesSearchButton('Searching', 'fas fa-spinner fa-spin');
@@ -9876,15 +9883,11 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // Pointing to your brand new single-date endpoint
         let url = `${API_BASE_URL}/sales/by-date`; 
-
         const params = new URLSearchParams();
 
-        // If a date exists, apply it to the parameters
         if (dateFilter) params.append('date', dateFilter); 
 
-        // Dynamically track active pagination variables safely
         const activeSalesPage = (typeof currentSalesPage !== 'undefined') ? currentSalesPage : 1;
         const activeSalesLimit = (typeof salesPerPage !== 'undefined') ? salesPerPage : 10;
 
@@ -9904,19 +9907,19 @@ async function fetchSales() {
         
         const result = await response.json();
         const salesData = result.sales || result.items || result.data || [];
-        
-        // 1. EXTRACT userTotals from backend response
         const userTotalsData = result.userTotals || [];
-        
-        // 2. DEFINE hideSensitiveInfo based on current user role
         const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
 
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;
 
-        renderSalesTable(salesData); 
+        // Extract total day metrics directly from backend aggregation across ALL pages
+        const grandSalesTotal = userTotalsData.reduce((acc, u) => acc + (u.totalSales || 0), 0);
+        const grandProfitTotal = userTotalsData.reduce((acc, u) => acc + (u.totalProfit || 0), 0);
+
+        // Pass daily aggregate totals downstream
+        renderSalesTable(salesData, grandSalesTotal, grandProfitTotal); 
         
-        // 3. Render staff breakdown with defined variables
         renderUserSalesSummary(userTotalsData, hideSensitiveInfo);
 
         if (typeof renderSalesPagination === 'function') {
@@ -9938,42 +9941,33 @@ async function fetchSales() {
 
 function renderSalesPagination(current, totalPages) {
     const container = document.getElementById('sales-pagination');
-    if (!container) return; // Exit if container not found
+    if (!container) return; 
     container.innerHTML = '';
+
+    if (totalPages <= 1) return; // Hide pagination bar if everything fits on one page
+
+    const nav = document.createElement('div');
+    nav.className = "flex items-center gap-1 my-4 justify-center";
 
     for (let i = 1; i <= totalPages; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
-        btn.disabled = i === current;
+        btn.className = (i === current)
+            ? "px-3 py-1 text-xs font-bold bg-indigo-600 text-white rounded-md shadow-sm"
+            : "px-3 py-1 text-xs font-medium bg-white text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors";
+        
+        btn.disabled = (i === current);
         btn.onclick = () => {
             currentSalesPage = i;
             fetchSales();
         };
-        container.appendChild(btn);
+        nav.appendChild(btn);
     }
-}
-/**
- * Utility function to display the modal.
- * It removes the 'hidden' class and adds 'flex' to make it visible and centered.
- */
-function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex'); // Assumes your modal uses flex for centering
-    }
+    
+    container.appendChild(nav);
 }
 
-/**
- * Utility function to close the modal.
- * (Assumed to be called by the Cancel button in your HTML)
- */
-
-/**
- * Populates the Edit Sale form with sale data and then displays the modal.
- */
-
-function renderSalesTable(sales) {
+function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
     const tbody = document.querySelector('#sales-table tbody');
     const mobileGrid = document.getElementById('sales-mobile-grid');
 
@@ -9987,16 +9981,9 @@ function renderSalesTable(sales) {
         return;
     }
 
-    // Role-based privacy & edit permission flags
     const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
-    
-    // UPDATED: Allow admin, super-admin, and manager (excludes bar and other roles)
     const canEditOrDelete = ['admin', 'super-admin', 'manager'].includes(currentUserRole);
 
-    let totalSellingPriceSum = 0;
-    let totalProfitSum = 0; // Track overall profit
-
-    // Department object structure: { DeptName: { sales: X, profit: Y } }
     const departmentTotals = {}; 
 
     sales.forEach(sale => {
@@ -10004,12 +9991,7 @@ function renderSalesTable(sales) {
         const sp = sale.sp || 0;
         const bp = sale.bp || 0;
         const totalSellingPrice = sp * qty;
-
-        // Calculate profit (use pre-calculated profit or derive)
         const profit = (typeof sale.profit === 'number') ? sale.profit : (sp - bp) * qty;
-
-        totalSellingPriceSum += totalSellingPrice;
-        totalProfitSum += profit;
 
         const dept = sale.department || 'General';
         if (!departmentTotals[dept]) {
@@ -10018,7 +10000,6 @@ function renderSalesTable(sales) {
         departmentTotals[dept].sales += totalSellingPrice;
         departmentTotals[dept].profit += profit;
 
-        // Structured formats for parsed financial outputs
         const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
         const spDisplay = sp.toLocaleString();
 
@@ -10034,7 +10015,7 @@ function renderSalesTable(sales) {
 
         const formattedDate = new Date(sale.date).toLocaleDateString();
 
-        // --- A. POPULATE VIEW 1: DESKTOP TABLE INTERFACE TR ---
+        // Desktop Row
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
@@ -10056,7 +10037,7 @@ function renderSalesTable(sales) {
             tbody.appendChild(tr);
         }
 
-        // --- B. POPULATE VIEW 2: SMARTPHONE GRID CARD ELEMENT ---
+        // Smartphone Card
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
@@ -10101,9 +10082,9 @@ function renderSalesTable(sales) {
         }
     });
 
-    // Pass total profit sum downstream along with sales
+    // Pass the actual daily totals into renderSalesSummary
     if (typeof renderSalesSummary === 'function') {
-        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum, totalProfitSum, hideSensitiveInfo);
+        renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo);
     }
 }
 
@@ -10121,7 +10102,7 @@ function injectActionElements(container, canEditOrDelete, sale, isMobileVariant 
         editBtn.className = isMobileVariant 
             ? 'p-2 text-indigo-600 bg-indigo-50 active:bg-indigo-100 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors';
-        editBtn.onclick = () => populateSaleForm(sale);
+        editBtn.addEventListener('click', () => populateSaleForm(sale));
 
         const delBtn = document.createElement('button');
         delBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
@@ -10129,7 +10110,7 @@ function injectActionElements(container, canEditOrDelete, sale, isMobileVariant 
         delBtn.className = isMobileVariant 
             ? 'p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors';
-        delBtn.onclick = () => deleteSale(sale._id);
+        delBtn.addEventListener('click', () => deleteSale(sale._id));
 
         btnGroup.appendChild(editBtn);
         btnGroup.appendChild(delBtn);
