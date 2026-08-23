@@ -8317,21 +8317,28 @@ app.get('/api/sales/by-date', auth, async (req, res) => {
 });
 
 // POST: Process Sale & Commit Charge
+// POST: Process Sale & Commit Charge
 app.post('/api/sales', auth, async (req, res) => {
   try {
     const { item, department, number, bp, sp, date, accountId } = req.body;
-    const hotelId = req.user.hotelId; 
-    const username = req.user.username || req.body.recordedBy || 'Staff'; 
-    const userRole = req.user.role || req.body.role || 'Staff'; 
+    
+    // 1. Resolve tenant & authenticated user credentials
+    const hotelId = req.user?.hotelId || req.body.hotelId; 
+    const username = req.user?.username || req.user?.email || req.body.recordedBy || 'Staff'; 
+    const userRole = req.user?.role || req.body.role || 'Staff'; 
 
-    // --- FIX A: Clean item name by stripping trailing '(xN)' before inventory lookup ---
+    if (!hotelId) {
+      return res.status(400).json({ error: 'hotelId is required' });
+    }
+
+    // Clean item name by stripping trailing '(xN)' before inventory lookup
     const cleanItemName = String(item || '').replace(/\s*\(x\d+\)$/i, '').trim();
     const qty = Number(number) || 1;
 
-    // 1. Fetch Inventory record with clean item name
+    // 2. Fetch Inventory record with clean item name
     const todayInventory = await getTodayInventory(cleanItemName, 0, hotelId);
 
-    // 2. Dynamic Inventory Logic (Stock Check)
+    // 3. Dynamic Inventory Logic (Stock Check)
     const currentAvailableStock = todayInventory.opening + todayInventory.purchases;
     const shouldTrackStock = todayInventory.trackInventory && department !== 'Restaurant';
 
@@ -8349,13 +8356,13 @@ app.post('/api/sales', auth, async (req, res) => {
       });
     }
 
-    // 3. Update Inventory
+    // 4. Update Inventory
     if (department !== 'Restaurant') {
       todayInventory.sales += qty;
       await todayInventory.save();
     }
 
-    // 4. Folio Charge Logic (Avoid Double Charging / Duplicate Items)
+    // 5. Folio Charge Logic (Avoid Double Charging / Duplicate Items)
     let appliedToAccount = false;
     let updatedAccount = null;
     const AccountModel = mongoose.models.ClientAccount || mongoose.model('ClientAccount');
@@ -8392,7 +8399,7 @@ app.post('/api/sales', auth, async (req, res) => {
             department,
             committed: true,
             status: 'Sent',
-            date: new Date()
+            date: date || new Date()
           });
           updatedAccount.totalCharges = (updatedAccount.totalCharges || 0) + totalChargeAmount;
         }
@@ -8410,18 +8417,20 @@ app.post('/api/sales', auth, async (req, res) => {
       }
     }
 
-    // 5. Create Sale Record with clean item name and parsed quantity
-    const sale = await Sale.create({
+    // 6. Create Sale Record with clean item name and explicit recordedBy attribution
+    const saleData = {
       ...req.body,
       item: cleanItemName,
       number: qty,
       quantity: qty,
-      recordedBy: username, 
+      recordedBy: username, // Explicitly assigned to override req.body
       accountId: accountId || null,
       hotelId,
       profit: (sp - bp) * qty,
       percentageprofit: bp !== 0 ? ((sp - bp) / bp) * 100 : 0
-    });
+    };
+
+    const sale = await Sale.create(saleData);
 
     // Audit Log
     await addAuditLog('Sale Created', username, hotelId, { 
@@ -8434,7 +8443,7 @@ app.post('/api/sales', auth, async (req, res) => {
       role: userRole
     });
 
-    // 6. Return response
+    // 7. Return response
     res.status(201).json({
       sale,
       updatedAccount

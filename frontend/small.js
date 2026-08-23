@@ -8339,6 +8339,10 @@ const completeCurrentOrder = async () => {
             // --- SANITIZE ITEM NAME: Strip any concatenated quantity strings ---
             const rawName = item.item || item.description || '';
             const cleanItemName = rawName.replace(/\s*\(x\d+\)$/i, '').trim();
+             
+            const activeUsername = (typeof currentUsername !== 'undefined' && currentUsername !== 'Guest')
+    ? currentUsername 
+    : (localStorage.getItem('username') || 'Staff');
 
             const payload = {
                 hotelId: hotelId,
@@ -8356,8 +8360,8 @@ const completeCurrentOrder = async () => {
                 tableNumber: item.tableNumber || "N/A",
                 isQuickSale: !activeAccountId,
                 date: item.date || new Date(),
-                recordedBy: typeof currentUsername !== 'undefined' ? currentUsername : 'System User',
-                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'POS User'
+                recordedBy: activeUsername, // Ensured valid username
+                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'Bar' 
             };
 
             const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
