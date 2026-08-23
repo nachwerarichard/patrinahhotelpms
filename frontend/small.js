@@ -2480,30 +2480,14 @@ function calculateBookingDetails() {
 bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    // 1. Get session data
+    // 1. Get session data for fallback checks
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
-    const currentUsername = sessionData?.username;
+    const currentUsername = sessionData?.username || sessionData?.name || 'System';
 
-    if (!hotelId) {
-        return showMessage('Error', 'No hotel session found. Please log in again.', true);
-    }
-
-    // Safely extract input values
-    const getValue = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value.trim() : '';
-    };
-
-    const getFloat = (id) => {
-        const el = document.getElementById(id);
-        return el ? parseFloat(el.value) || 0 : 0;
-    };
-
-    const getInt = (id) => {
-        const el = document.getElementById(id);
-        return el ? parseInt(el.value, 10) || 1 : 1;
-    };
+    // Helper functions for safe extraction
+    const getValue = (id) => document.getElementById(id)?.value.trim() || '';
+    const getFloat = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+    const getInt = (id) => parseInt(document.getElementById(id)?.value, 10) || 1;
 
     const id = getValue('bookingId');
     
@@ -2539,19 +2523,21 @@ bookingForm.addEventListener('submit', async function(event) {
         declarations: getValue('declarations'),
         transactionid: getValue('transactionid'),
         extraperson: getValue('extraperson'),
-        hotelId: hotelId,
-        username: currentUsername
+        
+        // Pass user identifier in body as explicit fallback
+        recordedBy: currentUsername,
+        updatedBy: id ? currentUsername : undefined
     };
 
     const saveBtn = document.getElementById('saveBookingBtn');
-    const originalBtnText = saveBtn ? saveBtn.innerHTML : (id ? 'Update Booking' : 'Add Booking');
+    const originalBtnText = id ? 'Update Booking' : 'Add Booking';
 
     try {
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = `
                 <span class="inline-flex items-center">
-                    <svg class="animate-spin h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg class="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -2560,34 +2546,29 @@ bookingForm.addEventListener('submit', async function(event) {
             `;
         }
 
-        let response;
-        let message;
         const endpoint = id 
             ? `${API_BASE_URL}/bookings/${id}` 
             : `${API_BASE_URL}/bookings`;
             
         const method = id ? 'PUT' : 'POST';
 
-        // 3. Unified request through authenticatedFetch
-        response = await authenticatedFetch(endpoint, {
+        const response = await authenticatedFetch(endpoint, {
             method: method,
             body: JSON.stringify(bookingData)
         });
 
         if (!response || !response.ok) {
             const errorData = response ? await response.json().catch(() => ({})) : {};
-            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network error'}`);
+            throw new Error(errorData.message || `HTTP error status: ${response?.status || 'Network error'}`);
         }
 
-        message = id ? 'Booking updated successfully!' : 'New booking added successfully!';
-        showMessage('Success', message);
+        showMessage('Success', id ? 'Booking updated successfully!' : 'New booking added successfully!');
         
-        // Reset form on new booking creation
         if (!id && typeof bookingForm.reset === 'function') {
             bookingForm.reset();
         }
 
-        // 4. Refresh UI state
+        // Refresh UI components
         if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
         if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
         if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
@@ -2600,7 +2581,7 @@ bookingForm.addEventListener('submit', async function(event) {
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
+            saveBtn.innerHTML = originalBtnText;
         }
     }
 });
@@ -5384,14 +5365,12 @@ function renderTable(bookings) {
     const sumBalanceDisplay = document.getElementById('sumBalance');
     const sumBookingsDisplay = document.getElementById('sumBookings');
 
-    // Wipe down containers completely before running updates
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty dataset scenarios gracefully
     if (!bookings || bookings.length === 0) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="10">${fallbackMsg}</td></tr>`; // Updated colspan to 10 for new column
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11">${fallbackMsg}</td></tr>`; // Updated colspan to 11
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         if (sumBookingsDisplay) sumBookingsDisplay.textContent = '0';
         if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
@@ -5399,26 +5378,25 @@ function renderTable(bookings) {
         return;
     }
 
-    // A. Calculate Dynamic Financial & Booking Summaries
     const totalBookings = bookings.length;
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Reformat & Update Top Display Cards
     if (sumBookingsDisplay) sumBookingsDisplay.textContent = totalBookings.toLocaleString();
     if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
     if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
-    // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
         
-        // Checkout date extraction (supporting schema field 'checkOut' or fallback 'endDate')
         const checkOutDate = b.checkOut || b.endDate || 'N/A';
+        
+        // Extract Recorded By info (handles string or populated object)
+        const recordedBy = b.recordedBy?.name || b.createdBy?.name || b.recordedBy || b.createdBy || b.staffName || 'System';
 
-        // 1. POPULATE VIEW 1: Render out standard desktop table row element
+        // 1. Desktop Table Row
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-50/80 transition-colors border-b border-gray-100";
@@ -5439,11 +5417,12 @@ function renderTable(bookings) {
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                 </td>
                 <td class="p-3 text-center text-gray-400 text-xs">${b.guestsource || 'Walk in'}</td>
+                <td class="p-3 text-center text-indigo-600 font-semibold text-xs">${recordedBy}</td>
             `;
             tbody.appendChild(tr);
         }
 
-        // 2. POPULATE VIEW 2: Render out card template for mobile ledger screens
+        // 2. Mobile View Card
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
@@ -5451,7 +5430,7 @@ function renderTable(bookings) {
                 <div class="flex justify-between items-start">
                     <div>
                         <h4 class="text-base font-bold text-gray-900">${b.name || 'N/A'}</h4>
-                        <p class="text-xs text-gray-400 font-medium">Room Assigned: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
+                        <p class="text-xs text-gray-400 font-medium">Room: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
                     </div>
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
                 </div>
@@ -5477,15 +5456,17 @@ function renderTable(bookings) {
                         <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between">
+
+                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between items-center">
                     <span>Source: <strong class="text-gray-600">${b.guestsource || 'Walk in'}</strong></span>
+                    <span class="text-gray-500 font-medium">Recorded by: <strong class="text-indigo-600">${recordedBy}</strong></span>
                 </div>
             `;
             mobileGrid.appendChild(card);
         }
     });
 
-    // D. Append Grand Totals Summary Row at bottom of Table view (Desktop Only)
+    // 3. Desktop Grand Totals Row
     if (tbody) {
         const totalRow = document.createElement('tr');
         totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
@@ -5493,14 +5474,13 @@ function renderTable(bookings) {
             <td colspan="4" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
             <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
             <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
-            <td colspan="4" class="p-4"></td>
+            <td colspan="5" class="p-4"></td>
         `;
         tbody.appendChild(totalRow);
     }
     
     currentData = bookings;
 }
-
 // 3. EXPORT FUNCTIONS
 function exportToExcel() {
     if (currentData.length === 0) return showMessage("No data to export");

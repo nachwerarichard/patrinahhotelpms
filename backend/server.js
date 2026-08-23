@@ -1478,6 +1478,9 @@ refunds: [{
     },
     date: { type: Date, default: Date.now }
 }],
+// Add inside bookingSchema
+recordedBy: { type: String, required: true, index: true }, // Username/ID who created the booking
+updatedBy: { type: String, default: null },               // Username/ID who last modified it
     // 🇺🇬 MUST ADD: EFRIS FISCAL TRACKING FIELDS
     isFiscalized: { type: Boolean, default: false, index: true },
     fdin: { type: String, default: null },
@@ -4399,9 +4402,19 @@ app.get('/api/bookings/all', auth, async (req, res) => {
 
 app.get('/api/bookings', auth, async (req, res) => {
     try {
-        const { search, gueststatus, paymentStatus, startDate, endDate, guestsource, paymentMethod } = req.query;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 500;
+        const { 
+            search, 
+            gueststatus, 
+            paymentStatus, 
+            startDate, 
+            endDate, 
+            guestsource, 
+            paymentMethod,
+            recordedBy 
+        } = req.query;
+
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 500;
         const skip = (page - 1) * limit;
 
         // Base tenant isolation filter
@@ -4419,34 +4432,61 @@ app.get('/api/bookings', auth, async (req, res) => {
                         { phoneNo: new RegExp(safeSearch, 'i') },
                         { guestEmail: new RegExp(safeSearch, 'i') },
                         { id: new RegExp(safeSearch, 'i') },
-                        { nationalIdNo: new RegExp(safeSearch, 'i') }
+                        { nationalIdNo: new RegExp(safeSearch, 'i') },
+                        { recordedBy: new RegExp(safeSearch, 'i') } // Search by clerk/staff member name
                     ]
                 }
             ];
         }
 
-        // 2. Direct Enum Matches
+        // 2. Direct Filter Matches
         if (gueststatus) query.gueststatus = gueststatus;
         if (paymentStatus) query.paymentStatus = paymentStatus;
         if (guestsource) query.guestsource = guestsource;
         if (paymentMethod) query.paymentMethod = paymentMethod;
+        if (recordedBy) query.recordedBy = recordedBy; // Filter by specific staff member
 
-        // 3. Simplified Range Query (Inclusive Check-In Filtering)
+        // 3. Date Range Query
         if (startDate || endDate) {
             query.checkIn = {};
             if (startDate) query.checkIn.$gte = startDate;
             if (endDate) query.checkIn.$lte = endDate;
         }
 
-        const [bookings, totalCount] = await Promise.all([
+        // 4. Parallel Execution: Paginated Results + Totals + Staff Breakdown Aggregation
+        const [bookings, totalCount, staffBreakdown] = await Promise.all([
             Booking.find(query).sort({ checkIn: -1 }).skip(skip).limit(limit),
-            Booking.countDocuments(query)
+            Booking.countDocuments(query),
+            Booking.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: "$recordedBy",
+                        totalBookings: { $sum: 1 },
+                        totalRevenue: { $sum: "$totalDue" },
+                        totalCollected: { $sum: "$amountPaid" },
+                        totalBalance: { $sum: "$balance" }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        staffMember: { $ifNull: ["$_id", "Unknown"] },
+                        totalBookings: 1,
+                        totalRevenue: 1,
+                        totalCollected: 1,
+                        totalBalance: 1
+                    }
+                },
+                { $sort: { totalRevenue: -1 } }
+            ])
         ]);
 
         res.json({
             bookings: bookings || [],
             totalPages: Math.ceil(totalCount / limit),
-            totalCount
+            totalCount,
+            staffBreakdown // Useful for staff performance reporting widgets
         });
 
     } catch (error) {
@@ -4540,8 +4580,14 @@ app.put('/api/bookings/:id', auth, async (req, res) => {
 app.post('/api/bookings', auth, async (req, res) => {
     const { username, ...newBookingData } = req.body;
     try {
-        newBookingData.hotelId = req.user.hotelId; // Assign the tenant
+        // Authenticated user resolution
+        const actingUser = req.user?.username || username || 'System';
+
+        newBookingData.hotelId = req.user.hotelId; // Assign tenant isolation
         newBookingData.id = newBookingData.id || `BKG${Math.floor(Math.random() * 90000) + 10000}`;
+        
+        // 🔒 Explicitly bind who created/recorded this booking
+        newBookingData.recordedBy = actingUser;
 
         // Find room ONLY in this hotel
         const room = await Room.findOne({ number: newBookingData.room, hotelId: req.user.hotelId });
@@ -4551,36 +4597,40 @@ app.post('/api/bookings', auth, async (req, res) => {
         const conflictingBooking = await Booking.findOne({
             hotelId: req.user.hotelId,
             room: newBookingData.room,
+            gueststatus: { $nin: ['cancelled', 'void'] }, // Exclude non-active statuses
             checkIn: { $lt: newBookingData.checkOut },
             checkOut: { $gt: newBookingData.checkIn }
         });
 
         if (conflictingBooking) {
-            return res.status(400).json({ message: `Room ${newBookingData.room} is already occupied.` });
+            return res.status(400).json({ message: `Room ${newBookingData.room} is already occupied for these dates.` });
         }
 
-       room.status = 'blocked';
+        room.status = 'blocked';
         await room.save();
 
         const newBooking = new Booking(newBookingData);
         await newBooking.save();
 
-        // 📝 Add the missing Audit Log with the correct parameter order
+        // 📝 Audit Log entry with authenticated user context
         await addAuditLog(
             'Booking Created', 
-            username || 'System', 
-            req.user.hotelId, // ✅ 3rd argument: hotelId
-            {                 // ✅ 4th argument: details object
+            actingUser, 
+            req.user.hotelId, 
+            { 
                 bookingId: newBooking.id,
                 guestName: newBooking.name,
                 roomNumber: newBooking.room,
                 checkIn: newBooking.checkIn,
-                checkOut: newBooking.checkOut
+                checkOut: newBooking.checkOut,
+                totalDue: newBooking.totalDue,
+                recordedBy: actingUser
             }
         );
 
-        res.status(201).json({ message: 'Booking added!', booking: newBooking });
+        res.status(201).json({ message: 'Booking added successfully!', booking: newBooking });
     } catch (error) {
+        console.error("Error creating booking:", error);
         res.status(500).json({ message: 'Error adding booking', error: error.message });
     }
 });
