@@ -11391,7 +11391,6 @@ function populateEditCashModal(record) {
     modal.style.display = 'flex';
 }
 // --- Reports Functions ---
-// ==================== 1. GENERATE SALES REPORTS ====================
 async function generateSalesReports() {
     const generateButton = document.getElementById('generate-sales-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
@@ -11407,11 +11406,16 @@ async function generateSalesReports() {
 
     const tbody = document.getElementById('sales-department-report-tbody');
     const cardContainer = document.getElementById('sales-department-report-cards');
+    const staffTbody = document.getElementById('sales-staff-report-tbody');
+    const staffCardContainer = document.getElementById('sales-staff-report-cards');
 
     if (!startDate || !endDate) { 
-        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate report.</td></tr>'; 
-        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
-        
+        const emptyMsg = 'Select a valid start and end date to generate report.';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">${emptyMsg}</td></tr>`; 
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-slate-400 italic text-xs">${emptyMsg}</div>`; 
+        if (staffTbody) staffTbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">${emptyMsg}</td></tr>`; 
+        if (staffCardContainer) staffCardContainer.innerHTML = `<div class="text-center py-4 text-slate-400 italic text-xs">${emptyMsg}</div>`; 
+
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
         document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
         const marginElem = document.getElementById('overall-margin-reportcard');
@@ -11425,14 +11429,15 @@ async function generateSalesReports() {
     }
 
     if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department figures...</td></tr>'; 
+    if (staffTbody) staffTbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading employee figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
+    if (staffCardContainer) staffCardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
         let allSales = [];
         let page = 1, totalPages = 1;
 
-        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -11443,55 +11448,44 @@ async function generateSalesReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        const salesReport = {}; // { Dept: { sales: X, profit: Y } }
-        
+        const salesReport = {}; // Department map
+        const staffReport = {}; // Staff map
+
         allSales.forEach(sale => {
-            let dept = (sale.department || 'Other').trim();
-            if (!dept) dept = 'Other';
+            let dept = (sale.department || 'Other').trim() || 'Other';
+            let staff = (sale.recordedBy || sale.createdBy || 'Staff').trim() || 'Staff';
 
-            const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
-            const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
-            const rawBp = String(sale.bp || '0').replace(/[^0-9.-]/g, '');
-
-            const quantity = Number(rawNumber) || 0;
-            const unitSp = Number(rawSp) || 0;
-            const unitBp = Number(rawBp) || 0;
+            const quantity = Number(String(sale.number || '0').replace(/[^0-9.-]/g, '')) || 0;
+            const unitSp = Number(String(sale.sp || '0').replace(/[^0-9.-]/g, '')) || 0;
+            const unitBp = Number(String(sale.bp || '0').replace(/[^0-9.-]/g, '')) || 0;
 
             const lineTotalSales = quantity * unitSp;
-            
-            let lineTotalProfit = 0;
-            if (typeof sale.profit === 'number') {
-                lineTotalProfit = sale.profit;
-            } else {
-                lineTotalProfit = quantity * (unitSp - unitBp);
-            }
+            let lineTotalProfit = (typeof sale.profit === 'number') ? sale.profit : (quantity * (unitSp - unitBp));
 
-            if (!salesReport[dept]) {
-                salesReport[dept] = { sales: 0, profit: 0 };
-            }
-            
+            // Accumulate Department Data
+            if (!salesReport[dept]) salesReport[dept] = { sales: 0, profit: 0 };
             salesReport[dept].sales += lineTotalSales;
             salesReport[dept].profit += lineTotalProfit;
+
+            // Accumulate Staff Data
+            if (!staffReport[staff]) staffReport[staff] = { sales: 0, profit: 0 };
+            staffReport[staff].sales += lineTotalSales;
+            staffReport[staff].profit += lineTotalProfit;
         });
 
         let totalSalesSum = 0;
         let totalProfitSum = 0;
-        const sortedDepts = Object.keys(salesReport).sort();
 
+        // Render Department Table
+        const sortedDepts = Object.keys(salesReport).sort();
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity recorded for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
-            
-            document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
-            document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
-            const marginElem = document.getElementById('overall-margin-reportcard');
-            if (marginElem) marginElem.textContent = '0.0%';
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
-            // SINGLE LOOP: Accumulate totals and build HTML
             sortedDepts.forEach(dept => {
                 const sales = salesReport[dept].sales;
                 const profit = salesReport[dept].profit;
@@ -11499,7 +11493,6 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-                // Desktop Table Row (Explicit w-1/2, w-1/4, w-1/4 matching headers)
                 tableRowsHTML.push(`
                     <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                         <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
@@ -11508,7 +11501,6 @@ async function generateSalesReports() {
                     </tr>
                 `);
 
-                // Mobile Card View
                 mobileCardsHTML.push(`
                     <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
                         <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider">${dept}</h4>
@@ -11524,7 +11516,6 @@ async function generateSalesReports() {
                 `);
             });
 
-            // --- HIGH-CONTRAST & PERFECTLY ALIGNED GRAND TOTAL ROW ---
             tableRowsHTML.push(`
                 <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
                     <td class="w-1/2 px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Operational Summary</td>
@@ -11537,22 +11528,56 @@ async function generateSalesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // --- UPDATE KPI CARDS ---
+        // Render Staff Table
+        const sortedStaff = Object.keys(staffReport).sort();
+        if (sortedStaff.length === 0) {
+            const emptyStateHtml = 'No employee sales activity recorded.';
+            if (staffTbody) staffTbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (staffCardContainer) staffCardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+        } else {
+            let staffRowsHTML = [];
+            let staffCardsHTML = [];
+
+            sortedStaff.forEach(user => {
+                const sales = staffReport[user].sales;
+                const profit = staffReport[user].profit;
+
+                staffRowsHTML.push(`
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="far fa-user text-slate-400"></i> ${user}
+                        </td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `);
+
+                staffCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 flex items-center gap-2"><i class="far fa-user text-slate-400"></i> ${user}</h4>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">Sales:</span>
+                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (staffTbody) staffTbody.innerHTML = staffRowsHTML.join('');
+            if (staffCardContainer) staffCardContainer.innerHTML = staffCardsHTML.join('');
+        }
+
+        // Update KPI Cards
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-        // Calculate and update Profit Margin Percentage
         const profitMargin = totalSalesSum > 0 ? ((totalProfitSum / totalSalesSum) * 100).toFixed(1) : "0.0";
         const marginElem = document.getElementById('overall-margin-reportcard');
-        if (marginElem) {
-            marginElem.textContent = `${profitMargin}%`;
-        }
-
-        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
-        const exportSalesElem = document.getElementById('overall-sales-export');
-        const exportProfitElem = document.getElementById('overall-profit-export');
-        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toFixed(2)}`;
-        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toFixed(2)}`;
+        if (marginElem) marginElem.textContent = `${profitMargin}%`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
