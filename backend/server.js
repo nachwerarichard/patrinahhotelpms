@@ -2270,12 +2270,10 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
     }
 });
 
-// =========================================================================
-// 2. POST ROUTE: Issue POS Transaction Refund
-// =========================================================================
-app.post('/api/pos/payments/refund', auth, async (req, res) => {
+app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
-    const { accountId, accountType, amount, reason, method } = req.body;
+    const { accountId } = req.params; // Extract accountId from route params
+    const { accountType, amount, reason, method } = req.body;
 
     if (!accountId || !amount || amount <= 0 || !reason) {
         return res.status(400).json({ message: 'Missing required refund details (Account, Amount, Reason).' });
