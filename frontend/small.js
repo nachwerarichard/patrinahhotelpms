@@ -13628,6 +13628,9 @@ function debouncedPaymentsReports() {
 let currentPaymentsCache = [];
 
 async function generatePaymentsReports() {
+    document.getElementById('overall-sales-card').textContent = `${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+document.getElementById('overall-refunds-card').textContent = `${currency} ${totalNetRefunds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; // <-- ADD THIS LINE
+document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
     const startDate = document.getElementById('payment-report-start-date').value;
     const endDate = document.getElementById('payment-report-end-date').value;
     const search = document.getElementById('payment-report-search').value.trim();

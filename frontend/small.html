@@ -2107,11 +2107,20 @@
                 <label for="payment-report-method" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                     <i class="fas fa-wallet text-slate-400"></i> Payment Method
                 </label>
+                <!-- ADJUSTED: Expanded options matching your Mongoose enum -->
                 <select id="payment-report-method" onchange="generatePaymentsReports()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
                     <option value="All">All Methods</option>
                     <option value="Cash">Cash</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="M-Pesa">M-Pesa</option>
                     <option value="Card">Card</option>
-                    <option value="MobileMoney">Mobile Money</option>
+                    <option value="Visa">Visa</option>
+                    <option value="MasterCard">MasterCard</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Stripe">Stripe</option>
+                    <option value="Bank">Bank</option>
                     <option value="Room Charge">Room Charge</option>
                 </select>
             </div>
@@ -2119,19 +2128,31 @@
         </div>
     </div>
 
-    <!-- KPI Analytics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <!-- KPI Analytics Cards (ADJUSTED: Added 3-column grid with Total Refunded Card) -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         
         <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Settled Revenue</span>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Net Settled Revenue</span>
                     <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-sm"><i class="fas fa-cash-register"></i></span>
                 </div>
                 <div class="text-2xl font-black font-mono text-slate-900" id="overall-sales-card">0.00</div>
             </div>
-            <p class="text-[11px] text-slate-400 mt-2 font-medium">Net aggregated value of closed folios</p>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Net aggregated value after refunds</p>
         </div> 
+
+        <!-- NEW: Total Refunded KPI Card -->
+        <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Refunded</span>
+                    <span class="p-2 bg-rose-50 text-rose-600 rounded-lg text-sm"><i class="fas fa-undo"></i></span>
+                </div>
+                <div class="text-2xl font-black font-mono text-rose-600" id="overall-refunds-card">0.00</div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 font-medium">Total refunds issued to guests</p>
+        </div>
 
         <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-xs relative overflow-hidden flex flex-col justify-between">
             <div>
@@ -2165,12 +2186,15 @@
                         <th class="w-1/6 px-6 py-3 tracking-wider">Room / Target</th>
                         <th class="w-2/6 px-6 py-3 tracking-wider">Items / Details</th>
                         <th class="w-1/6 px-6 py-3 tracking-wider">Method</th>
-                        <th class="w-1/6 px-6 py-3 text-right tracking-wider">Amount Paid</th>
+                        <th class="w-1/6 px-6 py-3 text-right tracking-wider">Net Amount</th>
+                        <!-- ADJUSTED: Added Actions Column Header -->
+                        <th class="w-1/6 px-6 py-3 text-right tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="payments-report-tbody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
                     <tr>
-                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 italic">Adjust filter metrics above to populate report entries.</td>
+                        <!-- ADJUSTED: Changed colspan from 6 to 7 -->
+                        <td colspan="7" class="px-6 py-10 text-center text-slate-400 italic">Adjust filter metrics above to populate report entries.</td>
                     </tr>
                 </tbody>
             </table>
