@@ -2273,14 +2273,14 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
 app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
     const { accountId } = req.params;
-    const { accountType, amount, reason, method } = req.body;
+    const { accountType, amount, reason, method, recordedBy } = req.body;
 
     if (!accountId || !amount || amount <= 0 || !reason) {
         return res.status(400).json({ message: 'Missing required refund details (Account, Amount, Reason).' });
     }
 
-    // Extract operator identity from auth middleware token payload
-    const activeUser = req.user.username || req.user.name || localStorage.getItem('username') || 'Staff';
+    // Extract operator identity safely from req.user (JWT) or request body
+    const activeUser = req.user?.username || req.user?.name || recordedBy || 'Staff';
 
     try {
         const refundRecord = {
@@ -2288,16 +2288,15 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             amount: Number(amount),
             reason,
             method: method || 'Cash',
-            recordedBy: activeUser,  // Required by Mongoose schema
-            refundedBy: activeUser,  // Kept for backward compatibility
-            refundedAt: new Date()
+            recordedBy: activeUser,
+            date: new Date()
         };
 
         if (accountType === 'IncidentalCharge') {
             const item = await IncidentalCharge.findOne({ _id: accountId, hotelId });
             if (!item) return res.status(404).json({ message: 'Incidental record not found.' });
 
-            const currentRefunded = item.totalRefundedAmount || 0;
+            const currentRefunded = item.totalRefundedAmount || item.totalRefunded || 0;
             const newTotalRefunded = currentRefunded + Number(amount);
 
             if (newTotalRefunded > item.amount) {
@@ -2305,8 +2304,9 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             }
 
             item.totalRefundedAmount = newTotalRefunded;
-            // Align casing if your schema accepts lowercase 'partial'/'full' or lowercase enum string
-            item.refundStatus = newTotalRefunded >= item.amount ? 'full' : 'partial';
+            item.totalRefunded = newTotalRefunded;
+            // MATCH SCHEMA ENUM EXACTLY
+            item.refundStatus = newTotalRefunded >= item.amount ? 'FULLY_REFUNDED' : 'PARTIALLY_REFUNDED';
             item.isRefunded = newTotalRefunded >= item.amount;
             item.refunds = item.refunds || [];
             item.refunds.push(refundRecord);
@@ -2319,16 +2319,17 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             if (!account) return res.status(404).json({ message: 'Client Account not found.' });
 
             const maxAmount = account.finalAmountPaid || account.totalCharges || 0;
-            const currentRefunded = account.totalRefundedAmount || 0;
+            const currentRefunded = account.totalRefunded || account.totalRefundedAmount || 0;
             const newTotalRefunded = currentRefunded + Number(amount);
 
             if (newTotalRefunded > maxAmount) {
                 return res.status(400).json({ message: `Refund amount exceeds maximum settled amount (${maxAmount}).` });
             }
 
+            account.totalRefunded = newTotalRefunded;
             account.totalRefundedAmount = newTotalRefunded;
-            // Match schema enum string validation (e.g., 'partial' or 'full')
-            account.refundStatus = newTotalRefunded >= maxAmount ? 'full' : 'partial';
+            // MATCH SCHEMA ENUM EXACTLY
+            account.refundStatus = newTotalRefunded >= maxAmount ? 'FULLY_REFUNDED' : 'PARTIALLY_REFUNDED';
             account.isRefunded = newTotalRefunded >= maxAmount;
             account.refunds = account.refunds || [];
             account.refunds.push(refundRecord);
@@ -2342,6 +2343,7 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
         res.status(500).json({ message: 'Failed to execute refund.', error: error.message });
     }
 });
+
 
 app.delete('/api/client-accounts/:accountId/charges/:chargeId', auth, async (req, res) => {
     try {
