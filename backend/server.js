@@ -4350,6 +4350,114 @@ app.get('/api/refunds', auth, async (req, res) => {
     }
 });
 
+app.get('/api/reports/refunds', auth, async (req, res) => {
+    try {
+        const hotelId = new mongoose.Types.ObjectId(req.user.hotelId);
+        const { startDate, endDate, source, method, search } = req.query;
+
+        // Base date range query
+        const dateMatch = {};
+        if (startDate || endDate) {
+            dateMatch.date = {};
+            if (startDate) dateMatch.date.$gte = new Date(startDate);
+            if (endDate) dateMatch.date.$lte = new Date(endDate);
+        }
+
+        // Pipeline for Front Office (Bookings)
+        const bookingPipeline = [
+            { $match: { hotelId } },
+            { $unwind: '$refunds' },
+            {
+                $project: {
+                    _id: 0,
+                    source: { $literal: 'Front Office' },
+                    referenceId: '$id',
+                    guestName: '$name',
+                    roomNumber: '$room',
+                    refundId: '$refunds.refundId',
+                    amount: '$refunds.amount',
+                    method: '$refunds.method',
+                    reason: '$refunds.reason',
+                    recordedBy: '$refunds.recordedBy',
+                    status: { $ifNull: ['$refunds.status', 'Completed'] },
+                    date: '$refunds.date'
+                }
+            }
+        ];
+
+        // Pipeline for POS Clients (ClientAccounts)
+        const clientAccountPipeline = [
+            { $match: { hotelId } },
+            { $unwind: '$refunds' },
+            {
+                $project: {
+                    _id: 0,
+                    source: { $literal: 'POS Client' },
+                    referenceId: 'POS-ACC',
+                    guestName: '$guestName',
+                    roomNumber: { $ifNull: ['$roomNumber', 'N/A'] },
+                    refundId: '$refunds.refundId',
+                    amount: '$refunds.amount',
+                    method: '$refunds.method',
+                    reason: '$refunds.reason',
+                    recordedBy: '$refunds.recordedBy',
+                    status: { $literal: 'Completed' },
+                    date: '$refunds.date'
+                }
+            }
+        ];
+
+        if (Object.keys(dateMatch).length > 0) {
+            bookingPipeline.push({ $match: dateMatch });
+            clientAccountPipeline.push({ $match: dateMatch });
+        }
+
+        let bookingsRefunds = source === 'POS Client' ? [] : await Booking.aggregate(bookingPipeline);
+        let posRefunds = source === 'Front Office' ? [] : await ClientAccount.aggregate(clientAccountPipeline);
+
+        let combined = [...bookingsRefunds, ...posRefunds];
+
+        // Filter by Payment Method
+        if (method && method !== 'ALL') {
+            combined = combined.filter(r => r.method.toLowerCase() === method.toLowerCase());
+        }
+
+        // Filter by Search Term (Guest Name, Refund ID, Reference ID, or Operator)
+        if (search) {
+            const term = search.toLowerCase();
+            combined = combined.filter(r => 
+                r.guestName?.toLowerCase().includes(term) ||
+                r.refundId?.toLowerCase().includes(term) ||
+                r.referenceId?.toLowerCase().includes(term) ||
+                r.recordedBy?.toLowerCase().includes(term)
+            );
+        }
+
+        // Sort descending by refund date
+        combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // Calculate KPI Metrics
+        const totalAmount = combined.reduce((acc, r) => acc + r.amount, 0);
+        const foCount = combined.filter(r => r.source === 'Front Office').length;
+        const posCount = combined.filter(r => r.source === 'POS Client').length;
+
+        res.status(200).json({
+            success: true,
+            summary: {
+                totalRefundsCount: combined.length,
+                totalRefundsAmount: totalAmount,
+                frontOfficeCount: foCount,
+                posCount: posCount
+            },
+            data: combined
+        });
+
+    } catch (err) {
+        console.error("Refund Report Retrieval Error:", err);
+        res.status(500).json({ success: false, message: 'Failed to fetch consolidated refund report.' });
+    }
+});
+
 app.post('/api/bookings/:id/checkout', auth, async (req, res) => {
     const { id } = req.params;
     const { username } = req.body;

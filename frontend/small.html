@@ -370,6 +370,7 @@
                     <li id="nav-expenses"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expenses</a></li>
                     <li id="nav-salereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Sales & Profit Reports</a></li>
                     <li id="nav-expensereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expense Breakdown Reports</a></li>
+                    <li id="nav-refundreports"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expense Breakdown Reports</a></li>
                     <li id="nav-cash"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
                 </ul>
             </li>
@@ -2490,6 +2491,126 @@
         </div>
     </div>
 
+</section>
+
+<section id="refundreports" class="section bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-slate-200 gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-slate-900">Unified Refund Management</h2>
+                <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Audited</span>
+            </div>
+            <p class="text-sm text-slate-500 mt-1">Consolidated reversal records from Front Office and POS Outlets.</p>
+        </div>
+        
+        <button id="export-refunds-btn" onclick="exportRefundsToCSV()" class="inline-flex items-center px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg transition-colors">
+            <i class="fas fa-file-csv mr-2"></i> Export Report
+        </button>
+    </div>
+
+    <!-- KPI Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Value Reversed</p>
+            <h3 id="kpi-total-amount" class="text-2xl font-bold text-slate-900 mt-1">UGX 0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Transactions</p>
+            <h3 id="kpi-total-count" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Front Office Refunds</p>
+            <h3 id="kpi-fo-count" class="text-2xl font-bold text-indigo-600 mt-1">0</h3>
+        </div>
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">POS Outlets Refunds</p>
+            <h3 id="kpi-pos-count" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+        <!-- Date Preset -->
+        <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Preset Period</label>
+            <select id="refund-date-preset" onchange="handleRefundPresetChange(this.value)" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="today" selected>Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="this_week">This Week</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+
+        <!-- Custom Date Range -->
+        <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
+            <input type="date" id="refund-start-date" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">End Date</label>
+            <input type="date" id="refund-end-date" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+        </div>
+
+        <!-- Source Filter -->
+        <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Department / Source</label>
+            <select id="refund-source-filter" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="ALL">All Sources</option>
+                <option value="Front Office">Front Office</option>
+                <option value="POS Client">POS Clients</option>
+            </select>
+        </div>
+
+        <!-- Payment Method -->
+        <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Payment Method</label>
+            <select id="refund-method-filter" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="ALL">All Methods</option>
+                <option value="Cash">Cash</option>
+                <option value="Mobile Money">Mobile Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Credit Card">Credit Card</option>
+            </select>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex items-end">
+            <button id="fetch-refunds-btn" onclick="fetchConsolidatedRefunds()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <i id="refund-spinner" class="fas fa-spinner fa-spin hidden"></i>
+                <span>Apply Filters</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Search -->
+    <div class="mb-4">
+        <input type="text" id="refund-search-input" onkeyup="debounceRefundSearch()" placeholder="Search guest name, room, refund ID, or operator..." class="w-full md:w-96 text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+    </div>
+
+    <!-- Table Container -->
+    <div class="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead>
+                <tr class="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider">
+                    <th class="py-3 px-4">Date & Time</th>
+                    <th class="py-3 px-4">Source</th>
+                    <th class="py-3 px-4">Guest / Account</th>
+                    <th class="py-3 px-4">Room</th>
+                    <th class="py-3 px-4">Method</th>
+                    <th class="py-3 px-4">Reason</th>
+                    <th class="py-3 px-4">Operator</th>
+                    <th class="py-3 px-4 text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody id="consolidated-refunds-tbody" class="divide-y divide-slate-200 text-slate-800">
+                <tr>
+                    <td colspan="8" class="text-center py-6 text-slate-400">Select parameters and click "Apply Filters" to pull records.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </section>
 
 <section id="efris" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
