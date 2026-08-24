@@ -13891,19 +13891,22 @@ async function submitPosRefund(event, accountId) {
     const amount = parseFloat(document.getElementById('refund-amount-input').value);
     const method = document.getElementById('refund-method-input').value;
     const reason = document.getElementById('refund-reason-input').value.trim();
+    
+    // Retrieve logged in user from localStorage
+    const recordedBy = localStorage.getItem('username') || currentUsername || 'Staff';
 
     try {
         const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/${accountId}/refund`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount, method, reason })
+            body: JSON.stringify({ amount, method, reason, recordedBy })
         });
 
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Refund failed');
 
         closePosRefundModal();
-        await generatePaymentsReports(); // Refresh interface with updated state
+        await generatePaymentsReports();
 
     } catch (err) {
         alert(`Error executing refund: ${err.message}`);

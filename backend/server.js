@@ -2272,12 +2272,15 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
 
 app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
-    const { accountId } = req.params; // Extract accountId from route params
+    const { accountId } = req.params;
     const { accountType, amount, reason, method } = req.body;
 
     if (!accountId || !amount || amount <= 0 || !reason) {
         return res.status(400).json({ message: 'Missing required refund details (Account, Amount, Reason).' });
     }
+
+    // Extract operator identity from auth middleware token payload
+    const activeUser = req.user.username || req.user.name || localStorage.getItem('username') || 'Staff';
 
     try {
         const refundRecord = {
@@ -2285,7 +2288,8 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             amount: Number(amount),
             reason,
             method: method || 'Cash',
-            refundedBy: req.user.name || req.user.username || 'Staff',
+            recordedBy: activeUser,  // Required by Mongoose schema
+            refundedBy: activeUser,  // Kept for backward compatibility
             refundedAt: new Date()
         };
 
@@ -2301,7 +2305,8 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             }
 
             item.totalRefundedAmount = newTotalRefunded;
-            item.refundStatus = newTotalRefunded >= item.amount ? 'Full' : 'Partial';
+            // Align casing if your schema accepts lowercase 'partial'/'full' or lowercase enum string
+            item.refundStatus = newTotalRefunded >= item.amount ? 'full' : 'partial';
             item.isRefunded = newTotalRefunded >= item.amount;
             item.refunds = item.refunds || [];
             item.refunds.push(refundRecord);
@@ -2322,7 +2327,8 @@ app.post('/api/pos/client/accounts/:accountId/refund', auth, async (req, res) =>
             }
 
             account.totalRefundedAmount = newTotalRefunded;
-            account.refundStatus = newTotalRefunded >= maxAmount ? 'Full' : 'Partial';
+            // Match schema enum string validation (e.g., 'partial' or 'full')
+            account.refundStatus = newTotalRefunded >= maxAmount ? 'full' : 'partial';
             account.isRefunded = newTotalRefunded >= maxAmount;
             account.refunds = account.refunds || [];
             account.refunds.push(refundRecord);
