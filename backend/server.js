@@ -2168,14 +2168,14 @@ app.post('/api/pos/client/account/:accountId/settle', auth, async (req, res) => 
     }
 });
 
+// =========================================================================
+// 1. GET ROUTE: Closed Accounts + Incidental Room Charges + Refund Details
+// =========================================================================
 app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
     const hotelId = req.user.hotelId;
     const { startDate, endDate, search, method } = req.query;
 
     try {
-        // -------------------------------------------------------------
-        // 1. Build Query for Closed Client Accounts
-        // -------------------------------------------------------------
         let clientAccountQuery = { hotelId, isClosed: true };
 
         if (startDate || endDate) {
@@ -2200,15 +2200,18 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
             clientAccountQuery.settledByMethod = method;
         }
 
-        // Fetch closed client accounts if method filter allows
         let closedAccounts = [];
         if (!method || method === 'All' || method !== 'Room Charge') {
-            closedAccounts = await ClientAccount.find(clientAccountQuery).lean();
+            const rawClosed = await ClientAccount.find(clientAccountQuery).lean();
+            closedAccounts = rawClosed.map(acc => ({
+                ...acc,
+                accountType: 'ClientAccount',
+                refundStatus: acc.refundStatus || (acc.isRefunded ? 'Full' : 'None'),
+                totalRefundedAmount: acc.totalRefundedAmount || 0,
+                refunds: acc.refunds || []
+            }));
         }
 
-        // -------------------------------------------------------------
-        // 2. Build Query for Paid Room Charges (IncidentalCharge)
-        // -------------------------------------------------------------
         let paidRoomCharges = [];
         if (!method || method === 'All' || method === 'Room Charge') {
             let incidentalQuery = { hotelId, isPaid: true };
@@ -2234,9 +2237,9 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
 
             const rawIncidentals = await IncidentalCharge.find(incidentalQuery).lean();
 
-            // Format Incidental Charges to mirror ClientAccount shape
             paidRoomCharges = rawIncidentals.map(inc => ({
                 _id: inc._id,
+                accountType: 'IncidentalCharge',
                 guestName: inc.guestName,
                 roomNumber: inc.roomNumber,
                 settledByMethod: 'Room Charge',
@@ -2244,6 +2247,9 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
                 finalAmountPaid: inc.amount,
                 totalAmount: inc.amount,
                 totalCharges: inc.amount,
+                refundStatus: inc.refundStatus || (inc.isRefunded ? 'Full' : 'None'),
+                totalRefundedAmount: inc.totalRefundedAmount || 0,
+                refunds: inc.refunds || [],
                 charges: [{
                     description: `${inc.type} - ${inc.description}`,
                     amount: inc.amount,
@@ -2253,9 +2259,6 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
             }));
         }
 
-        // -------------------------------------------------------------
-        // 3. Combine and Sort Consolidated Payments
-        // -------------------------------------------------------------
         const allPayments = [...closedAccounts, ...paidRoomCharges];
         allPayments.sort((a, b) => new Date(b.settledAt) - new Date(a.settledAt));
 
@@ -2264,6 +2267,75 @@ app.get('/api/pos/client/accounts/closed', auth, async (req, res) => {
     } catch (error) {
         console.error("Error fetching closed accounts and paid room charges:", error);
         res.status(500).json({ message: 'Failed to retrieve records', details: error.message });
+    }
+});
+
+// =========================================================================
+// 2. POST ROUTE: Issue POS Transaction Refund
+// =========================================================================
+app.post('/api/pos/payments/refund', auth, async (req, res) => {
+    const hotelId = req.user.hotelId;
+    const { accountId, accountType, amount, reason, method } = req.body;
+
+    if (!accountId || !amount || amount <= 0 || !reason) {
+        return res.status(400).json({ message: 'Missing required refund details (Account, Amount, Reason).' });
+    }
+
+    try {
+        const refundRecord = {
+            refundId: `RFD-POS-${Date.now()}`,
+            amount: Number(amount),
+            reason,
+            method: method || 'Cash',
+            refundedBy: req.user.name || req.user.username || 'Staff',
+            refundedAt: new Date()
+        };
+
+        if (accountType === 'IncidentalCharge') {
+            const item = await IncidentalCharge.findOne({ _id: accountId, hotelId });
+            if (!item) return res.status(404).json({ message: 'Incidental record not found.' });
+
+            const currentRefunded = item.totalRefundedAmount || 0;
+            const newTotalRefunded = currentRefunded + Number(amount);
+
+            if (newTotalRefunded > item.amount) {
+                return res.status(400).json({ message: `Refund amount exceeds original charge (${item.amount}).` });
+            }
+
+            item.totalRefundedAmount = newTotalRefunded;
+            item.refundStatus = newTotalRefunded >= item.amount ? 'Full' : 'Partial';
+            item.isRefunded = newTotalRefunded >= item.amount;
+            item.refunds = item.refunds || [];
+            item.refunds.push(refundRecord);
+
+            await item.save();
+            return res.status(200).json({ success: true, message: 'Room Charge refund processed successfully.', data: item });
+        } else {
+            // Default to ClientAccount
+            const account = await ClientAccount.findOne({ _id: accountId, hotelId });
+            if (!account) return res.status(404).json({ message: 'Client Account not found.' });
+
+            const maxAmount = account.finalAmountPaid || account.totalCharges || 0;
+            const currentRefunded = account.totalRefundedAmount || 0;
+            const newTotalRefunded = currentRefunded + Number(amount);
+
+            if (newTotalRefunded > maxAmount) {
+                return res.status(400).json({ message: `Refund amount exceeds maximum settled amount (${maxAmount}).` });
+            }
+
+            account.totalRefundedAmount = newTotalRefunded;
+            account.refundStatus = newTotalRefunded >= maxAmount ? 'Full' : 'Partial';
+            account.isRefunded = newTotalRefunded >= maxAmount;
+            account.refunds = account.refunds || [];
+            account.refunds.push(refundRecord);
+
+            await account.save();
+            return res.status(200).json({ success: true, message: 'POS refund processed successfully.', data: account });
+        }
+
+    } catch (error) {
+        console.error("Refund Processing Error:", error);
+        res.status(500).json({ message: 'Failed to execute refund.', error: error.message });
     }
 });
 
@@ -2435,36 +2507,65 @@ const incidentalChargeSchema = new mongoose.Schema({
 const IncidentalCharge = mongoose.models.IncidentalCharge || 
     mongoose.model('IncidentalCharge', incidentalChargeSchema);
 
-// Client Account Schema (Walk-In Customers)
+// 1. Define Sub-Schemas First
+const chargeItemSchema = new mongoose.Schema({
+    description: { type: String, required: true },
+    amount: { type: Number, required: true },
+    quantity: { type: Number, default: 1 },
+    sp: { type: Number }, // Selling Price
+    bp: { type: Number }, // Buying/Base Price
+    type: { 
+        type: String, 
+        enum: ['Bar', 'Restaurant', 'Other'], 
+        required: true 
+    },
+    date: { type: Date, default: Date.now }
+}, { _id: true });
+
+const refundSubSchema = new mongoose.Schema({
+    refundId: { type: String, required: true },
+    amount: { type: Number, required: true },
+    reason: { type: String, required: true },
+    method: { type: String, required: true },
+    refundedBy: { type: String, default: 'System' },
+    refundedAt: { type: Date, default: Date.now }
+}, { _id: true });
+
+// 2. Define Main Schema
 const clientAccountSchema = new mongoose.Schema({
-    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
-    guestName: { type: String, required: true },
+    hotelId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Hotel', 
+        required: true, 
+        index: true 
+    },
+    guestName: { type: String, required: true, trim: true },
     roomNumber: { type: String, default: "" },
-    charges: [{
-        description: { type: String, required: true },
-        amount: { type: Number, required: true },
-        quantity: { type: Number, default: 1 },
-        number: { type: Number, default: 1 },
-        sp: { type: Number },
-        bp: { type: Number },
-        type: { 
-            type: String,
-            enum: ['Bar', 'Restaurant', 'Other'],
-            required: true
-        },
-        date: { type: Date, default: Date.now }
-    }],
+    
+    // Array Sub-documents
+    charges: [chargeItemSchema],
+    refunds: [refundSubSchema],
+
+    // Totals & Financial Trackers
     totalCharges: { type: Number, default: 0 },
     finalAmountPaid: { type: Number, default: 0 },
     
-    // Audit reporting trackers
+    // Refund Auditing
+    isRefunded: { type: Boolean, default: false },
+    refundStatus: { 
+        type: String, 
+        enum: ['None', 'Partial', 'Full'], 
+        default: 'None' 
+    },
+    totalRefundedAmount: { type: Number, default: 0 },
+
+    // Audit & Settlement Trackers
     settledAt: { type: Date },
     settledByMethod: { 
         type: String, 
         enum: [
-            'Pesapal', 'Card', 'Visa', 'Visa Card', 'MasterCard', 
-            'Amex', 'Room Charge', 'Mobile Money', 'Cash', 'M-Pesa', 
-            'MTN Momo', 'Airtel Pay', 'Bank', 'Stripe', 'Stripe Card'
+            'Pesapal', 'Card', 'Room Charge', 'Mobile Money', 
+            'Cash', 'Bank', 'Stripe', 'Other'
         ] 
     },
     isClosed: { type: Boolean, default: false },
@@ -2476,14 +2577,18 @@ const clientAccountSchema = new mongoose.Schema({
     verificationCode: { type: String, default: null },
     qrCodeData: { type: String, default: null },
     fiscalizedAt: { type: Date, default: null },
-    efrisPayload: { type: Object, default: null }
-}, { timestamps: true });
+    efrisPayload: { type: mongoose.Schema.Types.Mixed, default: null }
+}, { 
+    timestamps: true 
+});
 
+// Compound index for faster audit and reporting lookups
+clientAccountSchema.index({ hotelId: 1, isClosed: 1, createdAt: -1 });
 
-
-// 2. ClientAccount Model (Walk-ins & POS Folios)
+// Model Export
 const ClientAccount = mongoose.models.ClientAccount || 
     mongoose.model('ClientAccount', clientAccountSchema);
+
 
 // Hotel Schema (Holds Tenant EFRIS Configurations)
 const efrisConfigSchema = new mongoose.Schema({
