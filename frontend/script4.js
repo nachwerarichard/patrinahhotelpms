@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations', 'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-refunds', 'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -1326,6 +1326,12 @@ async function renderBookings(page = 1, searchTerm = '') {
                                     <i class="fa-solid fa-money-bill-wave mr-1"></i> Add Payment
                                 </button>
                             ` : ''}
+
+                            ${booking.amountPaid > 0 ? `
+    <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
+        <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
+    </button>
+` : ''}
 
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-indigo-700 hover:bg-indigo-800" onclick="viewCharges('${booking.id}')">
@@ -2474,30 +2480,14 @@ function calculateBookingDetails() {
 bookingForm.addEventListener('submit', async function(event) {
     event.preventDefault();
 
-    // 1. Get session data
+    // 1. Get session data for fallback checks
     const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-    const hotelId = sessionData?.hotelId || localStorage.getItem('hotelId');
-    const currentUsername = sessionData?.username;
+    const currentUsername = sessionData?.username || sessionData?.name || 'System';
 
-    if (!hotelId) {
-        return showMessage('Error', 'No hotel session found. Please log in again.', true);
-    }
-
-    // Safely extract input values
-    const getValue = (id) => {
-        const el = document.getElementById(id);
-        return el ? el.value.trim() : '';
-    };
-
-    const getFloat = (id) => {
-        const el = document.getElementById(id);
-        return el ? parseFloat(el.value) || 0 : 0;
-    };
-
-    const getInt = (id) => {
-        const el = document.getElementById(id);
-        return el ? parseInt(el.value, 10) || 1 : 1;
-    };
+    // Helper functions for safe extraction
+    const getValue = (id) => document.getElementById(id)?.value.trim() || '';
+    const getFloat = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+    const getInt = (id) => parseInt(document.getElementById(id)?.value, 10) || 1;
 
     const id = getValue('bookingId');
     
@@ -2533,19 +2523,21 @@ bookingForm.addEventListener('submit', async function(event) {
         declarations: getValue('declarations'),
         transactionid: getValue('transactionid'),
         extraperson: getValue('extraperson'),
-        hotelId: hotelId,
-        username: currentUsername
+        
+        // Pass user identifier in body as explicit fallback
+        recordedBy: currentUsername,
+        updatedBy: id ? currentUsername : undefined
     };
 
     const saveBtn = document.getElementById('saveBookingBtn');
-    const originalBtnText = saveBtn ? saveBtn.innerHTML : (id ? 'Update Booking' : 'Add Booking');
+    const originalBtnText = id ? 'Update Booking' : 'Add Booking';
 
     try {
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = `
                 <span class="inline-flex items-center">
-                    <svg class="animate-spin h-4 w-4 mr-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg class="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -2554,34 +2546,29 @@ bookingForm.addEventListener('submit', async function(event) {
             `;
         }
 
-        let response;
-        let message;
         const endpoint = id 
             ? `${API_BASE_URL}/bookings/${id}` 
             : `${API_BASE_URL}/bookings`;
             
         const method = id ? 'PUT' : 'POST';
 
-        // 3. Unified request through authenticatedFetch
-        response = await authenticatedFetch(endpoint, {
+        const response = await authenticatedFetch(endpoint, {
             method: method,
             body: JSON.stringify(bookingData)
         });
 
         if (!response || !response.ok) {
             const errorData = response ? await response.json().catch(() => ({})) : {};
-            throw new Error(errorData.message || `HTTP error! status: ${response?.status || 'Network error'}`);
+            throw new Error(errorData.message || `HTTP error status: ${response?.status || 'Network error'}`);
         }
 
-        message = id ? 'Booking updated successfully!' : 'New booking added successfully!';
-        showMessage('Success', message);
+        showMessage('Success', id ? 'Booking updated successfully!' : 'New booking added successfully!');
         
-        // Reset form on new booking creation
         if (!id && typeof bookingForm.reset === 'function') {
             bookingForm.reset();
         }
 
-        // 4. Refresh UI state
+        // Refresh UI components
         if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
         if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
         if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
@@ -2594,7 +2581,7 @@ bookingForm.addEventListener('submit', async function(event) {
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = id ? 'Update Booking' : 'Add Booking';
+            saveBtn.innerHTML = originalBtnText;
         }
     }
 });
@@ -5115,6 +5102,73 @@ async function submitPayment() {
     }
 }
 
+function openRefundModal(bookingId, maxAmount) {
+    document.getElementById('refundBookingId').value = bookingId;
+    document.getElementById('maxRefundableAmount').value = `UGX ${maxAmount.toLocaleString()}`;
+    document.getElementById('refundAmount').value = '';
+    document.getElementById('refundReason').value = '';
+    document.getElementById('refundModal').classList.remove('hidden');
+}
+
+function closeRefundModal() {
+    document.getElementById('refundModal').classList.add('hidden');
+}
+
+async function submitRefund() {
+    const bookingId = document.getElementById('refundBookingId')?.value;
+    const amountInput = document.getElementById('refundAmount');
+    const methodInput = document.getElementById('refundMethod');
+    const reasonInput = document.getElementById('refundReason');
+    const submitBtn = document.getElementById('submitRefundBtn');
+
+    const amount = parseFloat(amountInput?.value || 0);
+    const method = methodInput?.value;
+    const reason = reasonInput?.value.trim();
+
+    if (!bookingId) return showMessage("Error", "No booking context linked.", true);
+    if (!amount || amount <= 0) return showMessage("Error", "Please enter a valid refund amount.", true);
+    if (!method) return showMessage("Error", "Select a payout channel.", true);
+    if (!reason) return showMessage("Error", "Please state a reason for this refund.", true);
+
+    const user = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing...';
+        }
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/${bookingId}/refund`, {
+            method: "POST",
+            body: JSON.stringify({
+                amount,
+                method,
+                reason,
+                hotelId: user?.hotelId,
+                recordedBy: user?.username || 'system'
+            })
+        });
+
+        if (!response || !response.ok) {
+            const errBody = await response.json().catch(() => ({ message: "Failed to process refund." }));
+            throw new Error(errBody.message || "Server error occurred.");
+        }
+
+        showMessage("Success", `Refund of UGX ${amount.toLocaleString()} logged successfully! ✅`);
+        closeRefundModal();
+        if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
+
+    } catch (err) {
+        console.error("Refund Execution Error:", err);
+        showMessage("Error", err.message, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Process Refund';
+        }
+    }
+}
+
 function refreshDashboardViews() {
     if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
     if (typeof renderBookings === 'function') renderBookings(currentPage, currentSearchTerm);
@@ -5305,20 +5359,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderTable(bookings) {
+    renderStaffBreakdown(bookings);
     const tbody = document.getElementById('tableBody');
     const mobileGrid = document.getElementById('reportsMobileGrid');
     const sumPaidDisplay = document.getElementById('sumPaid');
     const sumBalanceDisplay = document.getElementById('sumBalance');
     const sumBookingsDisplay = document.getElementById('sumBookings');
 
-    // Wipe down containers completely before running updates
     if (tbody) tbody.innerHTML = '';
     if (mobileGrid) mobileGrid.innerHTML = '';
 
-    // Handle empty dataset scenarios gracefully
     if (!bookings || bookings.length === 0) {
         const fallbackMsg = '<div class="p-8 text-center text-gray-400 font-medium italic">No match logs mapped for active criteria.</div>';
-        if (tbody) tbody.innerHTML = `<tr><td colspan="10">${fallbackMsg}</td></tr>`; // Updated colspan to 10 for new column
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11">${fallbackMsg}</td></tr>`; // Updated colspan to 11
         if (mobileGrid) mobileGrid.innerHTML = fallbackMsg;
         if (sumBookingsDisplay) sumBookingsDisplay.textContent = '0';
         if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} 0.00`;
@@ -5326,26 +5379,25 @@ function renderTable(bookings) {
         return;
     }
 
-    // A. Calculate Dynamic Financial & Booking Summaries
     const totalBookings = bookings.length;
     const totalPaid = bookings.reduce((sum, b) => sum + Number(b.amountPaid || 0), 0);
     const totalBalance = bookings.reduce((sum, b) => sum + Number(b.balance || 0), 0);
 
-    // B. Reformat & Update Top Display Cards
     if (sumBookingsDisplay) sumBookingsDisplay.textContent = totalBookings.toLocaleString();
     if (sumPaidDisplay) sumPaidDisplay.textContent = `${CURRENT_CURRENCY} ${totalPaid.toLocaleString()}`;
     if (sumBalanceDisplay) sumBalanceDisplay.textContent = `${CURRENT_CURRENCY}  ${totalBalance.toLocaleString()}`;
 
-    // C. Process Collections and Run Render Loops
     bookings.forEach(b => {
         const payColor = b.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
         const statusColor = b.gueststatus === 'confirmed' || b.gueststatus === 'checkedin' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700';
         const methodColor = b.paymentMethod === 'Cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
         
-        // Checkout date extraction (supporting schema field 'checkOut' or fallback 'endDate')
         const checkOutDate = b.checkOut || b.endDate || 'N/A';
+        
+        // Extract Recorded By info (handles string or populated object)
+        const recordedBy = b.recordedBy?.name || b.createdBy?.name || b.recordedBy || b.createdBy || b.staffName || 'System';
 
-        // 1. POPULATE VIEW 1: Render out standard desktop table row element
+        // 1. Desktop Table Row
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-50/80 transition-colors border-b border-gray-100";
@@ -5366,11 +5418,12 @@ function renderTable(bookings) {
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                 </td>
                 <td class="p-3 text-center text-gray-400 text-xs">${b.guestsource || 'Walk in'}</td>
+                <td class="p-3 text-center text-indigo-600 font-semibold text-xs">${recordedBy}</td>
             `;
             tbody.appendChild(tr);
         }
 
-        // 2. POPULATE VIEW 2: Render out card template for mobile ledger screens
+        // 2. Mobile View Card
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-gray-200 rounded-xl shadow-sm space-y-3";
@@ -5378,7 +5431,7 @@ function renderTable(bookings) {
                 <div class="flex justify-between items-start">
                     <div>
                         <h4 class="text-base font-bold text-gray-900">${b.name || 'N/A'}</h4>
-                        <p class="text-xs text-gray-400 font-medium">Room Assigned: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
+                        <p class="text-xs text-gray-400 font-medium">Room: <span class="text-indigo-600 font-bold">${b.room || 'N/A'}</span></p>
                     </div>
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusColor}">${b.gueststatus || 'Reserved'}</span>
                 </div>
@@ -5404,15 +5457,17 @@ function renderTable(bookings) {
                         <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${methodColor}">${b.paymentMethod || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between">
+
+                <div class="text-[11px] text-gray-400 border-t border-gray-100/70 pt-2 flex justify-between items-center">
                     <span>Source: <strong class="text-gray-600">${b.guestsource || 'Walk in'}</strong></span>
+                    <span class="text-gray-500 font-medium">Recorded by: <strong class="text-indigo-600">${recordedBy}</strong></span>
                 </div>
             `;
             mobileGrid.appendChild(card);
         }
     });
 
-    // D. Append Grand Totals Summary Row at bottom of Table view (Desktop Only)
+    // 3. Desktop Grand Totals Row
     if (tbody) {
         const totalRow = document.createElement('tr');
         totalRow.className = "bg-slate-50 font-black border-t-2 border-gray-300 text-gray-900";
@@ -5420,12 +5475,135 @@ function renderTable(bookings) {
             <td colspan="4" class="p-4 text-right text-gray-500 uppercase tracking-widest text-xs font-bold">Grand Total (${totalBookings} Bookings):</td>
             <td class="p-4 text-green-700 text-right font-mono text-base">${totalPaid.toLocaleString()}</td>
             <td class="p-4 text-red-700 text-right font-mono text-base">${totalBalance.toLocaleString()}</td>
-            <td colspan="4" class="p-4"></td>
+            <td colspan="5" class="p-4"></td>
         `;
         tbody.appendChild(totalRow);
     }
     
     currentData = bookings;
+}
+
+// Helper to extract staff name reliably from various backend schema formats
+function getRecordedBy(booking) {
+    return booking.recordedBy?.name || booking.createdBy?.name || booking.recordedBy || booking.createdBy || booking.staffName || 'System';
+}
+
+// Dynamically populates unique staff members into the select dropdown
+function populateStaffFilter(bookings) {
+    const staffSelect = document.getElementById('staffFilter');
+    if (!staffSelect) return;
+
+    // Save current selection if any
+    const currentValue = staffSelect.value;
+
+    // Extract unique non-empty staff names
+    const staffNames = [...new Set(bookings.map(getRecordedBy))].sort();
+
+    // Rebuild options list
+    staffSelect.innerHTML = '<option value="ALL">All Staff</option>';
+    staffNames.forEach(staff => {
+        const option = document.createElement('option');
+        option.value = staff;
+        option.textContent = staff;
+        staffSelect.appendChild(option);
+    });
+
+    // Restore selection if still valid
+    if (staffNames.includes(currentValue)) {
+        staffSelect.value = currentValue;
+    }
+}
+
+// Integrated Filter Routine
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase().trim() || '';
+    const selectedStaff = document.getElementById('staffFilter')?.value || 'ALL';
+    // Add references to your other existing inputs (e.g., dateFrom, dateTo, statusFilter)
+
+    const filtered = rawBookingsData.filter(b => {
+        const staffName = getRecordedBy(b);
+        const guestName = (b.name || '').toLowerCase();
+        const roomNum = (b.room || '').toLowerCase();
+
+        // 1. Staff Filter Match
+        const matchesStaff = selectedStaff === 'ALL' || staffName === selectedStaff;
+
+        // 2. Search Term Match
+        const matchesSearch = !searchTerm || guestName.includes(searchTerm) || roomNum.includes(searchTerm) || staffName.toLowerCase().includes(searchTerm);
+
+        return matchesStaff && matchesSearch;
+    });
+
+    // Re-render table and summary indicators with filtered subset
+    renderTable(filtered);
+}
+
+// Call this function right after fetching/loading initial dataset
+function onBookingsDataLoaded(data) {
+    rawBookingsData = data;
+    populateStaffFilter(rawBookingsData);
+    applyFilters();
+}
+
+function renderStaffBreakdown(bookings) {
+    const container = document.getElementById('staffBreakdownCard');
+    const grid = document.getElementById('staffMetricsGrid');
+    const countBadge = document.getElementById('staffCountBadge');
+    
+    if (!container || !grid) return;
+
+    if (!bookings || bookings.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    // 1. Group totals by staff member
+    const summaryMap = bookings.reduce((acc, b) => {
+        const staff = getRecordedBy(b);
+        const paid = Number(b.amountPaid || 0);
+        const bal = Number(b.balance || 0);
+
+        if (!acc[staff]) {
+            acc[staff] = { count: 0, totalPaid: 0, totalBalance: 0 };
+        }
+
+        acc[staff].count += 1;
+        acc[staff].totalPaid += paid;
+        acc[staff].totalBalance += bal;
+        return acc;
+    }, {});
+
+    const staffList = Object.keys(summaryMap);
+    
+    if (countBadge) {
+        countBadge.textContent = `${staffList.length} ${staffList.length === 1 ? 'Staff Member' : 'Staff Members'}`;
+    }
+
+    // 2. Build breakdown cards HTML
+    grid.innerHTML = staffList.map(staff => {
+        const data = summaryMap[staff];
+        return `
+            <div class="p-3.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:border-indigo-300 transition-colors space-y-2">
+                <div class="flex justify-between items-center border-b border-slate-200/60 pb-2">
+                    <span class="font-bold text-gray-800 text-sm truncate" title="${staff}">${staff}</span>
+                    <span class="text-[11px] font-bold text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full">${data.count} ${data.count === 1 ? 'entry' : 'entries'}</span>
+                </div>
+                
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Collected:</span>
+                        <span class="text-green-700 font-bold font-mono text-sm">${CURRENT_CURRENCY} ${data.totalPaid.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-medium">Balance Due:</span>
+                        <span class="text-red-600 font-bold font-mono">${CURRENT_CURRENCY} ${data.totalBalance.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.classList.remove('hidden');
 }
 
 // 3. EXPORT FUNCTIONS
@@ -5887,6 +6065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
       const navCash = document.getElementById('nav-cash');
+    const navRefunds = document.getElementById('nav-refunds');
       const navInventory = document.getElementById('nav-inventory');
         const navExpense = document.getElementById('nav-expenses');
                 const navReceivables = document.getElementById('nav-receivables');
@@ -5951,6 +6130,13 @@ if (navPayments) {
         navCash.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('cash');
+        });
+    }
+
+     if (navRefunds) {
+        navRefunds.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('refunds');
         });
     }
 
@@ -8236,8 +8422,36 @@ const completeCurrentOrder = async () => {
     const completeBtn = document.getElementById('completeOrderBtn');
     const hotelId = localStorage.getItem('hotelId') || (typeof getHotelId === 'function' ? getHotelId() : null);
 
-    // 1. Extract uncommitted draft charges
-    const uncommittedCharges = currentActiveAccountData.charges.filter(item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed');
+    // 1. Robust resolution of active username across all storage/DOM layers
+    let resolvedUsername = 'Staff';
+    
+    if (typeof currentUsername !== 'undefined' && currentUsername && currentUsername !== 'Guest') {
+        resolvedUsername = currentUsername;
+    } else if (localStorage.getItem('username')) {
+        resolvedUsername = localStorage.getItem('username');
+    } else {
+        try {
+            const loggedInUserObj = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+            if (loggedInUserObj.username) {
+                resolvedUsername = loggedInUserObj.username;
+            }
+        } catch (e) {
+            console.warn('Could not parse loggedInUser from localStorage');
+        }
+    }
+
+    // Secondary DOM fallback if global variables failed
+    if (resolvedUsername === 'Staff') {
+        const userDisplayEl = document.getElementById('user-name-display') || document.getElementById('username-display');
+        if (userDisplayEl && userDisplayEl.textContent.trim()) {
+            resolvedUsername = userDisplayEl.textContent.trim();
+        }
+    }
+
+    // 2. Extract uncommitted draft charges
+    const uncommittedCharges = currentActiveAccountData.charges.filter(
+        item => !item.committed && item.status !== 'Sent' && item.status !== 'Completed'
+    );
 
     if (uncommittedCharges.length === 0) {
         return showMessage('Notice', 'All items in this tab have already been processed.', false);
@@ -8249,19 +8463,19 @@ const completeCurrentOrder = async () => {
             completeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mb-1 text-sm"></i><span class="text-[10px] font-extrabold uppercase">Processing...</span>`;
         }
 
-        // 2. Send dispatch requests
+        // 3. Send dispatch requests
         for (const item of uncommittedCharges) {
             const department = item.department || item.type || 'Bar';
             const qty = Number(item.number || item.quantity || 1);
             const unitSp = item.sp ? Number(item.sp) : (item.amount ? Number(item.amount) / qty : 0);
 
-            // --- SANITIZE ITEM NAME: Strip any concatenated quantity strings ---
+            // Clean item name (strip trailing quantity notations)
             const rawName = item.item || item.description || '';
             const cleanItemName = rawName.replace(/\s*\(x\d+\)$/i, '').trim();
 
             const payload = {
                 hotelId: hotelId,
-                item: cleanItemName, // Clean name ensures stock lookup matches inventory DB
+                item: cleanItemName,
                 description: cleanItemName,
                 department: department,
                 number: qty,
@@ -8271,12 +8485,13 @@ const completeCurrentOrder = async () => {
                 amount: Number(item.amount || (unitSp * qty)),
                 profit: Number(item.profit || 0),
                 percentageprofit: Number(item.percentageprofit || 0),
-                accountId: activeAccountId || null,
+                accountId: typeof activeAccountId !== 'undefined' ? activeAccountId : null,
                 tableNumber: item.tableNumber || "N/A",
-                isQuickSale: !activeAccountId,
+                isQuickSale: typeof activeAccountId !== 'undefined' ? !activeAccountId : true,
                 date: item.date || new Date(),
-                recordedBy: typeof currentUsername !== 'undefined' ? currentUsername : 'System User',
-                role: typeof currentUserRole !== 'undefined' ? currentUserRole : 'POS User'
+                recordedBy: resolvedUsername, // Guaranteed active user
+                createdBy: resolvedUsername,  // Included as a fallback alias for backend compatibility
+                role: typeof currentUserRole !== 'undefined' ? currentUserRole : (localStorage.getItem('userRole') || 'Bar')
             };
 
             const endpoint = department === 'Restaurant' ? `${API_BASE_URL}/kitchen/order` : `${API_BASE_URL}/sales`;
@@ -8298,14 +8513,17 @@ const completeCurrentOrder = async () => {
         }
 
         showMessage('Success', 'Order completed and inventory updated!', false);
-        fetchSales();
 
-        // 3. Update UI
-        updateActiveAccountUI(currentActiveAccountData);
-
-        // 4. Refresh auxiliary POS stats/tables
-        if (typeof fetchSales === 'function') fetchSales();
-        if (typeof refreshTodayPOSStats === 'function') refreshTodayPOSStats();
+        // 4. Update UI & POS Stats
+        if (typeof updateActiveAccountUI === 'function') {
+            updateActiveAccountUI(currentActiveAccountData);
+        }
+        if (typeof fetchSales === 'function') {
+            fetchSales();
+        }
+        if (typeof refreshTodayPOSStats === 'function') {
+            refreshTodayPOSStats();
+        }
 
     } catch (err) {
         console.error("Complete Order Error:", err);
@@ -9783,6 +10001,13 @@ function updateSalesSearchButton(text, iconClass) {
         button.classList.remove('opacity-75', 'cursor-not-allowed');
     }
 }
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // Assumes your modal uses flex for centering
+    }
+}
 
 async function fetchSales() {
     updateSalesSearchButton('Searching', 'fas fa-spinner fa-spin');
@@ -9791,21 +10016,17 @@ async function fetchSales() {
         const dateFilterInput = document.getElementById('sales-date-filter');
         const dateFilter = dateFilterInput ? dateFilterInput.value : '';
 
-        // Pointing to your brand new single-date endpoint
         let url = `${API_BASE_URL}/sales/by-date`; 
-        
         const params = new URLSearchParams();
-        
-        // If a date exists, apply it to the parameters
+
         if (dateFilter) params.append('date', dateFilter); 
-        
-        // Dynamically track active pagination variables safely
+
         const activeSalesPage = (typeof currentSalesPage !== 'undefined') ? currentSalesPage : 1;
         const activeSalesLimit = (typeof salesPerPage !== 'undefined') ? salesPerPage : 10;
-        
+
         params.append('page', activeSalesPage);
         params.append('limit', activeSalesLimit);
-        
+
         const hotelId = localStorage.getItem('hotelId'); 
         if (hotelId) params.append('hotelId', hotelId);
 
@@ -9816,69 +10037,70 @@ async function fetchSales() {
             updateSalesSearchButton('Search', 'fas fa-search');
             return;
         }
-
-        const result = await response.json();
         
+        const result = await response.json();
         const salesData = result.sales || result.items || result.data || [];
+        const userTotalsData = result.userTotals || [];
+        const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
+
         const totalPages = result.totalPages || 1;
         const currentPage = result.currentPage || 1;
 
-        renderSalesTable(salesData); 
+        // Extract total day metrics directly from backend aggregation across ALL pages
+        const grandSalesTotal = userTotalsData.reduce((acc, u) => acc + (u.totalSales || 0), 0);
+        const grandProfitTotal = userTotalsData.reduce((acc, u) => acc + (u.totalProfit || 0), 0);
+
+        // Pass daily aggregate totals downstream
+        renderSalesTable(salesData, grandSalesTotal, grandProfitTotal); 
         
+        renderUserSalesSummary(userTotalsData, hideSensitiveInfo);
+
         if (typeof renderSalesPagination === 'function') {
             renderSalesPagination(currentPage, totalPages);
         }
 
         updateSalesSearchButton('Done', 'fas fa-check');
-
         setTimeout(() => {
             updateSalesSearchButton('Search', 'fas fa-search');
         }, 1500);
-        
+
     } catch (error) {
         console.error('Error fetching sales:', error);
         showMessage('Failed to fetch sales: ' + error.message, true);
         updateSalesSearchButton('Search', 'fas fa-search');
     }
 }
+
+
 function renderSalesPagination(current, totalPages) {
     const container = document.getElementById('sales-pagination');
-    if (!container) return; // Exit if container not found
+    if (!container) return; 
     container.innerHTML = '';
+
+    if (totalPages <= 1) return; // Hide pagination bar if everything fits on one page
+
+    const nav = document.createElement('div');
+    nav.className = "flex items-center gap-1 my-4 justify-center";
 
     for (let i = 1; i <= totalPages; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
-        btn.disabled = i === current;
+        btn.className = (i === current)
+            ? "px-3 py-1 text-xs font-bold bg-indigo-600 text-white rounded-md shadow-sm"
+            : "px-3 py-1 text-xs font-medium bg-white text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors";
+        
+        btn.disabled = (i === current);
         btn.onclick = () => {
             currentSalesPage = i;
             fetchSales();
         };
-        container.appendChild(btn);
+        nav.appendChild(btn);
     }
-}
-/**
- * Utility function to display the modal.
- * It removes the 'hidden' class and adds 'flex' to make it visible and centered.
- */
-function showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex'); // Assumes your modal uses flex for centering
-    }
+    
+    container.appendChild(nav);
 }
 
-/**
- * Utility function to close the modal.
- * (Assumed to be called by the Cancel button in your HTML)
- */
-
-/**
- * Populates the Edit Sale form with sale data and then displays the modal.
- */
-
-function renderSalesTable(sales) {
+function renderSalesTable(sales, grandSalesTotal = 0, grandProfitTotal = 0) {
     const tbody = document.querySelector('#sales-table tbody');
     const mobileGrid = document.getElementById('sales-mobile-grid');
 
@@ -9887,21 +10109,14 @@ function renderSalesTable(sales) {
 
     if (sales.length === 0) {
         const emptyStateHtml = `<div class="py-10 text-center text-slate-400 font-medium text-sm italic">No sales records found for this date.</div>`;
-        if (tbody) tbody.innerHTML = `<tr><td colspan="9">${emptyStateHtml}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="10">${emptyStateHtml}</td></tr>`;
         if (mobileGrid) mobileGrid.innerHTML = emptyStateHtml;
         return;
     }
 
-    // Role-based privacy & edit permission flags
     const hideSensitiveInfo = ['cashier', 'bar'].includes(currentUserRole);
-    
-    // UPDATED: Allow admin, super-admin, and manager (excludes bar and other roles)
     const canEditOrDelete = ['admin', 'super-admin', 'manager'].includes(currentUserRole);
 
-    let totalSellingPriceSum = 0;
-    let totalProfitSum = 0; // Track overall profit
-
-    // Department object structure: { DeptName: { sales: X, profit: Y } }
     const departmentTotals = {}; 
 
     sales.forEach(sale => {
@@ -9909,12 +10124,7 @@ function renderSalesTable(sales) {
         const sp = sale.sp || 0;
         const bp = sale.bp || 0;
         const totalSellingPrice = sp * qty;
-
-        // Calculate profit (use pre-calculated profit or derive)
         const profit = (typeof sale.profit === 'number') ? sale.profit : (sp - bp) * qty;
-
-        totalSellingPriceSum += totalSellingPrice;
-        totalProfitSum += profit;
 
         const dept = sale.department || 'General';
         if (!departmentTotals[dept]) {
@@ -9923,7 +10133,6 @@ function renderSalesTable(sales) {
         departmentTotals[dept].sales += totalSellingPrice;
         departmentTotals[dept].profit += profit;
 
-        // Structured formats for parsed financial outputs
         const bpDisplay = hideSensitiveInfo ? '***' : bp.toLocaleString();
         const spDisplay = sp.toLocaleString();
 
@@ -9938,8 +10147,9 @@ function renderSalesTable(sales) {
         }
 
         const formattedDate = new Date(sale.date).toLocaleDateString();
+        const staffName = sale.recordedBy || sale.createdBy || 'Staff';
 
-        // --- A. POPULATE VIEW 1: DESKTOP TABLE INTERFACE TR ---
+        // Desktop Row
         if (tbody) {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50/80 border-b border-slate-100 text-slate-600 text-sm transition-colors";
@@ -9952,6 +10162,7 @@ function renderSalesTable(sales) {
                 <td class="px-6 py-4 font-mono text-indigo-600 font-semibold">${spDisplay}</td>
                 <td class="px-6 py-4 font-mono ${profitClass}">${profitDisplay}</td>
                 <td class="px-6 py-4 font-mono text-xs text-slate-500">${percentageDisplay}</td>
+                <td class="px-6 py-4 text-xs font-bold text-slate-700">${staffName}</td>
                 <td class="px-6 py-4 text-xs whitespace-nowrap text-slate-400">${formattedDate}</td>
                 <td class="px-6 py-4 text-right whitespace-nowrap actions-cell"></td>
             `;
@@ -9961,7 +10172,7 @@ function renderSalesTable(sales) {
             tbody.appendChild(tr);
         }
 
-        // --- B. POPULATE VIEW 2: SMARTPHONE GRID CARD ELEMENT ---
+        // Smartphone Card
         if (mobileGrid) {
             const card = document.createElement('div');
             card.className = "p-4 bg-white border border-slate-200 rounded-xl shadow-sm space-y-3 hover:border-slate-300 transition-all";
@@ -9969,7 +10180,12 @@ function renderSalesTable(sales) {
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
-                        <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider mb-1 inline-block">${dept}</span>
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wider inline-block">${dept}</span>
+                            <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase tracking-wider inline-block">
+                                <i class="fas fa-user text-[9px] mr-1"></i>${staffName}
+                            </span>
+                        </div>
                         <h4 class="text-base font-bold text-slate-900">${sale.item}</h4>
                         <p class="text-[11px] text-slate-400 font-medium mt-0.5"><i class="far fa-calendar mr-1"></i> ${formattedDate}</p>
                     </div>
@@ -10006,133 +10222,131 @@ function renderSalesTable(sales) {
         }
     });
 
-    // Pass total profit sum downstream along with sales
     if (typeof renderSalesSummary === 'function') {
-        renderSalesSummary(tbody, departmentTotals, totalSellingPriceSum, totalProfitSum, hideSensitiveInfo);
+        renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo);
     }
 }
 
-// Helper utility targeting modular actions rendering matrix
 function injectActionElements(container, canEditOrDelete, sale, isMobileVariant = false) {
     if (!container) return;
 
+    // Reset container safely
+    container.innerHTML = '';
+
     if (canEditOrDelete) {
         const btnGroup = document.createElement('div');
-        btnGroup.className = "flex gap-1.5 justify-end";
+        btnGroup.className = "flex gap-1.5 justify-end items-center";
 
+        // Edit Action Button
         const editBtn = document.createElement('button');
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.type = 'button';
+        editBtn.innerHTML = '<i class="fas fa-pen-to-square"></i>';
         editBtn.title = "Edit Sale Record";
         editBtn.className = isMobileVariant 
-            ? 'p-2 text-indigo-600 bg-indigo-50 active:bg-indigo-100 rounded-lg text-xs transition-colors'
+            ? 'p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors';
-        editBtn.onclick = () => populateSaleForm(sale);
+            
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof populateSaleForm === 'function') {
+                populateSaleForm(sale);
+            }
+        });
 
+        // Delete Action Button
         const delBtn = document.createElement('button');
+        delBtn.type = 'button';
         delBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
         delBtn.title = "Delete Sale Record";
         delBtn.className = isMobileVariant 
-            ? 'p-2 text-rose-600 bg-rose-50 active:bg-rose-100 rounded-lg text-xs transition-colors'
+            ? 'p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 rounded-lg text-xs transition-colors'
             : 'p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors';
-        delBtn.onclick = () => deleteSale(sale._id);
+            
+        delBtn.dataset.saleId = sale._id || sale.id;
+        delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const saleId = e.currentTarget.dataset.saleId;
+            if (typeof deleteSale === 'function') {
+                deleteSale(saleId);
+            }
+        });
 
         btnGroup.appendChild(editBtn);
         btnGroup.appendChild(delBtn);
         container.appendChild(btnGroup);
     } else {
-        container.innerHTML = `<span class="text-xs text-slate-400 tracking-wide font-medium ${isMobileVariant ? 'bg-slate-100 px-2 py-1 rounded text-[10px]' : 'italic'}">View Only</span>`;
+        const badge = document.createElement('span');
+        badge.className = isMobileVariant 
+            ? 'bg-slate-100 px-2 py-1 rounded text-[10px] text-slate-400 tracking-wide font-medium'
+            : 'text-xs text-slate-400 tracking-wide font-medium italic';
+        badge.textContent = 'View Only';
+        container.appendChild(badge);
     }
 }
+function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo) {
+    if (!tbody) return;
 
-function renderSalesSummary(tbody, departmentTotals, grandSalesTotal, grandProfitTotal, hideSensitiveInfo = false) {
-    // --- 1. DESKTOP VIEWPORT PROCESSING (TABLE ROWS) ---
-    if (tbody) {
-        // Clean up previously appended summary rows
-        const existingSummaries = tbody.querySelectorAll('.summary-row');
-        existingSummaries.forEach(el => el.remove());
+    const summaryTr = document.createElement('tr');
+    summaryTr.className = "bg-slate-100/80 font-bold border-t-2 border-slate-300 text-slate-800 text-sm";
 
-        // Spacer Row across all 9 columns
-        const spacer = tbody.insertRow();
-        spacer.className = "summary-row border-none";
-        spacer.innerHTML = `<td colspan="9" class="h-4 bg-white"></td>`;
+    const profitDisplay = hideSensitiveInfo ? '***' : Math.round(grandProfitTotal).toLocaleString();
+    const profitClass = (grandProfitTotal >= 0) ? 'text-emerald-700' : 'text-rose-700';
 
-        // Departmental Sub-totals Loop
-        for (const [dept, metrics] of Object.entries(departmentTotals)) {
-            const row = tbody.insertRow();
-            row.className = "summary-row bg-slate-100/90 text-slate-800 font-bold border-t border-b border-slate-300";
-            
-            const profitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
+    summaryTr.innerHTML = `
+        <td class="px-6 py-4 text-slate-900 uppercase tracking-wider text-xs">Total Day Sales</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4 font-mono text-xs text-slate-500">${hideSensitiveInfo ? '***' : '--'}</td>
+        <td class="px-6 py-4 font-mono text-indigo-700 text-base">${grandSalesTotal.toLocaleString()}</td>
+        <td class="px-6 py-4 font-mono text-base ${profitClass}">${profitDisplay}</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4">--</td>
+        <td class="px-6 py-4"></td>
+    `;
 
-            row.innerHTML = `
-                <td colspan="4" class="text-right py-3 px-6 text-xs uppercase tracking-wider font-extrabold text-slate-700">${dept} Subtotal:</td>
-                <td class="px-6 py-3 font-mono font-bold text-indigo-700 whitespace-nowrap">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</td>
-                <td class="px-6 py-3 font-mono font-bold text-emerald-700 whitespace-nowrap">${profitDisplay}</td>
-                <td colspan="3"></td>
-            `;
-        }
+    tbody.appendChild(summaryTr);
+}
+function renderUserSalesSummary(userTotalsData, hideSensitiveInfo) {
+    const container = document.getElementById('user-sales-summary-grid');
+    if (!container) return;
 
-        // --- HIGH-CONTRAST GRAND TOTAL ROW ---
-        const grandRow = tbody.insertRow();
-        grandRow.className = "summary-row text-white font-extrabold shadow-md";
-        // Applying inline style to guarantee background priority over parent CSS overrides
-        grandRow.style.backgroundColor = "#1e293b"; // Solid Slate 800
+    container.innerHTML = '';
 
-        const grandProfitDisplay = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
-
-        grandRow.innerHTML = `
-            <td colspan="4" class="text-right py-3.5 px-6 text-xs uppercase tracking-widest font-black text-slate-100" style="color: #f8fafc !important;">GRAND TOTAL:</td>
-            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #818cf8 !important;">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</td>
-            <td class="px-6 py-3.5 text-sm font-mono font-black whitespace-nowrap" style="color: #34d399 !important;">${grandProfitDisplay}</td>
-            <td colspan="3" style="background-color: #1e293b;"></td>
-        `;
+    if (!userTotalsData || userTotalsData.length === 0) {
+        container.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-slate-400 italic">No staff activity logged for this date.</div>`;
+        return;
     }
 
-    // --- 2. MOBILE VIEWPORT PROCESSING ---
-    const summaryContainer = document.getElementById('sales-summary');
-    if (summaryContainer) {
-        const mobileDeptRowsHtml = Object.entries(departmentTotals)
-            .map(([dept, metrics]) => {
-                const profitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(metrics.profit).toLocaleString()}`;
-                return `
-                    <div class="py-2 border-b border-amber-200/60 last:border-0 text-xs space-y-1">
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-700 font-semibold">${dept} Sales</span>
-                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${metrics.sales.toLocaleString()}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-[11px]">
-                            <span class="text-slate-600 font-semibold">${dept} Profit</span>
-                            <span class="font-mono font-bold text-emerald-700">${profitText}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+    userTotalsData.forEach(user => {
+        const username = user._id || 'Unknown Staff';
+        const totalSales = user.totalSales || 0;
+        const totalProfit = user.totalProfit || 0;
+        const itemCount = user.itemCount || 0;
 
-        const totalProfitText = hideSensitiveInfo ? '***' : `${CURRENT_CURRENCY} ${Math.round(grandProfitTotal).toLocaleString()}`;
+        const profitDisplay = hideSensitiveInfo ? '***' : Math.round(totalProfit).toLocaleString();
 
-        summaryContainer.innerHTML = `
-            <div class="space-y-3">
-                <div class="flex items-center gap-2 pb-2 border-b border-amber-200 text-amber-900">
-                    <i class="fa-solid fa-calculator text-base"></i>
-                    <h4 class="font-bold uppercase tracking-wider text-xs">Financial Overview Summary</h4>
+        const card = document.createElement('div');
+        card.className = "p-3 bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col justify-between";
+
+        card.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-xs font-bold text-slate-800"><i class="fas fa-user-circle mr-1.5 text-indigo-500"></i>${username}</span>
+                <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-semibold">${itemCount} items</span>
+            </div>
+            <div class="space-y-1 text-xs">
+                <div class="flex justify-between text-slate-500">
+                    <span>Revenue:</span>
+                    <span class="font-mono font-bold text-slate-900">${totalSales.toLocaleString()}</span>
                 </div>
-                
-                <div class="divide-y divide-amber-200/30">
-                    ${mobileDeptRowsHtml || '<div class="text-xs text-slate-500 italic py-1">No departmental records calculated.</div>'}
-                </div>
-
-                <div class="mt-3 p-3 bg-slate-900 text-white rounded-xl space-y-2 shadow-md">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Sales</span>
-                        <span class="text-base font-mono font-black text-indigo-300">${CURRENT_CURRENCY} ${grandSalesTotal.toLocaleString()}</span>
-                    </div>
-                    <div class="flex justify-between items-center pt-2 border-t border-slate-700">
-                        <span class="text-[10px] uppercase tracking-widest font-black text-slate-200">Grand Total Profit</span>
-                        <span class="text-base font-mono font-black text-emerald-400">${totalProfitText}</span>
-                    </div>
+                <div class="flex justify-between text-slate-500">
+                    <span>Profit:</span>
+                    <span class="font-mono font-semibold ${totalProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${profitDisplay}</span>
                 </div>
             </div>
         `;
-    }
+
+        container.appendChild(card);
+    });
 }
 
 async function createSale(saleData) {
@@ -11282,7 +11496,6 @@ function populateEditCashModal(record) {
     modal.style.display = 'flex';
 }
 // --- Reports Functions ---
-// ==================== 1. GENERATE SALES REPORTS ====================
 async function generateSalesReports() {
     const generateButton = document.getElementById('generate-sales-report-btn');
     let originalButtonHtml = generateButton ? generateButton.innerHTML : '';
@@ -11298,11 +11511,16 @@ async function generateSalesReports() {
 
     const tbody = document.getElementById('sales-department-report-tbody');
     const cardContainer = document.getElementById('sales-department-report-cards');
+    const staffTbody = document.getElementById('sales-staff-report-tbody');
+    const staffCardContainer = document.getElementById('sales-staff-report-cards');
 
     if (!startDate || !endDate) { 
-        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">Select a valid start and end date to generate report.</td></tr>'; 
-        if (cardContainer) cardContainer.innerHTML = '<div class="text-center py-4 text-slate-400 italic text-xs">Select dates above.</div>'; 
-        
+        const emptyMsg = 'Select a valid start and end date to generate report.';
+        if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">${emptyMsg}</td></tr>`; 
+        if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-4 text-slate-400 italic text-xs">${emptyMsg}</div>`; 
+        if (staffTbody) staffTbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 italic">${emptyMsg}</td></tr>`; 
+        if (staffCardContainer) staffCardContainer.innerHTML = `<div class="text-center py-4 text-slate-400 italic text-xs">${emptyMsg}</div>`; 
+
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
         document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
         const marginElem = document.getElementById('overall-margin-reportcard');
@@ -11316,14 +11534,15 @@ async function generateSalesReports() {
     }
 
     if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading department figures...</td></tr>'; 
+    if (staffTbody) staffTbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-indigo-600"><i class="fas fa-spinner fa-spin mr-2"></i>Loading employee figures...</td></tr>'; 
     if (cardContainer) cardContainer.innerHTML = ''; 
+    if (staffCardContainer) staffCardContainer.innerHTML = ''; 
 
     try {
         const queryParams = `hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
         let allSales = [];
         let page = 1, totalPages = 1;
 
-        // Fetch all paginated pages for the date range
         do {
             const resp = await authenticatedFetch(`${API_BASE_URL}/sales?${queryParams}&page=${page}&limit=100`);
             const res = await resp.json();
@@ -11334,55 +11553,44 @@ async function generateSalesReports() {
             } else { break; }
         } while (page <= totalPages);
 
-        const salesReport = {}; // { Dept: { sales: X, profit: Y } }
-        
+        const salesReport = {}; // Department map
+        const staffReport = {}; // Staff map
+
         allSales.forEach(sale => {
-            let dept = (sale.department || 'Other').trim();
-            if (!dept) dept = 'Other';
+            let dept = (sale.department || 'Other').trim() || 'Other';
+            let staff = (sale.recordedBy || sale.createdBy || 'Staff').trim() || 'Staff';
 
-            const rawNumber = String(sale.number || '0').replace(/[^0-9.-]/g, '');
-            const rawSp = String(sale.sp || '0').replace(/[^0-9.-]/g, '');
-            const rawBp = String(sale.bp || '0').replace(/[^0-9.-]/g, '');
-
-            const quantity = Number(rawNumber) || 0;
-            const unitSp = Number(rawSp) || 0;
-            const unitBp = Number(rawBp) || 0;
+            const quantity = Number(String(sale.number || '0').replace(/[^0-9.-]/g, '')) || 0;
+            const unitSp = Number(String(sale.sp || '0').replace(/[^0-9.-]/g, '')) || 0;
+            const unitBp = Number(String(sale.bp || '0').replace(/[^0-9.-]/g, '')) || 0;
 
             const lineTotalSales = quantity * unitSp;
-            
-            let lineTotalProfit = 0;
-            if (typeof sale.profit === 'number') {
-                lineTotalProfit = sale.profit;
-            } else {
-                lineTotalProfit = quantity * (unitSp - unitBp);
-            }
+            let lineTotalProfit = (typeof sale.profit === 'number') ? sale.profit : (quantity * (unitSp - unitBp));
 
-            if (!salesReport[dept]) {
-                salesReport[dept] = { sales: 0, profit: 0 };
-            }
-            
+            // Accumulate Department Data
+            if (!salesReport[dept]) salesReport[dept] = { sales: 0, profit: 0 };
             salesReport[dept].sales += lineTotalSales;
             salesReport[dept].profit += lineTotalProfit;
+
+            // Accumulate Staff Data
+            if (!staffReport[staff]) staffReport[staff] = { sales: 0, profit: 0 };
+            staffReport[staff].sales += lineTotalSales;
+            staffReport[staff].profit += lineTotalProfit;
         });
 
         let totalSalesSum = 0;
         let totalProfitSum = 0;
-        const sortedDepts = Object.keys(salesReport).sort();
 
+        // Render Department Table
+        const sortedDepts = Object.keys(salesReport).sort();
         if (sortedDepts.length === 0) {
             const emptyStateHtml = 'No sales activity recorded for this period.';
             if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
             if (cardContainer) cardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
-            
-            document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
-            document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} 0.00`;
-            const marginElem = document.getElementById('overall-margin-reportcard');
-            if (marginElem) marginElem.textContent = '0.0%';
         } else {
             let tableRowsHTML = [];
             let mobileCardsHTML = [];
 
-            // SINGLE LOOP: Accumulate totals and build HTML
             sortedDepts.forEach(dept => {
                 const sales = salesReport[dept].sales;
                 const profit = salesReport[dept].profit;
@@ -11390,7 +11598,6 @@ async function generateSalesReports() {
                 totalSalesSum += sales;
                 totalProfitSum += profit;
 
-                // Desktop Table Row (Explicit w-1/2, w-1/4, w-1/4 matching headers)
                 tableRowsHTML.push(`
                     <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                         <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800">${dept}</td>
@@ -11399,7 +11606,6 @@ async function generateSalesReports() {
                     </tr>
                 `);
 
-                // Mobile Card View
                 mobileCardsHTML.push(`
                     <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
                         <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 uppercase tracking-wider">${dept}</h4>
@@ -11415,7 +11621,6 @@ async function generateSalesReports() {
                 `);
             });
 
-            // --- HIGH-CONTRAST & PERFECTLY ALIGNED GRAND TOTAL ROW ---
             tableRowsHTML.push(`
                 <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
                     <td class="w-1/2 px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Operational Summary</td>
@@ -11428,22 +11633,56 @@ async function generateSalesReports() {
             if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
         }
 
-        // --- UPDATE KPI CARDS ---
+        // Render Staff Table
+        const sortedStaff = Object.keys(staffReport).sort();
+        if (sortedStaff.length === 0) {
+            const emptyStateHtml = 'No employee sales activity recorded.';
+            if (staffTbody) staffTbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 italic">${emptyStateHtml}</td></tr>`;
+            if (staffCardContainer) staffCardContainer.innerHTML = `<div class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 rounded-xl text-xs">${emptyStateHtml}</div>`;
+        } else {
+            let staffRowsHTML = [];
+            let staffCardsHTML = [];
+
+            sortedStaff.forEach(user => {
+                const sales = staffReport[user].sales;
+                const profit = staffReport[user].profit;
+
+                staffRowsHTML.push(`
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
+                        <td class="w-1/2 px-6 py-3.5 font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="far fa-user text-slate-400"></i> ${user}
+                        </td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-slate-900 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="w-1/4 px-6 py-3.5 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `);
+
+                staffCardsHTML.push(`
+                    <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2">
+                        <h4 class="font-bold text-slate-800 text-xs border-b border-slate-100 pb-1.5 flex items-center gap-2"><i class="far fa-user text-slate-400"></i> ${user}</h4>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">Sales:</span>
+                            <span class="font-mono font-bold text-slate-900">${CURRENT_CURRENCY} ${sales.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500 font-medium">Profit:</span>
+                            <span class="font-mono font-bold text-emerald-600">${CURRENT_CURRENCY} ${profit.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (staffTbody) staffTbody.innerHTML = staffRowsHTML.join('');
+            if (staffCardContainer) staffCardContainer.innerHTML = staffCardsHTML.join('');
+        }
+
+        // Update KPI Cards
         document.getElementById('overall-sales-reportcard').textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('overall-profit-reportcard').textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-        // Calculate and update Profit Margin Percentage
         const profitMargin = totalSalesSum > 0 ? ((totalProfitSum / totalSalesSum) * 100).toFixed(1) : "0.0";
         const marginElem = document.getElementById('overall-margin-reportcard');
-        if (marginElem) {
-            marginElem.textContent = `${profitMargin}%`;
-        }
-
-        // --- UPDATE HIDDEN EXCEL EXPORT TABLE ---
-        const exportSalesElem = document.getElementById('overall-sales-export');
-        const exportProfitElem = document.getElementById('overall-profit-export');
-        if (exportSalesElem) exportSalesElem.textContent = `${CURRENT_CURRENCY} ${totalSalesSum.toFixed(2)}`;
-        if (exportProfitElem) exportProfitElem.textContent = `${CURRENT_CURRENCY} ${totalProfitSum.toFixed(2)}`;
+        if (marginElem) marginElem.textContent = `${profitMargin}%`;
 
     } catch (error) {
         console.error('Sales Report Error:', error);
@@ -12070,26 +12309,31 @@ async function loadOrders() {
         // 3. LOAD ORDERS
 // 1. MUST BE OUTSIDE THE FUNCTION
 async function completeOrder(id) {
-            try {
-               const res = await authenticatedFetch(
-    `${API_BASE_URL}/kitchen/order/${id}/ready`,
-    { method: 'PATCH' }
-);
-if (res.ok) loadOrders();
-fetchActiveAccounts();
-fetchSales(); // Refresh sales data to reflect the completed order
-if (!res) return; // Redirect handled if token missing
-if (!res.ok) {
-    const error = await res.json();
-    console.error("Failed to mark order as ready:", error);
-    return;
-}
+    try {
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/kitchen/order/${id}/ready`,
+            { method: 'PATCH' }
+        );
 
-const data = await res.json();
-            } catch (err) {
-                console.error("Update Error:", err);
-            }
+        if (!res) return; // Redirected if token missing
+
+        if (!res.ok) {
+            const error = await res.json();
+            console.error("Failed to mark order as ready:", error);
+            return;
         }
+
+        const data = await res.json();
+        
+        // Refresh views upon successful response
+        if (typeof loadOrders === 'function') loadOrders();
+        if (typeof fetchActiveAccounts === 'function') fetchActiveAccounts();
+        if (typeof fetchSales === 'function') fetchSales();
+
+    } catch (err) {
+        console.error("Update Error:", err);
+    }
+}
 
 async function markAsPreparing(orderId) {
     try {
@@ -17760,3 +18004,245 @@ function populateEfrisForm(config) {
     document.getElementById('efris-pay-momo').value = config.paymentMappings.momo || '104';
   }
 }
+
+let globalRefundsData = [];
+
+/**
+ * Fetch refunds from backend API
+ */
+async function fetchRefunds(hotelId = null) {
+    try {
+        const activeHotelId = hotelId || localStorage.getItem('hotelId');
+        const params = new URLSearchParams();
+
+        if (activeHotelId && activeHotelId !== 'global') {
+            params.append('hotelId', activeHotelId);
+        }
+
+        const endpoint = `/refunds${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await authenticatedFetch(endpoint);
+
+        if (!response) {
+            console.warn('Unable to fetch refunds: No authentication token active.');
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(`Server returned HTTP status ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            globalRefundsData = data.refunds || [];
+            filterRefundsTable(); // Computes KPIs & filters records
+        } else {
+            console.error('Failed to load refunds:', data.message);
+            showRefundsError(data.message || 'Failed to retrieve refunds.');
+        }
+
+    } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error requesting refunds:', err);
+        showRefundsError('Error loading refunds data.');
+    }
+}
+
+/**
+ * Filter Table & Recalculate KPIs
+ */
+function filterRefundsTable() {
+    const searchInput = document.getElementById('refundSearchInput');
+    const statusSelect = document.getElementById('refundStatusFilter');
+    const methodSelect = document.getElementById('refundMethodFilter');
+    const presetSelect = document.getElementById('refundDatePreset');
+    const startDateInput = document.getElementById('refundStartDate');
+    const endDateInput = document.getElementById('refundEndDate');
+
+    const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const statusVal = statusSelect ? statusSelect.value : 'ALL';
+    const methodVal = methodSelect ? methodSelect.value : 'ALL';
+    const presetVal = presetSelect ? presetSelect.value : 'ALL';
+
+    const dataset = Array.isArray(globalRefundsData) ? globalRefundsData : [];
+
+    // Date range calculations
+    let startDate = null;
+    let endDate = null;
+    const now = new Date();
+
+    if (presetVal === 'TODAY') {
+        startDate = new Date(now.setHours(0, 0, 0, 0));
+        endDate = new Date(now.setHours(23, 59, 59, 999));
+    } else if (presetVal === 'YESTERDAY') {
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        startDate = new Date(yest.setHours(0, 0, 0, 0));
+        endDate = new Date(yest.setHours(23, 59, 59, 999));
+    } else if (presetVal === 'THIS_WEEK') {
+        const day = now.getDay();
+        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+        startDate = new Date(now.setDate(diffToMonday));
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+    } else if (presetVal === 'THIS_MONTH') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (presetVal === 'CUSTOM') {
+        if (startDateInput?.value) startDate = new Date(startDateInput.value);
+        if (endDateInput?.value) {
+            endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999);
+        }
+    }
+
+    const filteredList = dataset.filter(item => {
+        const refundRef = String(item.refundId || item._id || '').toLowerCase();
+        const guestName = String(item.guestName || '').toLowerCase();
+        const bookingRef = String(item.bookingId || '').toLowerCase();
+
+        const matchesSearch = !searchVal || 
+            refundRef.includes(searchVal) || 
+            guestName.includes(searchVal) ||
+            bookingRef.includes(searchVal);
+
+        const itemStatus = item.status || 'Completed';
+        const itemMethod = item.method || '';
+
+        const matchesStatus = (statusVal === 'ALL') || (itemStatus.toLowerCase() === statusVal.toLowerCase());
+        const matchesMethod = (methodVal === 'ALL') || (itemMethod.toLowerCase() === methodVal.toLowerCase());
+
+        let matchesDate = true;
+        if (startDate || endDate) {
+            const itemDate = new Date(item.date);
+            if (startDate && itemDate < startDate) matchesDate = false;
+            if (endDate && itemDate > endDate) matchesDate = false;
+        }
+
+        return matchesSearch && matchesStatus && matchesMethod && matchesDate;
+    });
+
+    updateRefundsKPIs(filteredList);
+    renderRefundsTable(filteredList);
+}
+
+/**
+ * Consolidated KPI Aggregator
+ */
+function updateRefundsKPIs(refunds) {
+    let totalRefunded = 0;
+    let pendingCount = 0;
+    let thisMonthCount = 0;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    refunds.forEach(item => {
+        const amount = Number(item.amount || 0);
+        const status = (item.status || 'completed').toLowerCase();
+        const dateObj = new Date(item.date);
+
+        if (status === 'completed' || status === 'processed') {
+            totalRefunded += amount;
+        }
+
+        if (status === 'pending' || status === 'pending approval') {
+            pendingCount++;
+        }
+
+        if (
+            (status === 'completed' || status === 'processed') &&
+            dateObj.getFullYear() === currentYear &&
+            dateObj.getMonth() === currentMonth
+        ) {
+            thisMonthCount++;
+        }
+    });
+
+    const elTotal = document.getElementById('kpiTotalRefunded');
+    const elPending = document.getElementById('kpiPendingRefunds');
+    const elMonth = document.getElementById('kpiMonthRefunds');
+
+    if (elTotal) elTotal.innerText = `UGX ${totalRefunded.toLocaleString()}`;
+    if (elPending) elPending.innerText = pendingCount.toString();
+    if (elMonth) elMonth.innerText = thisMonthCount.toString();
+}
+
+/**
+ * Render Table Rows with correct property references
+ */
+function renderRefundsTable(refundList = []) {
+    const tbody = document.getElementById('refundsTableBody');
+    const paginationInfo = document.getElementById('refundsPaginationInfo');
+    if (!tbody) return;
+
+    if (!refundList.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-3xl mb-2 block text-slate-300"></i>
+                    No refund transactions matching the current filters.
+                </td>
+            </tr>`;
+        if (paginationInfo) paginationInfo.innerText = 'Showing 0 of 0 entries';
+        return;
+    }
+
+    tbody.innerHTML = refundList.map(item => {
+        const dateObj = new Date(item.date);
+        const formattedDate = isNaN(dateObj) ? 'N/A' : dateObj.toLocaleDateString();
+        const formattedTime = isNaN(dateObj) ? '' : dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const statusClass = (item.status || '').toLowerCase() === 'pending' 
+            ? 'bg-amber-100 text-amber-800' 
+            : 'bg-emerald-100 text-emerald-800';
+
+        return `
+            <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-3 px-4 font-mono font-medium text-slate-900">
+                    ${item.refundId || 'N/A'}
+                    <span class="block text-[10px] text-slate-400 font-sans">
+                        ${formattedDate} ${formattedTime}
+                    </span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="font-semibold text-slate-800 block">${item.guestName || 'Guest'}</span>
+                    <span class="text-[11px] text-slate-500 font-mono">BKG: ${item.bookingId || 'N/A'} (${item.room || 'N/A'})</span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                        <i class="fa-solid fa-wallet text-[10px] text-slate-500"></i> ${item.method || 'N/A'}
+                    </span>
+                </td>
+                <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${item.reason || ''}">
+                    ${item.reason || 'N/A'}
+                </td>
+                <td class="py-3 px-4 font-semibold text-slate-900">
+                    UGX ${Number(item.amount || 0).toLocaleString()}
+                </td>
+                <td class="py-3 px-4 text-slate-600">
+                    <span class="block font-medium">${item.recordedBy || 'System'}</span>
+                    <span class="text-[10px] text-slate-400 uppercase">Authorized</span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}">
+                        ● ${item.status || 'Completed'}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                    <button onclick="viewRefundDetails('${item.refundId}')" class="p-1.5 text-slate-400 hover:text-slate-700 transition-colors" title="View Details">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    if (paginationInfo) {
+        paginationInfo.innerText = `Showing ${refundList.length} of ${refundList.length} entries`;
+    }
+}
+
+
