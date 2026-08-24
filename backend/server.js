@@ -2531,44 +2531,64 @@ const refundSubSchema = new mongoose.Schema({
     refundedAt: { type: Date, default: Date.now }
 }, { _id: true });
 
-// 2. Define Main Schema
-const clientAccountSchema = new mongoose.Schema({
-    hotelId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Hotel', 
-        required: true, 
-        index: true 
-    },
-    guestName: { type: String, required: true, trim: true },
-    roomNumber: { type: String, default: "" },
-    
-    // Array Sub-documents
-    charges: [chargeItemSchema],
-    refunds: [refundSubSchema],
 
-    // Totals & Financial Trackers
+const clientAccountSchema = new mongoose.Schema({
+    hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+    guestName: { type: String, required: true },
+    roomNumber: { type: String, default: "" },
+    charges: [{
+        description: { type: String, required: true },
+        amount: { type: Number, required: true },
+        quantity: { type: Number, default: 1 },
+        number: { type: Number, default: 1 },
+        sp: { type: Number },
+        bp: { type: Number },
+        type: { 
+            type: String,
+            enum: ['Bar', 'Restaurant', 'Other'],
+            required: true
+        },
+        date: { type: Date, default: Date.now }
+    }],
     totalCharges: { type: Number, default: 0 },
     finalAmountPaid: { type: Number, default: 0 },
     
-    // Refund Auditing
-    isRefunded: { type: Boolean, default: false },
-    refundStatus: { 
-        type: String, 
-        enum: ['None', 'Partial', 'Full'], 
-        default: 'None' 
-    },
-    totalRefundedAmount: { type: Number, default: 0 },
-
-    // Audit & Settlement Trackers
+    // Audit reporting trackers
     settledAt: { type: Date },
     settledByMethod: { 
         type: String, 
         enum: [
-            'Pesapal', 'Card', 'Room Charge', 'Mobile Money', 
-            'Cash', 'Bank', 'Stripe', 'Other'
+            'Pesapal', 'Card', 'Visa', 'Visa Card', 'MasterCard', 
+            'Amex', 'Room Charge', 'Mobile Money', 'Cash', 'M-Pesa', 
+            'MTN Momo', 'Airtel Pay', 'Bank', 'Stripe', 'Stripe Card'
         ] 
     },
     isClosed: { type: Boolean, default: false },
+
+    // --- REFUND TRACKING FIELDS ---
+    refundStatus: {
+        type: String,
+        enum: ['UNREFUNDED', 'PARTIALLY_REFUNDED', 'FULLY_REFUNDED'],
+        default: 'UNREFUNDED'
+    },
+    totalRefunded: { type: Number, default: 0 },
+    refunds: [{
+        refundId: { type: String, required: true },
+        amount: { type: Number, required: true },
+        method: { 
+            type: String, 
+            required: true,
+            enum: [
+                'Pesapal', 'Card', 'Visa', 'Visa Card', 'MasterCard', 
+                'Amex', 'Room Charge', 'Mobile Money', 'Cash', 'M-Pesa', 
+                'MTN Momo', 'Airtel Pay', 'Bank', 'Stripe', 'Stripe Card'
+            ]
+        },
+        reason: { type: String, required: true },
+        recordedBy: { type: String, required: true },
+        date: { type: Date, default: Date.now },
+        notes: { type: String }
+    }],
 
     // --- EFRIS FISCALIZATION FIELDS ---
     isFiscalized: { type: Boolean, default: false },
@@ -2577,17 +2597,15 @@ const clientAccountSchema = new mongoose.Schema({
     verificationCode: { type: String, default: null },
     qrCodeData: { type: String, default: null },
     fiscalizedAt: { type: Date, default: null },
-    efrisPayload: { type: mongoose.Schema.Types.Mixed, default: null }
-}, { 
-    timestamps: true 
-});
+    efrisPayload: { type: Object, default: null }
+}, { timestamps: true });
 
-// Compound index for faster audit and reporting lookups
+// Compound index for audit & filtering queries
 clientAccountSchema.index({ hotelId: 1, isClosed: 1, createdAt: -1 });
 
-// Model Export
 const ClientAccount = mongoose.models.ClientAccount || 
     mongoose.model('ClientAccount', clientAccountSchema);
+
 
 
 // Hotel Schema (Holds Tenant EFRIS Configurations)

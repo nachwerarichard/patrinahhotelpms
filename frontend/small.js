@@ -13625,8 +13625,9 @@ function debouncedPaymentsReports() {
     }, 400);
 }
 
+let currentPaymentsCache = [];
+
 async function generatePaymentsReports() {
-    // 1. Gather filters
     const startDate = document.getElementById('payment-report-start-date').value;
     const endDate = document.getElementById('payment-report-end-date').value;
     const search = document.getElementById('payment-report-search').value.trim();
@@ -13642,7 +13643,6 @@ async function generatePaymentsReports() {
     const cardContainer = document.getElementById('payments-report-cards');
     const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
 
-    // Loading State Spinner
     if (tbody) {
         tbody.innerHTML = `
             <tr>
@@ -13658,8 +13658,8 @@ async function generatePaymentsReports() {
         if (!response.ok) throw new Error('Could not retrieve settled accounts.');
 
         const accounts = await response.json();
+        currentPaymentsCache = accounts;
 
-        // Empty state
         if (!accounts || accounts.length === 0) {
             const emptyStateHtml = 'No matching transaction history found for selected metrics.';
             if (tbody) {
@@ -13675,25 +13675,23 @@ async function generatePaymentsReports() {
         }
 
         let grandTotal = 0;
-        let totalRefunded = 0;
+        let totalNetRefunds = 0;
         let departmentSplits = {};
         let tableRowsHTML = [];
         let mobileCardsHTML = [];
 
-        // Loop accounts once cleanly
         accounts.forEach(account => {
             let paidAmount = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
             if (!paidAmount && Array.isArray(account.charges)) {
                 paidAmount = account.charges.reduce((sum, item) => sum + Number(item.amount || item.price || 0), 0);
             }
 
-            const refundedAmount = Number(account.totalRefundedAmount || 0);
+            const refundedAmount = Number(account.totalRefunded || 0);
             const netAmount = paidAmount - refundedAmount;
-
+            
             grandTotal += netAmount;
-            totalRefunded += refundedAmount;
+            totalNetRefunds += refundedAmount;
 
-            // Process Department Breakdowns dynamically
             (account.charges || []).forEach(c => {
                 const chargeAmount = Number(c.amount || c.price || 0);
                 const deptType = (c.type || c.department || 'Other').trim() || 'Other';
@@ -13707,37 +13705,31 @@ async function generatePaymentsReports() {
             const settleDate = account.settledAt ? new Date(account.settledAt).toLocaleString() : 'N/A';
             const roomDisplay = account.roomNumber ? `Room ${account.roomNumber}` : 'Walk-In';
             const methodDisplay = account.settledByMethod || 'Cash';
-            const accType = account.accountType || 'ClientAccount';
 
-            // Method Badge styling
             let badgeStyle = 'bg-slate-100 text-slate-700';
             if (methodDisplay === 'Cash') badgeStyle = 'bg-emerald-100 text-emerald-800';
             if (methodDisplay === 'Card') badgeStyle = 'bg-blue-100 text-blue-800';
             if (methodDisplay === 'MobileMoney') badgeStyle = 'bg-amber-100 text-amber-800';
             if (methodDisplay === 'Room Charge') badgeStyle = 'bg-purple-100 text-purple-800';
 
-            // Refund Status Badge & Action Button
-            let refundBadge = '';
-            let actionBtnHTML = '';
+            // Refund Status Indicator
+            const status = account.refundStatus || 'UNREFUNDED';
+            let actionButtonHTML = '';
 
-            if (account.refundStatus === 'Full') {
-                refundBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-800 block mt-1">Fully Refunded</span>`;
-                actionBtnHTML = `
-                    <button disabled class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-400 cursor-not-allowed">
-                        <i class="fas fa-ban mr-1"></i>Refunded
-                    </button>`;
-            } else if (account.refundStatus === 'Partial') {
-                refundBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 block mt-1">Partially Refunded</span>`;
-                actionBtnHTML = `
-                    <button onclick="openPOSRefundModal('${account._id}', '${accType}', ${paidAmount}, ${refundedAmount}, '${account.guestName || 'Walk-In'}', '${methodDisplay}')" 
-                            class="px-2.5 py-1 text-xs font-semibold rounded bg-amber-500 hover:bg-amber-600 text-white transition-colors">
-                        <i class="fas fa-undo mr-1"></i>Refund Extra
+            if (status === 'FULLY_REFUNDED') {
+                actionButtonHTML = `
+                    <span class="px-2 py-1 text-[10px] font-bold rounded bg-rose-100 text-rose-800 inline-flex items-center gap-1">
+                        <i class="fas fa-ban"></i> Fully Refunded
+                    </span>`;
+            } else if (status === 'PARTIALLY_REFUNDED') {
+                actionButtonHTML = `
+                    <button onclick="openPosRefundModal('${account._id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors shadow-xs inline-flex items-center gap-1">
+                        <i class="fas fa-undo"></i> Partial (${currency} ${refundedAmount.toLocaleString()})
                     </button>`;
             } else {
-                actionBtnHTML = `
-                    <button onclick="openPOSRefundModal('${account._id}', '${accType}', ${paidAmount}, 0, '${account.guestName || 'Walk-In'}', '${methodDisplay}')" 
-                            class="px-2.5 py-1 text-xs font-semibold rounded bg-rose-600 hover:bg-rose-700 text-white transition-colors">
-                        <i class="fas fa-undo mr-1"></i>Issue Refund
+                actionButtonHTML = `
+                    <button onclick="openPosRefundModal('${account._id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-rose-600 text-white transition-colors shadow-xs inline-flex items-center gap-1">
+                        <i class="fas fa-rotate-left"></i> Refund
                     </button>`;
             }
 
@@ -13745,10 +13737,7 @@ async function generatePaymentsReports() {
             tableRowsHTML.push(`
                 <tr class="border-b border-slate-100 hover:bg-slate-50/80 transition-colors">
                     <td class="w-1/6 px-6 py-3.5 whitespace-nowrap text-slate-500">${settleDate}</td>
-                    <td class="w-1/6 px-6 py-3.5 font-semibold text-slate-800">
-                        ${account.guestName || 'Walk-In'}
-                        ${refundBadge}
-                    </td>
+                    <td class="w-1/6 px-6 py-3.5 font-semibold text-slate-800">${account.guestName || 'Walk-In'}</td>
                     <td class="w-1/6 px-6 py-3.5 text-slate-600">${roomDisplay}</td>
                     <td class="w-2/6 px-6 py-3.5 text-slate-500 truncate" title="${itemizedSummary}">${itemizedSummary}</td>
                     <td class="w-1/6 px-6 py-3.5 whitespace-nowrap">
@@ -13756,10 +13745,10 @@ async function generatePaymentsReports() {
                     </td>
                     <td class="w-1/6 px-6 py-3.5 text-right font-mono font-bold text-slate-900">
                         ${currency} ${paidAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        ${refundedAmount > 0 ? `<div class="text-[10px] text-rose-500">(-${currency} ${refundedAmount.toLocaleString()})</div>` : ''}
+                        ${refundedAmount > 0 ? `<div class="text-[10px] text-rose-500 font-normal">- ${currency} ${refundedAmount.toLocaleString()}</div>` : ''}
                     </td>
-                    <td class="px-6 py-3.5 text-center whitespace-nowrap">
-                        ${actionBtnHTML}
+                    <td class="px-6 py-3.5 text-right whitespace-nowrap">
+                        ${actionButtonHTML}
                     </td>
                 </tr>
             `);
@@ -13772,10 +13761,7 @@ async function generatePaymentsReports() {
                             <h4 class="font-bold text-slate-800 text-xs">${account.guestName || 'Walk-In'}</h4>
                             <p class="text-[10px] text-slate-400">${settleDate}</p>
                         </div>
-                        <div class="text-right">
-                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
-                            ${refundBadge}
-                        </div>
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeStyle}">${methodDisplay}</span>
                     </div>
                     <div class="text-xs text-slate-600">
                         <span class="font-semibold text-slate-500">Target:</span> ${roomDisplay}
@@ -13783,54 +13769,31 @@ async function generatePaymentsReports() {
                     <div class="text-xs text-slate-500 truncate" title="${itemizedSummary}">
                         <span class="font-semibold text-slate-500">Items:</span> ${itemizedSummary}
                     </div>
-                    <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-100">
-                        <div>
-                            <span class="text-slate-500 font-medium">Net Amount:</span>
-                            <span class="font-mono font-bold text-slate-900">${currency} ${netAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div>
-                            ${actionBtnHTML}
-                        </div>
+                    <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-100">
+                        <span class="text-slate-500 font-medium">Net Amount:</span>
+                        <span class="font-mono font-bold text-slate-900">${currency} ${netAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="pt-2 text-right">
+                        ${actionButtonHTML}
                     </div>
                 </div>
             `);
         });
 
-        // Add High-Contrast Operational Grand Total Row
+        // Add Operational Grand Total Row
         tableRowsHTML.push(`
             <tr class="font-black border-t-2 border-slate-900 shadow-md" style="background-color: #0f172a !important;">
-                <td colspan="5" class="px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">
-                    Total Settled Revenue Summary ${totalRefunded > 0 ? `(Net of ${currency} ${totalRefunded.toLocaleString()} Refunds)` : ''}
-                </td>
-                <td class="px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #34d399 !important; background-color: #0f172a !important;">
-                    ${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </td>
+                <td colspan="5" class="px-6 py-4 uppercase text-xs tracking-widest" style="color: #f8fafc !important; background-color: #0f172a !important;">Total Settled Revenue Summary (Net of Refunds)</td>
+                <td class="px-6 py-4 text-right font-mono text-sm whitespace-nowrap" style="color: #34d399 !important; background-color: #0f172a !important;">${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 <td style="background-color: #0f172a !important;"></td>
             </tr>
         `);
 
-        // Render Tables & Cards
         if (tbody) tbody.innerHTML = tableRowsHTML.join('');
         if (cardContainer) cardContainer.innerHTML = mobileCardsHTML.join('');
 
-        // Update KPIs
         document.getElementById('overall-sales-card').textContent = `${currency} ${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         document.getElementById('overall-transactions-card').textContent = accounts.length.toString();
-
-        // Update Department Summary table if present
-        const deptTbody = document.getElementById('sales-department-report-tbody');
-        if (deptTbody) {
-            let deptHTML = '';
-            Object.keys(departmentSplits).forEach(dept => {
-                deptHTML += `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                        <td class="px-6 py-3 font-medium text-slate-700">${dept}</td>
-                        <td class="px-6 py-3 text-right font-mono font-bold text-slate-900">${currency} ${departmentSplits[dept].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    </tr>
-                `;
-            });
-            deptTbody.innerHTML = deptHTML;
-        }
 
     } catch (err) {
         console.error("Failed executing payments generation routine:", err);
@@ -13841,105 +13804,114 @@ async function generatePaymentsReports() {
 }
 
 /**
- * Handle POS Interactive Refund Workflow (using SweetAlert2)
+ * Global Handler to Trigger Refund Modal Flow
  */
-async function openPOSRefundModal(accountId, accountType, totalPaid, existingRefunded, guestName, originalMethod) {
-    const maxRefundable = totalPaid - existingRefunded;
-    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+function openPosRefundModal(accountId) {
+    const account = currentPaymentsCache.find(a => String(a._id) === String(accountId));
+    if (!account) return alert('Transaction record not found.');
 
-    const { value: formValues } = await Swal.fire({
-        title: `Issue Refund: ${guestName}`,
-        html: `
-            <div class="text-left space-y-3 text-sm font-sans">
-                <div class="bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <p class="text-xs text-slate-500">Max Refundable: <strong class="text-slate-800">${currency} ${maxRefundable.toLocaleString()}</strong></p>
-                    <p class="text-xs text-slate-500">Original Method: <strong class="text-slate-800">${originalMethod}</strong></p>
-                </div>
+    const currency = typeof CURRENT_CURRENCY !== 'undefined' ? CURRENT_CURRENCY : 'UGX';
+    const originalPaid = Number(account.finalAmountPaid || account.totalAmount || account.totalCharges || 0);
+    const totalRefunded = Number(account.totalRefunded || 0);
+    const maxRefundable = originalPaid - totalRefunded;
+
+    let modal = document.getElementById('pos-refund-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'pos-refund-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fas fa-rotate-left text-rose-500"></i> Process POS Refund
+                </h3>
+                <button onclick="closePosRefundModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="pos-refund-form" onsubmit="submitPosRefund(event, '${account._id}')" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">Refund Amount (${currency})</label>
-                    <input id="swal-refund-amount" type="number" step="0.01" max="${maxRefundable}" value="${maxRefundable}" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 font-mono">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Guest / Transaction</label>
+                    <input type="text" disabled value="${account.guestName || 'Walk-In'} (${account.roomNumber ? 'Room ' + account.roomNumber : 'Walk-In'})" class="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-700">
                 </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Original Paid</label>
+                        <div class="text-xs font-mono font-bold text-slate-800 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">${currency} ${originalPaid.toLocaleString()}</div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Max Refundable</label>
+                        <div class="text-xs font-mono font-bold text-emerald-600 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">${currency} ${maxRefundable.toLocaleString()}</div>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">Refund Method</label>
-                    <select id="swal-refund-method" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500">
-                        <option value="Cash" ${originalMethod === 'Cash' ? 'selected' : ''}>Cash</option>
-                        <option value="Mobile Money" ${originalMethod === 'MobileMoney' ? 'selected' : ''}>Mobile Money</option>
-                        <option value="Card" ${originalMethod === 'Card' ? 'selected' : ''}>Card / Terminal</option>
-                        <option value="Room Charge" ${originalMethod === 'Room Charge' ? 'selected' : ''}>Room Credit Adjustment</option>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Refund Amount (${currency}) *</label>
+                    <input type="number" step="0.01" max="${maxRefundable}" value="${maxRefundable}" id="refund-amount-input" required class="w-full text-xs font-mono font-bold bg-white border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 text-slate-900">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Refund Method *</label>
+                    <select id="refund-method-input" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                        <option value="Cash" ${account.settledByMethod === 'Cash' ? 'selected' : ''}>Cash</option>
+                        <option value="Card" ${account.settledByMethod === 'Card' ? 'selected' : ''}>Card / Terminal</option>
+                        <option value="Mobile Money" ${account.settledByMethod === 'Mobile Money' ? 'selected' : ''}>Mobile Money</option>
                     </select>
                 </div>
+
                 <div>
-                    <label class="block text-xs font-medium text-slate-700 mb-1">Reason for Refund</label>
-                    <textarea id="swal-refund-reason" rows="2" placeholder="e.g. Returned drink item / Order cancellation" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 text-xs"></textarea>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Reason for Refund *</label>
+                    <input type="text" id="refund-reason-input" placeholder="e.g., Wrong item charged / Customer returned item" required class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 text-slate-900">
                 </div>
-            </div>
-        `,
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-check mr-1"></i> Process Refund',
-        confirmButtonColor: '#dc2626',
-        preConfirm: () => {
-            const amount = parseFloat(document.getElementById('swal-refund-amount').value);
-            const method = document.getElementById('swal-refund-method').value;
-            const reason = document.getElementById('swal-refund-reason').value.trim();
 
-            if (isNaN(amount) || amount <= 0) {
-                Swal.showValidationMessage('Enter a valid refund amount.');
-                return false;
-            }
-            if (amount > maxRefundable) {
-                Swal.showValidationMessage(`Amount exceeds maximum allowable limit of ${currency} ${maxRefundable.toLocaleString()}`);
-                return false;
-            }
-            if (!reason) {
-                Swal.showValidationMessage('Please provide a reason for audit tracking.');
-                return false;
-            }
-            return { amount, method, reason };
-        }
-    });
-
-    if (formValues) {
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/pos/payments/refund`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    accountId,
-                    accountType,
-                    amount: formValues.amount,
-                    method: formValues.method,
-                    reason: formValues.reason
-                })
-            });
-
-            const resData = await response.json();
-
-            if (!response.ok) {
-                throw new Error(resData.message || 'Refund request rejected.');
-            }
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Refund Processed',
-                text: `${currency} ${formValues.amount.toLocaleString()} successfully credited.`,
-                timer: 2000,
-                showConfirmButton: false
-            });
-
-            // Refresh table automatically
-            generatePaymentsReports();
-
-        } catch (err) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Refund Failed',
-                text: err.message
-            });
-        }
-    }
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closePosRefundModal()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Cancel</button>
+                    <button type="submit" id="submit-refund-btn" class="px-4 py-2 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white shadow-xs">Confirm & Issue Refund</button>
+                </div>
+            </form>
+        </div>`;
+    modal.classList.remove('hidden');
 }
 
+function closePosRefundModal() {
+    const modal = document.getElementById('pos-refund-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitPosRefund(event, accountId) {
+    event.preventDefault();
+    const btn = document.getElementById('submit-refund-btn');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> Processing...`;
+
+    const amount = parseFloat(document.getElementById('refund-amount-input').value);
+    const method = document.getElementById('refund-method-input').value;
+    const reason = document.getElementById('refund-reason-input').value.trim();
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/pos/client/accounts/${accountId}/refund`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, method, reason })
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Refund failed');
+
+        closePosRefundModal();
+        await generatePaymentsReports(); // Refresh interface with updated state
+
+    } catch (err) {
+        alert(`Error executing refund: ${err.message}`);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Issue Refund';
+    }
+}
 // In-memory cache for ultra-fast UI filtering without re-fetching
 let cachedActiveAccounts = [];
 
