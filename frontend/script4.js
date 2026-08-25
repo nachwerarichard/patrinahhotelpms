@@ -18543,3 +18543,8 @@ async function fetchDepartmentReceivables(rangeOverride) {
 document.addEventListener('DOMContentLoaded', () => {
     fetchDepartmentReceivables('today');
 });
+
+// Expose functions globally for inline onclick handlers
+window.editBooking = editBooking;
+window.viewBooking = viewBooking;
+window.closeBookingModal = closeBookingModal;

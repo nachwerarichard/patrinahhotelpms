@@ -1482,7 +1482,131 @@ ${booking.amountPaid > 0 ? `
         }
     }
 }
+// --- CENTRAL HELPER FUNCTIONS FOR MODAL DISPLAY ---
+function showBookingModal(title = 'Booking Details', options = {}) {
+    const modal = document.getElementById('bookingModal');
+    const form = document.getElementById('bookingForm');
+    const modalTitle = document.getElementById('modalTitle');
+    const saveBtn = document.getElementById('saveBookingBtn');
 
+    if (!modal) {
+        console.error("Booking modal element '#bookingModal' not found.");
+        return null;
+    }
+
+    // 1. Show modal overlay properly
+    modal.classList.remove('hidden');
+
+    // 2. Reset form display if previously hidden directly
+    if (form) {
+        form.style.display = '';
+    }
+
+    // 3. Set Modal Title
+    if (modalTitle) modalTitle.textContent = title;
+
+    // 4. Configure input fields (read-only vs editable)
+    const isReadOnly = options.readOnly || false;
+    const inputs = modal.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        // Exclude system fields if necessary
+        input.disabled = isReadOnly;
+        input.readOnly = isReadOnly;
+        
+        if (isReadOnly) {
+            input.classList.add('bg-slate-100', 'cursor-not-allowed');
+        } else {
+            input.classList.remove('bg-slate-100', 'cursor-not-allowed');
+        }
+    });
+
+    // 5. Configure Save Button
+    if (saveBtn) {
+        if (options.showSave === false) {
+            saveBtn.classList.add('hidden');
+        } else {
+            saveBtn.classList.remove('hidden');
+            saveBtn.disabled = false;
+            if (options.saveText) {
+                saveBtn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg> ${options.saveText}`;
+            }
+        }
+    }
+
+    return modal;
+}
+// --- UPDATED EDIT BOOKING FUNCTION ---
+async function editBooking(id) {
+    if (!id) {
+        console.error("Booking ID is required for editing.");
+        return;
+    }
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${id}`, { method: 'GET' });
+        if (!response || !response.ok) {
+            throw new Error(`HTTP error! status: ${response?.status || 'Network failure'}`);
+        }
+
+        const booking = await response.json();
+        if (!booking || Object.keys(booking).length === 0) {
+            showMessage('Error', 'Booking not found for editing.', true);
+            return;
+        }
+
+        // Show and configure modal for Edit mode FIRST
+        showBookingModal('Edit Guest Details', { readOnly: false, showSave: true, saveText: 'Update Booking' });
+
+        // Populate Form Fields
+        setVal('bookingId', booking.id || booking._id);
+        setVal('name', booking.name);
+        setVal('occupation', booking.occupation);
+        setVal('nationality', booking.nationality);
+        setVal('nationalIdNo', booking.nationalIdNo);
+        setVal('address', booking.address);
+        setVal('phoneNo', booking.phoneNo);
+        setVal('guestEmail', booking.guestEmail);
+
+        setVal('room', booking.room);
+        setVal('checkIn', booking.checkIn);
+        setVal('checkIntime', booking.checkIntime);
+        setVal('checkOut', booking.checkOut);
+        setVal('checkOuttime', booking.checkOuttime);
+        setVal('nights', booking.nights || 0);
+        setVal('people', booking.people || 1);
+        setVal('extraperson', booking.extraperson);
+
+        setVal('amtPerNight', booking.amtPerNight || 0);
+        setVal('totalDue', booking.totalDue || 0);
+        setVal('amountPaid', booking.amountPaid || 0);
+        setVal('balance', booking.balance || 0);
+
+        setVal('paymentStatus', booking.paymentStatus || 'Pending');
+        setVal('paymentMethod', booking.paymentMethod || 'Cash');
+        setVal('guestsource', booking.guestsource || 'Walk in');
+        setVal('gueststatus', booking.gueststatus || 'confirmed');
+        setVal('transactionid', booking.transactionid);
+
+        setVal('vehno', booking.vehno);
+        setVal('destination', booking.destination);
+        setVal('kin', booking.kin);
+        setVal('kintel', booking.kintel);
+        setVal('purpose', booking.purpose);
+        setVal('declarations', booking.declarations);
+
+        // Async Room Dropdown population (wrapped safely)
+        if (typeof populateRoomDropdown === 'function') {
+            await populateRoomDropdown(booking.room).catch(e => console.error("Dropdown error:", e));
+        }
+
+    } catch (error) {
+        console.error('Error fetching booking for edit:', error);
+        showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
+    }
+}
 async function viewBooking(id) {
     try {
         const response = await authenticatedFetch(
@@ -18440,3 +18564,8 @@ async function fetchDepartmentReceivables(rangeOverride) {
 document.addEventListener('DOMContentLoaded', () => {
     fetchDepartmentReceivables('today');
 });
+
+// Expose functions globally for inline onclick handlers
+window.editBooking = editBooking;
+window.viewBooking = viewBooking;
+window.closeBookingModal = closeBookingModal;
