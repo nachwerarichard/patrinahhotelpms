@@ -1482,6 +1482,88 @@ ${booking.amountPaid > 0 ? `
         }
     }
 }
+
+async function viewBooking(id) {
+    try {
+        const response = await authenticatedFetch(
+    `${API_BASE_URL}/booking/id/${id}`,
+    { method: 'GET' }
+);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const booking = await response.json();
+
+        if (!booking) {
+            showMessage('Error', 'Booking not found.', true);
+            return;
+        }
+
+        // 1. Update Modal Title
+        document.getElementById('modalTitle').textContent = 'Booking Details';
+
+       // 2. Populate Fields
+// --- Primary IDs and Guest Info ---
+document.getElementById('bookingId').value = booking.id || '';
+document.getElementById('name').value = booking.name || '';
+document.getElementById('occupation').value = booking.occupation || '';
+document.getElementById('nationality').value = booking.nationality || '';
+document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
+document.getElementById('address').value = booking.address || '';
+document.getElementById('phoneNo').value = booking.phoneNo || '';
+document.getElementById('guestEmail').value = booking.guestEmail || '';
+
+// --- Room & Stay Details ---
+document.getElementById('room').value = booking.room || '';
+document.getElementById('checkIn').value = booking.checkIn || '';
+document.getElementById('checkIntime').value = booking.checkIntime || '';
+document.getElementById('checkOut').value = booking.checkOut || '';
+document.getElementById('checkOuttime').value = booking.checkOuttime || '';
+document.getElementById('nights').value = booking.nights || 0;
+document.getElementById('people').value = booking.people || 1;
+document.getElementById('extraperson').value = booking.extraperson || '';
+
+// --- Financials ---
+document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
+document.getElementById('totalDue').value = booking.totalDue || 0;
+document.getElementById('amountPaid').value = booking.amountPaid || 0;
+document.getElementById('balance').value = booking.balance || 0;
+
+// --- Status & Methods ---
+document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
+document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
+document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
+document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
+document.getElementById('transactionid').value = booking.transactionid || '';
+
+// --- Logistics & Extras ---
+document.getElementById('vehno').value = booking.vehno || '';
+document.getElementById('destination').value = booking.destination || '';
+document.getElementById('kin').value = booking.kin || '';
+document.getElementById('kintel').value = booking.kintel || '';
+document.getElementById('purpose').value = booking.purpose || '';
+document.getElementById('declarations').value = booking.declarations || '';
+        // 3. Populate Room (Async)
+        await populateRoomDropdown(booking.room);
+
+        // 4. DISABLE ALL INPUTS
+        // This targets all inputs, selects, and textareas inside the modal
+        const formElements = bookingModal.querySelectorAll('input, select, textarea');
+        formElements.forEach(el => {
+            el.disabled = true; 
+            el.style.backgroundColor = '#f9f9f9'; // Optional: make it look "read-only"
+        });
+
+        // 5. Hide the 'Save/Submit' button if it exists
+        const saveBtn = document.getElementById('saveBookingBtn'); 
+        if (saveBtn) saveBtn.style.display = 'none';
+
+// Change this line at the bottom of viewBooking and editBooking:
+bookingModal.classList.remove('hidden');
+bookingModal.classList.add('flex');
+    } catch (error) {
+        console.error('Error fetching booking:', error);
+        showMessage('Error', `Failed to load details: ${error.message}`, true);
+    }
+}
 // 1. Trigger function attached to the UI button
 // 1. Asynchronous Fetcher with Parallel API Requests
 // 1. Asynchronous Fetcher with Parallel API Requests
@@ -1875,87 +1957,7 @@ const generateInvoiceFromAccount = (booking, incidentalCharges = []) => {
     }, 150);
 };
 
-async function viewBooking(id) {
-    try {
-        const response = await authenticatedFetch(
-    `${API_BASE_URL}/booking/id/${id}`,
-    { method: 'GET' }
-);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const booking = await response.json();
 
-        if (!booking) {
-            showMessage('Error', 'Booking not found.', true);
-            return;
-        }
-
-        // 1. Update Modal Title
-        document.getElementById('modalTitle').textContent = 'Booking Details';
-
-       // 2. Populate Fields
-// --- Primary IDs and Guest Info ---
-document.getElementById('bookingId').value = booking.id || '';
-document.getElementById('name').value = booking.name || '';
-document.getElementById('occupation').value = booking.occupation || '';
-document.getElementById('nationality').value = booking.nationality || '';
-document.getElementById('nationalIdNo').value = booking.nationalIdNo || '';
-document.getElementById('address').value = booking.address || '';
-document.getElementById('phoneNo').value = booking.phoneNo || '';
-document.getElementById('guestEmail').value = booking.guestEmail || '';
-
-// --- Room & Stay Details ---
-document.getElementById('room').value = booking.room || '';
-document.getElementById('checkIn').value = booking.checkIn || '';
-document.getElementById('checkIntime').value = booking.checkIntime || '';
-document.getElementById('checkOut').value = booking.checkOut || '';
-document.getElementById('checkOuttime').value = booking.checkOuttime || '';
-document.getElementById('nights').value = booking.nights || 0;
-document.getElementById('people').value = booking.people || 1;
-document.getElementById('extraperson').value = booking.extraperson || '';
-
-// --- Financials ---
-document.getElementById('amtPerNight').value = booking.amtPerNight || 0;
-document.getElementById('totalDue').value = booking.totalDue || 0;
-document.getElementById('amountPaid').value = booking.amountPaid || 0;
-document.getElementById('balance').value = booking.balance || 0;
-
-// --- Status & Methods ---
-document.getElementById('paymentStatus').value = booking.paymentStatus || 'Pending';
-document.getElementById('paymentMethod').value = booking.paymentMethod || 'Cash';
-document.getElementById('guestsource').value = booking.guestsource || 'Walk in';
-document.getElementById('gueststatus').value = booking.gueststatus || 'confirmed';
-document.getElementById('transactionid').value = booking.transactionid || '';
-
-// --- Logistics & Extras ---
-document.getElementById('vehno').value = booking.vehno || '';
-document.getElementById('destination').value = booking.destination || '';
-document.getElementById('kin').value = booking.kin || '';
-document.getElementById('kintel').value = booking.kintel || '';
-document.getElementById('purpose').value = booking.purpose || '';
-document.getElementById('declarations').value = booking.declarations || '';
-        // 3. Populate Room (Async)
-        await populateRoomDropdown(booking.room);
-
-        // 4. DISABLE ALL INPUTS
-        // This targets all inputs, selects, and textareas inside the modal
-        const formElements = bookingModal.querySelectorAll('input, select, textarea');
-        formElements.forEach(el => {
-            el.disabled = true; 
-            el.style.backgroundColor = '#f9f9f9'; // Optional: make it look "read-only"
-        });
-
-        // 5. Hide the 'Save/Submit' button if it exists
-        const saveBtn = document.getElementById('saveBookingBtn'); 
-        if (saveBtn) saveBtn.style.display = 'none';
-
-// Change this line at the bottom of viewBooking and editBooking:
-bookingModal.classList.remove('hidden');
-bookingModal.classList.add('flex');
-    } catch (error) {
-        console.error('Error fetching booking:', error);
-        showMessage('Error', `Failed to load details: ${error.message}`, true);
-    }
-}
 
 
 async function updateBookingStats() {
@@ -2591,112 +2593,7 @@ bookingForm.addEventListener('submit', async function(event) {
  * @param {string} id - The custom ID of the booking to edit.
  */
 
-async function editBooking(id) {
-    if (!id) {
-        console.error("Booking ID is required for editing.");
-        return;
-    }
 
-    try {
-        // 1. Fetch booking data using authenticatedFetch
-        const response = await authenticatedFetch(`${API_BASE_URL}/bookings/id/${id}`, {
-            method: 'GET'
-        });
-
-        if (!response || !response.ok) {
-            throw new Error(`HTTP error! status: ${response?.status || 'Network failure'}`);
-        }
-
-        const booking = await response.json();
-
-        if (!booking || Object.keys(booking).length === 0) {
-            showMessage('Error', 'Booking not found for editing.', true);
-            return;
-        }
-
-        // Helper function for safe DOM updates
-        const setVal = (elementId, val) => {
-            const el = document.getElementById(elementId);
-            if (el) el.value = val !== undefined && val !== null ? val : '';
-        };
-
-        const bookingModal = document.getElementById('bookingModal');
-        if (bookingModal) {
-            // Enable inputs (in case they were disabled by viewBooking)
-            const inputs = bookingModal.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                input.removeAttribute('readonly');
-                input.disabled = false;
-                input.style.backgroundColor = '';
-            });
-        }
-
-        const modalTitle = document.getElementById('modalTitle');
-        if (modalTitle) modalTitle.textContent = 'Edit Guest Details';
-
-        // --- Populate Guest Details ---
-        setVal('bookingId', booking.id || booking._id);
-        setVal('name', booking.name);
-        setVal('occupation', booking.occupation);
-        setVal('nationality', booking.nationality);
-        setVal('nationalIdNo', booking.nationalIdNo);
-        setVal('address', booking.address);
-        setVal('phoneNo', booking.phoneNo);
-        setVal('guestEmail', booking.guestEmail);
-
-        // --- Room & Stay Details ---
-        if (typeof populateRoomDropdown === 'function') {
-            await populateRoomDropdown(booking.room);
-        }
-        setVal('room', booking.room);
-        setVal('checkIn', booking.checkIn);
-        setVal('checkIntime', booking.checkIntime);
-        setVal('checkOut', booking.checkOut);
-        setVal('checkOuttime', booking.checkOuttime);
-        setVal('nights', booking.nights || 0);
-        setVal('people', booking.people || 1);
-        setVal('extraperson', booking.extraperson);
-
-        // --- Financials ---
-        setVal('amtPerNight', booking.amtPerNight || 0);
-        setVal('totalDue', booking.totalDue || 0);
-        setVal('amountPaid', booking.amountPaid || 0);
-        setVal('balance', booking.balance || 0);
-
-        // --- Status & Methods ---
-        setVal('paymentStatus', booking.paymentStatus || 'Pending');
-        setVal('paymentMethod', booking.paymentMethod || 'Cash');
-        setVal('guestsource', booking.guestsource || 'Walk in');
-        setVal('gueststatus', booking.gueststatus || 'confirmed');
-        setVal('transactionid', booking.transactionid);
-
-        // --- Logistics & Extras ---
-        setVal('vehno', booking.vehno);
-        setVal('destination', booking.destination);
-        setVal('kin', booking.kin);
-        setVal('kintel', booking.kintel);
-        setVal('purpose', booking.purpose);
-        setVal('declarations', booking.declarations);
-
-        // --- Action Buttons ---
-        const saveBtn = document.getElementById('saveBookingBtn');
-        if (saveBtn) {
-            saveBtn.style.display = 'flex';
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Update Booking';
-        }
-
-        // Display Modal
-        if (bookingModal) {
-            bookingModal.classList.remove('hidden');
-            bookingModal.classList.add('flex');
-        }
-
-    } catch (error) {
-        console.error('Error fetching booking for edit:', error);
-        showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
-    }
-}
 
 /**
  * Initiates the deletion process by opening the reason modal.
