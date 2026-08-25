@@ -1496,21 +1496,34 @@ function showBookingModal(title = 'Booking Details', options = {}) {
 
     // 1. Unhide the outer modal container
     modal.classList.remove('hidden');
+    modal.style.display = ''; 
 
-    // 2. Unhide the form and form body wrappers explicitly
+    // 2. Unhide form and restore all direct container wrappers
     if (form) {
         form.classList.remove('hidden');
-        form.style.display = ''; // Reset any inline display overrides
-        
-        // Remove 'hidden' from any nested sections/fieldsets inside the form
-        const hiddenSections = form.querySelectorAll('.hidden');
-        hiddenSections.forEach(section => section.classList.remove('hidden'));
+        form.style.display = '';
+
+        // Unhide all children divs/fieldsets inside the form
+        const allChildren = form.querySelectorAll('*');
+        allChildren.forEach(child => {
+            child.classList.remove('hidden');
+            if (child.style.display === 'none') {
+                child.style.display = '';
+            }
+        });
     }
 
-    // 3. Set Modal Title
+    // 3. Unhide any dedicated modal-body container outside the form if present
+    const modalBody = modal.querySelector('.modal-body') || modal.querySelector('[data-modal-body]');
+    if (modalBody) {
+        modalBody.classList.remove('hidden');
+        modalBody.style.display = '';
+    }
+
+    // 4. Set Modal Title
     if (modalTitle) modalTitle.textContent = title;
 
-    // 4. Configure input fields (read-only vs editable)
+    // 5. Configure input fields (read-only vs editable)
     const isReadOnly = options.readOnly || false;
     const inputs = modal.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
@@ -1524,7 +1537,7 @@ function showBookingModal(title = 'Booking Details', options = {}) {
         }
     });
 
-    // 5. Configure Save Button
+    // 6. Configure Save Button
     if (saveBtn) {
         if (options.showSave === false) {
             saveBtn.classList.add('hidden');
