@@ -5227,14 +5227,12 @@ Manage payment providers used for guest payments.            </p>
       </div>
 
       <div>
-  <label class="text-xs font-semibold text-gray-600 block mb-1">Payment Channel / Route</label>
+  <label class="text-xs font-semibold text-gray-600 block mb-1">Payment Method</label>
   <select id="payMethod" onchange="toggleDigitalPaymentFields(this.value)" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none">
     <option value="">Select method</option>
     <option value="Cash">Cash (Manual Reconciliation)</option>
     <option value="MTN Momo">Pesapal: Mobile Money (MTN / Airtel)</option>
     <option value="Airtel Pay">Pesapal: Card / International Transfers</option>
-    <!-- New Option Added Below -->
-    <option value="Stripe">Stripe (Card / Global Wallets)</option>
   </select>
       </div>
 

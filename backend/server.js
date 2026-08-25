@@ -990,19 +990,26 @@ app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
         const newAmountPaid = alreadyPaid + paymentAmount;
         const newBalance = totalDue - newAmountPaid;
 
-        booking.amountPaid = newAmountPaid;
-        booking.balance = newBalance;
-        booking.paymentMethod = method;
-
+        let paymentStatus = 'Pending';
         if (newBalance === 0) {
-            booking.paymentStatus = 'Paid';
+            paymentStatus = 'Paid';
         } else if (newAmountPaid > 0) {
-            booking.paymentStatus = 'Partially Paid';
-        } else {
-            booking.paymentStatus = 'Pending';
+            paymentStatus = 'Partially Paid';
         }
 
-        await booking.save();
+        // 🚀 Atomic update bypasses document-level schema validation on pre-existing legacy refunds
+        const updatedBooking = await Booking.findOneAndUpdate(
+            { id, hotelId: req.user.hotelId },
+            {
+                $set: {
+                    amountPaid: newAmountPaid,
+                    balance: newBalance,
+                    paymentMethod: method, // Overrides previous payment method directly
+                    paymentStatus: paymentStatus
+                }
+            },
+            { new: true, runValidators: false } // Bypasses legacy enum validation
+        );
 
         // ✅ Proper Audit Log Call
         await addAuditLog(
@@ -1021,7 +1028,7 @@ app.post('/api/bookings/:id/add-payment', auth, async (req, res) => {
             message: 'Payment added successfully',
             newAmountPaid,
             newBalance,
-            paymentStatus: booking.paymentStatus
+            paymentStatus: updatedBooking.paymentStatus
         });
 
     } catch (error) {
