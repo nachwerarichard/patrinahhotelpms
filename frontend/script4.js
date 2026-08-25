@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-refunds', 'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -6057,18 +6057,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
     const navKDS = document.getElementById('nav-kds');
-
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
-      const navCash = document.getElementById('nav-cash');
+    const navCash = document.getElementById('nav-cash');
+    const navReceivable= document.getElementById('nav-receivable');
     const navRefunds = document.getElementById('nav-refunds');
-      const navInventory = document.getElementById('nav-inventory');
-        const navExpense = document.getElementById('nav-expenses');
-                const navReceivables = document.getElementById('nav-receivables');
+    const navRefundReports = document.getElementById('nav-refundreports');
+    const navInventory = document.getElementById('nav-inventory');
+    const navExpense = document.getElementById('nav-expenses');
+        const navReceivables = document.getElementById('nav-receivables');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
             const navChannelManager = document.getElementById('nav-channelmanager');
@@ -6078,10 +6079,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const navRoominventory = document.getElementById('nav-roominventory');
 
         const navExpReport = document.getElementById('nav-expensereport');
-if (navReceivables) {
+       if (navReceivables) {
             navReceivables.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('receivables');
+            });
+        }
+
+        if (navReceivable) {
+            navReceivable.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('receivable');
             });
         }
          if (navKitch) {
@@ -6137,6 +6145,13 @@ if (navPayments) {
         navRefunds.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('refunds');
+        });
+    }
+
+     if (navRefundReports) {
+        navRefundReports.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('refundreports');
         });
     }
 
@@ -18371,4 +18386,160 @@ function renderRefundsTable(refundList = []) {
     }
 }
 
+let refundSearchTimeout = null;
+let currentRefundData = [];
 
+// Date Range Presets Helper
+function handleRefundPresetChange(preset) {
+    const startInput = document.getElementById('refund-start-date');
+    const endInput = document.getElementById('refund-end-date');
+    const now = new Date();
+
+    let start = new Date();
+    let end = new Date();
+
+    if (preset === 'today') {
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+    } else if (preset === 'yesterday') {
+        start.setDate(now.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end.setDate(now.getDate() - 1);
+        end.setHours(23, 59, 59, 999);
+    } else if (preset === 'this_week') {
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+        start = new Date(now.setDate(diff));
+        start.setHours(0, 0, 0, 0);
+        end = new Date();
+    } else if (preset === 'this_month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date();
+    } else if (preset === 'custom') {
+        return;
+    }
+
+    startInput.value = start.toISOString().split('T')[0];
+    endInput.value = end.toISOString().split('T')[0];
+}
+
+// Fetch Consolidated Refunds
+async function fetchConsolidatedRefunds() {
+    const btn = document.getElementById('fetch-refunds-btn');
+    const spinner = document.getElementById('refund-spinner');
+    const tbody = document.getElementById('consolidated-refunds-tbody');
+
+    const startDate = document.getElementById('refund-start-date').value;
+    const endDate = document.getElementById('refund-end-date').value;
+    const source = document.getElementById('refund-source-filter').value;
+    const method = document.getElementById('refund-method-filter').value;
+    const search = document.getElementById('refund-search-input').value.trim();
+
+    // UI Loading State
+    btn.disabled = true;
+    spinner.classList.remove('hidden');
+
+    try {
+        const queryParams = new URLSearchParams({
+            ...(startDate && { startDate: new Date(startDate).toISOString() }),
+            ...(endDate && { endDate: new Date(`${endDate}T23:59:59`).toISOString() }),
+            source,
+            method,
+            search
+        });
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/reports/refunds?${queryParams.toString()}`);
+        const result = await response.json();
+
+        if (!response.ok || !result.success) throw new Error(result.message || 'Failed to fetch refunds');
+
+        currentRefundData = result.data;
+
+        // Render KPIs
+        document.getElementById('kpi-total-amount').textContent = `UGX ${result.summary.totalRefundsAmount.toLocaleString()}`;
+        document.getElementById('kpi-total-count').textContent = result.summary.totalRefundsCount;
+        document.getElementById('kpi-fo-count').textContent = result.summary.frontOfficeCount;
+        document.getElementById('kpi-pos-count').textContent = result.summary.posCount;
+
+        // Render Table Rows
+        if (result.data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">No matching refund records found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = result.data.map(item => `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-3 px-4 font-mono text-slate-600">${new Date(item.date).toLocaleString()}</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${item.source === 'Front Office' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}">
+                        ${item.source}
+                    </span>
+                </td>
+                <td class="py-3 px-4 font-medium text-slate-900">${item.guestName} <span class="text-slate-400 text-xs">(${item.referenceId})</span></td>
+                <td class="py-3 px-4 text-slate-600">${item.roomNumber || 'N/A'}</td>
+                <td class="py-3 px-4 font-medium text-slate-700">${item.method}</td>
+                <td class="py-3 px-4 text-slate-600 truncate max-w-xs" title="${item.reason}">${item.reason}</td>
+                <td class="py-3 px-4 text-slate-600">${item.recordedBy}</td>
+                <td class="py-3 px-4 text-right font-bold text-red-600">- UGX ${item.amount.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-medium">${err.message}</td></tr>`;
+    } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+    }
+}
+
+// Debounced Search Handler
+function debounceRefundSearch() {
+    clearTimeout(refundSearchTimeout);
+    refundSearchTimeout = setTimeout(() => {
+        fetchConsolidatedRefunds();
+    }, 400);
+}
+
+// Initialize Defaults on Load
+document.addEventListener('DOMContentLoaded', () => {
+    handleRefundPresetChange('today');
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchRefunds();
+});
+
+async function fetchDepartmentReceivables(rangeOverride) {
+    const range = rangeOverride || document.getElementById('receivable-range-selector').value || 'today';
+    const spinner = document.getElementById('rec-spinner');
+
+    if (spinner) spinner.classList.remove('hidden', 'fa-spin'), spinner.classList.add('fa-spin');
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/reports/receivables?range=${range}`);
+        const result = await response.json();
+
+        if (!response.ok || !result.success) throw new Error(result.message || 'Failed to fetch receivables');
+
+        const { grandTotalReceivables, byDepartment } = result.summary;
+
+        // Render Values
+        document.getElementById('rec-grand-total').textContent = `UGX ${grandTotalReceivables.toLocaleString()}`;
+        document.getElementById('rec-fo-total').textContent = `UGX ${byDepartment.frontOffice.total.toLocaleString()}`;
+        document.getElementById('rec-fo-count').textContent = `${byDepartment.frontOffice.count} Active Bookings`;
+
+        document.getElementById('rec-restaurant-total').textContent = `UGX ${byDepartment.restaurant.total.toLocaleString()}`;
+        document.getElementById('rec-bar-total').textContent = `UGX ${byDepartment.bar.total.toLocaleString()}`;
+        document.getElementById('rec-other-total').textContent = `UGX ${byDepartment.otherPos.total.toLocaleString()}`;
+
+    } catch (err) {
+        console.error('Receivables Fetch Error:', err);
+    } finally {
+        if (spinner) spinner.classList.remove('fa-spin'), spinner.classList.add('hidden');
+    }
+}
+
+// Auto-run on load
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDepartmentReceivables('today');
+});
