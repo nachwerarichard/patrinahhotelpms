@@ -3835,6 +3835,131 @@ app.get('/api/pos/search/in-house', auth, async (req, res) => {
         res.status(500).json({ message: 'Error during search' });
     }
 });
+
+app.get('/api/reports/receivables', auth, async (req, res) => {
+    try {
+        const hotelId = new mongoose.Types.ObjectId(req.user.hotelId);
+        const { range = 'today' } = req.query;
+
+        // Determine Date Boundary based on range
+        const now = new Date();
+        let startDate = new Date();
+        let endDate = new Date();
+
+        if (range === 'today') {
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+        } else if (range === 'yesterday') {
+            startDate.setDate(now.getDate() - 1);
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setDate(now.getDate() - 1);
+            endDate.setHours(23, 59, 59, 999);
+        } else if (range === 'this_week') {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+            startDate = new Date(now.setDate(diff));
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date();
+        } else if (range === 'this_month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date();
+        }
+
+        // 1. Front Office Receivables (Bookings with balance > 0 within date range)
+        const foResult = await Booking.aggregate([
+            {
+                $match: {
+                    hotelId,
+                    balance: { $gt: 0 },
+                    createdAt: { $gte: startDate, $lte: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalReceivables: { $sum: '$balance' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const frontOfficeTotal = foResult[0]?.totalReceivables || 0;
+        const frontOfficeCount = foResult[0]?.count || 0;
+
+        // 2. POS Receivables (Unclosed accounts with unpaid balance grouped by charge type)
+        const posResult = await ClientAccount.aggregate([
+            {
+                $match: {
+                    hotelId,
+                    isClosed: false,
+                    createdAt: { $gte: startDate, $lte: endDate }
+                }
+            },
+            { $unwind: '$charges' },
+            {
+                $project: {
+                    type: '$charges.type',
+                    // Calculate item portion of charge vs payment shortfall ratio
+                    itemChargeAmount: { $multiply: ['$charges.amount', '$charges.quantity'] },
+                    accountTotalCharges: '$totalCharges',
+                    accountPaid: '$finalAmountPaid'
+                }
+            },
+            {
+                $group: {
+                    _id: '$type', // 'Bar', 'Restaurant', 'Other'
+                    totalCharges: { $sum: '$itemChargeAmount' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Unclosed POS Account aggregate totals
+        const posAccounts = await ClientAccount.find({
+            hotelId,
+            isClosed: false,
+            createdAt: { $gte: startDate, $lte: endDate }
+        }).select('totalCharges finalAmountPaid charges');
+
+        let barTotal = 0, restaurantTotal = 0, otherPosTotal = 0;
+
+        posAccounts.forEach(account => {
+            const unpaidBalance = account.totalCharges - account.finalAmountPaid;
+            if (unpaidBalance > 0 && account.totalCharges > 0) {
+                account.charges.forEach(charge => {
+                    const lineTotal = charge.amount * (charge.quantity || 1);
+                    const lineRatio = lineTotal / account.totalCharges;
+                    const allocatedUnpaid = lineRatio * unpaidBalance;
+
+                    if (charge.type === 'Bar') barTotal += allocatedUnpaid;
+                    else if (charge.type === 'Restaurant') restaurantTotal += allocatedUnpaid;
+                    else otherPosTotal += allocatedUnpaid;
+                });
+            }
+        });
+
+        const grandTotalReceivables = frontOfficeTotal + barTotal + restaurantTotal + otherPosTotal;
+
+        res.status(200).json({
+            success: true,
+            range,
+            summary: {
+                grandTotalReceivables,
+                byDepartment: {
+                    frontOffice: { total: frontOfficeTotal, count: frontOfficeCount },
+                    restaurant: { total: restaurantTotal },
+                    bar: { total: barTotal },
+                    otherPos: { total: otherPosTotal }
+                }
+            }
+        });
+
+    } catch (err) {
+        console.error("Receivables Summary Error:", err);
+        res.status(500).json({ success: false, message: 'Failed to compute department receivables.' });
+    }
+});
+
 app.get('/api/reports/services', auth, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;

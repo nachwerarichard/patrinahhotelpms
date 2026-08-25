@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -6057,19 +6057,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
     const navKDS = document.getElementById('nav-kds');
-
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
-      const navCash = document.getElementById('nav-cash');
+    const navCash = document.getElementById('nav-cash');
+    const navReceivable= document.getElementById('nav-receivable');
     const navRefunds = document.getElementById('nav-refunds');
     const navRefundReports = document.getElementById('nav-refundreports');
-      const navInventory = document.getElementById('nav-inventory');
-        const navExpense = document.getElementById('nav-expenses');
-                const navReceivables = document.getElementById('nav-receivables');
+    const navInventory = document.getElementById('nav-inventory');
+    const navExpense = document.getElementById('nav-expenses');
+        const navReceivables = document.getElementById('nav-receivables');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
             const navChannelManager = document.getElementById('nav-channelmanager');
@@ -6079,10 +6079,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const navRoominventory = document.getElementById('nav-roominventory');
 
         const navExpReport = document.getElementById('nav-expensereport');
-if (navReceivables) {
+       if (navReceivables) {
             navReceivables.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('receivables');
+            });
+        }
+
+        if (navReceivable) {
+            navReceivable.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('receivable');
             });
         }
          if (navKitch) {
@@ -18496,4 +18503,39 @@ function debounceRefundSearch() {
 // Initialize Defaults on Load
 document.addEventListener('DOMContentLoaded', () => {
     handleRefundPresetChange('today');
+});
+
+async function fetchDepartmentReceivables(rangeOverride) {
+    const range = rangeOverride || document.getElementById('receivable-range-selector').value || 'today';
+    const spinner = document.getElementById('rec-spinner');
+
+    if (spinner) spinner.classList.remove('hidden', 'fa-spin'), spinner.classList.add('fa-spin');
+
+    try {
+        const response = await authenticatedFetch(`${API_BASE_URL}/reports/receivables?range=${range}`);
+        const result = await response.json();
+
+        if (!response.ok || !result.success) throw new Error(result.message || 'Failed to fetch receivables');
+
+        const { grandTotalReceivables, byDepartment } = result.summary;
+
+        // Render Values
+        document.getElementById('rec-grand-total').textContent = `UGX ${grandTotalReceivables.toLocaleString()}`;
+        document.getElementById('rec-fo-total').textContent = `UGX ${byDepartment.frontOffice.total.toLocaleString()}`;
+        document.getElementById('rec-fo-count').textContent = `${byDepartment.frontOffice.count} Active Bookings`;
+
+        document.getElementById('rec-restaurant-total').textContent = `UGX ${byDepartment.restaurant.total.toLocaleString()}`;
+        document.getElementById('rec-bar-total').textContent = `UGX ${byDepartment.bar.total.toLocaleString()}`;
+        document.getElementById('rec-other-total').textContent = `UGX ${byDepartment.otherPos.total.toLocaleString()}`;
+
+    } catch (err) {
+        console.error('Receivables Fetch Error:', err);
+    } finally {
+        if (spinner) spinner.classList.remove('fa-spin'), spinner.classList.add('hidden');
+    }
+}
+
+// Auto-run on load
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDepartmentReceivables('today');
 });
