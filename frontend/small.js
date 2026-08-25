@@ -1538,6 +1538,28 @@ function showBookingModal(title = 'Booking Details', options = {}) {
 
     return modal;
 }
+/**
+ * Safely sets the value of a DOM element by ID or name attribute.
+ * Handles input, select, textarea, checkboxes, and date formatting.
+ */
+function setVal(elementId, value) {
+    const el = document.getElementById(elementId) || document.querySelector(`[name="${elementId}"]`);
+    if (!el) {
+        // Suppress warning if optional fields like transactionid don't exist in DOM
+        return; 
+    }
+
+    const val = (value === null || value === undefined) ? '' : value;
+
+    if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = Boolean(val);
+    } else if (el.type === 'date' && val) {
+        // Format ISO date strings (YYYY-MM-DDTHH:mm:ss.sssZ) to YYYY-MM-DD
+        el.value = typeof val === 'string' ? val.split('T')[0] : val;
+    } else {
+        el.value = val;
+    }
+}
 // --- UPDATED EDIT BOOKING FUNCTION ---
 async function editBooking(id) {
     if (!id) {
@@ -1557,10 +1579,15 @@ async function editBooking(id) {
             return;
         }
 
-        // Show and configure modal for Edit mode FIRST
+        // Show and configure modal FIRST
         showBookingModal('Edit Guest Details', { readOnly: false, showSave: true, saveText: 'Update Booking' });
 
-        // Populate Form Fields
+        // Populate async room dropdown BEFORE setting room value
+        if (typeof populateRoomDropdown === 'function') {
+            await populateRoomDropdown(booking.room).catch(e => console.error("Dropdown error:", e));
+        }
+
+        // Populate Form Fields safely
         setVal('bookingId', booking.id || booking._id);
         setVal('name', booking.name);
         setVal('occupation', booking.occupation);
@@ -1597,16 +1624,12 @@ async function editBooking(id) {
         setVal('purpose', booking.purpose);
         setVal('declarations', booking.declarations);
 
-        // Async Room Dropdown population (wrapped safely)
-        if (typeof populateRoomDropdown === 'function') {
-            await populateRoomDropdown(booking.room).catch(e => console.error("Dropdown error:", e));
-        }
-
     } catch (error) {
         console.error('Error fetching booking for edit:', error);
         showMessage('Error', `Failed to load booking for editing: ${error.message}`, true);
     }
 }
+
 async function viewBooking(id) {
     try {
         const response = await authenticatedFetch(
