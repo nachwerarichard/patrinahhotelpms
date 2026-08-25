@@ -18505,6 +18505,10 @@ document.addEventListener('DOMContentLoaded', () => {
     handleRefundPresetChange('today');
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+    fetchRefunds();
+});
+
 async function fetchDepartmentReceivables(rangeOverride) {
     const range = rangeOverride || document.getElementById('receivable-range-selector').value || 'today';
     const spinner = document.getElementById('rec-spinner');
