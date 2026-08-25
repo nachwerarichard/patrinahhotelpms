@@ -1482,7 +1482,7 @@ ${booking.amountPaid > 0 ? `
         }
     }
 }
-// --- CENTRAL HELPER FUNCTIONS FOR MODAL DISPLAY ---
+
 function showBookingModal(title = 'Booking Details', options = {}) {
     const modal = document.getElementById('bookingModal');
     const form = document.getElementById('bookingForm');
@@ -1494,12 +1494,17 @@ function showBookingModal(title = 'Booking Details', options = {}) {
         return null;
     }
 
-    // 1. Show modal overlay properly
+    // 1. Unhide the outer modal container
     modal.classList.remove('hidden');
 
-    // 2. Reset form display if previously hidden directly
+    // 2. Unhide the form and form body wrappers explicitly
     if (form) {
-        form.style.display = '';
+        form.classList.remove('hidden');
+        form.style.display = ''; // Reset any inline display overrides
+        
+        // Remove 'hidden' from any nested sections/fieldsets inside the form
+        const hiddenSections = form.querySelectorAll('.hidden');
+        hiddenSections.forEach(section => section.classList.remove('hidden'));
     }
 
     // 3. Set Modal Title
@@ -1509,7 +1514,6 @@ function showBookingModal(title = 'Booking Details', options = {}) {
     const isReadOnly = options.readOnly || false;
     const inputs = modal.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
-        // Exclude system fields if necessary
         input.disabled = isReadOnly;
         input.readOnly = isReadOnly;
         
