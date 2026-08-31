@@ -11117,7 +11117,8 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
 
         const hotelObjectId = new mongoose.Types.ObjectId(rawHotelId);
 
-        // 1. Build Date Filters for BSON Dates (createdAt) and String Dates (checkIn)
+        // 1. Build Date Range Filters
+        let dateQueryFilter = {};
         let createdAtFilter = {};
         let checkInFilter = {};
 
@@ -11128,7 +11129,10 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
 
+            // BSON Date range (for Expense.date and Sale/Booking createdAt)
+            dateQueryFilter = { $gte: start, $lte: end };
             createdAtFilter = { $gte: start, $lte: end };
+            // String date range (for Booking.checkIn)
             checkInFilter = { $gte: startDate, $lte: endDate };
         }
 
@@ -11173,12 +11177,17 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             ? Math.max(0, roomRevenueAgg[0].totalRevenue - roomRevenueAgg[0].totalRefunds)
             : 0;
 
-        // Common filter for Sale and Expense using createdAt
-        const commonDateFilter = (startDate && endDate) ? { createdAt: createdAtFilter } : {};
+        // 3. Aggregate F&B Sales (Matches date or createdAt)
+        const saleMatchFilter = { hotelId: hotelObjectId };
+        if (startDate && endDate) {
+            saleMatchFilter.$or = [
+                { date: dateQueryFilter },
+                { createdAt: createdAtFilter }
+            ];
+        }
 
-        // 3. Aggregate F&B Sales (Bar, Restaurant, Kitchen)
         const salesAgg = await Sale.aggregate([
-            { $match: { hotelId: hotelObjectId, ...commonDateFilter } },
+            { $match: saleMatchFilter },
             {
                 $group: {
                     _id: "$department",
@@ -11188,9 +11197,17 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         ]);
 
-        // 4. Aggregate Expenses by Department
+        // 4. Aggregate Expenses (Matches date or createdAt on Expense model)
+        const expenseMatchFilter = { hotelId: hotelObjectId };
+        if (startDate && endDate) {
+            expenseMatchFilter.$or = [
+                { date: dateQueryFilter },
+                { createdAt: createdAtFilter }
+            ];
+        }
+
         const expenseAgg = await Expense.aggregate([
-            { $match: { hotelId: hotelObjectId, ...commonDateFilter } },
+            { $match: expenseMatchFilter },
             {
                 $group: {
                     _id: "$department",
@@ -11199,7 +11216,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         ]);
 
-        // 5. Structure into USALI standard departmental accounts
+        // 5. Structure into standard departmental accounts
         const deptMap = {};
         const ensureDept = (deptName) => {
             if (!deptMap[deptName]) {
@@ -11207,21 +11224,28 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         };
 
-        // Seed Front Office
-        ensureDept('Front Office');
+        // Explicitly seed all departments defined in ExpenseSchema enum
+        const standardDepartments = ['Front Office', 'Bar', 'Restaurant', 'Housekeeping', 'Maintenance', 'Other'];
+        standardDepartments.forEach(dept => ensureDept(dept));
+
+        // Assign Front Office Room Revenue
         deptMap['Front Office'].revenue = netRoomRevenue;
 
         // Populate Sales data
         salesAgg.forEach(item => {
-            ensureDept(item._id);
-            deptMap[item._id].revenue += item.revenue;
-            deptMap[item._id].cogs += item.cogs;
+            if (item._id) {
+                ensureDept(item._id);
+                deptMap[item._id].revenue += item.revenue;
+                deptMap[item._id].cogs += item.cogs;
+            }
         });
 
         // Populate Expense data
         expenseAgg.forEach(item => {
-            ensureDept(item._id);
-            deptMap[item._id].expenses += item.totalExpense;
+            if (item._id) {
+                ensureDept(item._id);
+                deptMap[item._id].expenses += item.totalExpense;
+            }
         });
 
         return res.status(200).json({
