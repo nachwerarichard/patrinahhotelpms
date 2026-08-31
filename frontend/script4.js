@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -6133,6 +6133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const navReceivables = document.getElementById('nav-receivables');
         const navPayments = document.getElementById('nav-payments');
       const navSale = document.getElementById('nav-sales');
+      const navProfit = document.getElementById('nav-netprofit');
             const navChannelManager = document.getElementById('nav-channelmanager');
       const navPOSreport = document.getElementById('nav-posreports');
         const navBarReport = document.getElementById('nav-salereport');
@@ -6251,6 +6252,13 @@ if (navPayments) {
         navSale.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
             showSection('sale');
+        });
+    }
+
+    if (navProfit) {
+        navProfit.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior
+            showSection('profit');
         });
     }
      if (navPaymentGateway) {
@@ -18609,3 +18617,109 @@ document.addEventListener('DOMContentLoaded', () => {
 window.editBooking = editBooking;
 window.viewBooking = viewBooking;
 window.closeBookingModal = closeBookingModal;
+
+/**
+ * Main Function: Fetch P&L data and render USALI Table & Cards
+ */
+async function generateProfitReport() {
+    const startDate = document.getElementById('profit-report-start-date').value;
+    const endDate = document.getElementById('profit-report-end-date').value;
+
+    try {
+        const queryParams = new URLSearchParams();
+        if (startDate) queryParams.append('startDate', startDate);
+        if (endDate) queryParams.append('endDate', endDate);
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/reports/profit-loss?${queryParams.toString()}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.message || 'Failed to generate profit statement.');
+            return;
+        }
+
+        renderProfitStatement(data.departments);
+
+    } catch (err) {
+        console.error('Profit Report Error:', err);
+    }
+}
+
+/**
+ * Render P&L Data into Table and Summary Cards
+ */
+function renderProfitStatement(deptData) {
+    const tbody = document.getElementById('profit-statement-tbody');
+    tbody.innerHTML = '';
+
+    let grandRevenue = 0;
+    let grandCogs = 0;
+    let grandExpenses = 0;
+
+    // Render Operated Revenue Departments first, then Undistributed Overhead Depts
+    Object.keys(deptData).forEach(dept => {
+        const info = deptData[dept];
+        const netProfit = info.revenue - info.cogs - info.expenses;
+        const margin = info.revenue > 0 ? ((netProfit / info.revenue) * 100) : 0;
+
+        grandRevenue += info.revenue;
+        grandCogs += info.cogs;
+        grandExpenses += info.expenses;
+
+        const isNegative = netProfit < 0;
+        const marginBadgeClass = isNegative 
+            ? 'bg-rose-100 text-rose-800' 
+            : 'bg-emerald-100 text-emerald-800';
+
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-50 transition-colors';
+        row.innerHTML = `
+            <td class="px-5 py-3 font-semibold text-slate-800">${dept}</td>
+            <td class="px-4 py-3 text-right font-mono">${info.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="px-4 py-3 text-right font-mono text-amber-700">${info.cogs.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="px-4 py-3 text-right font-mono text-rose-600">${info.expenses.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="px-4 py-3 text-right font-mono font-bold ${isNegative ? 'text-rose-600' : 'text-emerald-600'}">
+                ${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+            </td>
+            <td class="px-4 py-3 text-right font-mono">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${marginBadgeClass}">
+                    ${margin.toFixed(1)}%
+                </span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Compute Overall GOP
+    const grandGOP = grandRevenue - grandCogs - grandExpenses;
+    const overallMargin = grandRevenue > 0 ? ((grandGOP / grandRevenue) * 100) : 0;
+
+    // Update KPI Ribbon
+    document.getElementById('kpi-total-revenue').textContent = `UGX ${grandRevenue.toLocaleString()}`;
+    document.getElementById('kpi-total-cogs').textContent = `UGX ${grandCogs.toLocaleString()}`;
+    document.getElementById('kpi-total-expenses').textContent = `UGX ${grandExpenses.toLocaleString()}`;
+    document.getElementById('kpi-gop-amount').textContent = `UGX ${grandGOP.toLocaleString()}`;
+    document.getElementById('kpi-gop-margin').textContent = `${overallMargin.toFixed(1)}%`;
+
+    // Update Table Footer
+    document.getElementById('foot-total-revenue').textContent = grandRevenue.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('foot-total-cogs').textContent = grandCogs.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('foot-total-expenses').textContent = grandExpenses.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('foot-net-gop').textContent = grandGOP.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('foot-gop-margin').textContent = `${overallMargin.toFixed(1)}%`;
+}
+
+/**
+ * Export P&L Table to Excel
+ */
+function exportProfitStatementToExcel() {
+    const table = document.getElementById('profit-statement-table');
+    const html = table.outerHTML;
+    const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Profit_Loss_Statement_${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}

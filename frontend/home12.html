@@ -368,8 +368,9 @@
                 </button>
                 <ul id="financials-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-expenses"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expenses</a></li>
-                    <li id="nav-salereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Sales & Profit Reports</a></li>
-                    <li id="nav-expensereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expense Breakdown Reports</a></li>
+                    <li id="nav-salereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Sales Reports</a></li>
+                    <li id="nav-expensereport"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Expense Reports</a></li>
+                    <li id="nav-netprofit"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Net Profit Reports</a></li>
                     <li id="nav-refundreports"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Refund Reports</a></li>
                     <li id="nav-receivable"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Receivables</a></li>
                     <li id="nav-cash"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
@@ -3583,6 +3584,143 @@
     </table>
 
 </section>
+<section id="profit" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-200 pb-5">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                <h2 class="text-xl font-bold text-slate-900 tracking-tight">Departmental Profit & Loss Statement (USALI)</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Gross Operating Profit (GOP), revenue streams, direct cost of sales, and overhead allocations</p>
+        </div>
+        
+        <!-- Action Toolbar -->
+        <div class="flex items-center gap-2">
+            <button onclick="exportProfitStatementToExcel()" class="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-slate-400">
+                <i class="fas fa-file-excel text-emerald-400"></i> Export Excel
+            </button>
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition-all">
+                <i class="fas fa-print text-slate-500"></i> Print Statement
+            </button>
+        </div>
+    </div>
+
+    <!-- Enterprise Filter Toolbar -->
+    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+            
+            <div class="md:col-span-4 flex flex-col">
+                <label for="profit-report-start-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar text-slate-400"></i> Period Start
+                </label>
+                <input type="date" id="profit-report-start-date" onchange="generateProfitReport()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex flex-col">
+                <label for="profit-report-end-date" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <i class="far fa-calendar-check text-slate-400"></i> Period End
+                </label>
+                <input type="date" id="profit-report-end-date" onchange="generateProfitReport()" class="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <div class="md:col-span-4 flex items-center gap-2">
+                <button id="generate-profit-report-btn" onclick="generateProfitReport()" class="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i> Calculate P&L
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Financial KPI Summary Ribbon -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        
+        <!-- Total Revenue Card -->
+        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+                <span class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs"><i class="fas fa-coins"></i></span>
+            </div>
+            <div class="text-xl font-black font-mono text-emerald-600" id="kpi-total-revenue">UGX 0.00</div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Rooms, F&B, and POS total</p>
+        </div> 
+
+        <!-- Total Direct Cost of Sales -->
+        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Direct Cost (COGS)</span>
+                <span class="p-2 bg-amber-50 text-amber-600 rounded-lg text-xs"><i class="fas fa-boxes-packing"></i></span>
+            </div>
+            <div class="text-xl font-black font-mono text-amber-600" id="kpi-total-cogs">UGX 0.00</div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Inventory purchase costs (BP)</p>
+        </div> 
+
+        <!-- Operating Expenses Card -->
+        <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Operating Expenses</span>
+                <span class="p-2 bg-rose-50 text-rose-600 rounded-lg text-xs"><i class="fas fa-receipt"></i></span>
+            </div>
+            <div class="text-xl font-black font-mono text-rose-600" id="kpi-total-expenses">UGX 0.00</div>
+            <p class="text-[11px] text-slate-400 mt-1 font-medium">Dept expenses & admin overheads</p>
+        </div> 
+
+        <!-- Gross Operating Profit (GOP) -->
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-xs flex flex-col justify-between text-white">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Gross Operating Profit</span>
+                <span class="p-2 bg-slate-800 text-indigo-400 rounded-lg text-xs"><i class="fas fa-chart-pie"></i></span>
+            </div>
+            <div class="text-xl font-black font-mono text-indigo-300" id="kpi-gop-amount">UGX 0.00</div>
+            <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1">
+                <span>GOP Margin:</span>
+                <span id="kpi-gop-margin" class="font-bold text-emerald-400">0.0%</span>
+            </div>
+        </div> 
+
+    </div>
+
+    <!-- Departmental Breakdown Table -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+        <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                <i class="fas fa-table text-slate-400"></i> P&L Summary Statement
+            </h3>
+            <span class="text-[11px] text-slate-500 font-medium">All figures in UGX</span>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table id="profit-statement-table" class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100/70 text-[11px] font-bold text-slate-600 uppercase border-b border-slate-200">
+                        <th class="px-5 py-3">Department / Cost Center</th>
+                        <th class="px-4 py-3 text-right">Gross Revenue</th>
+                        <th class="px-4 py-3 text-right">Direct Cost (COGS)</th>
+                        <th class="px-4 py-3 text-right">Op Expenses</th>
+                        <th class="px-4 py-3 text-right">Net Profit / Contribution</th>
+                        <th class="px-4 py-3 text-right">Margin (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="profit-statement-tbody" class="divide-y divide-slate-200 text-xs font-medium text-slate-700 bg-white">
+                    <!-- Dynamic USALI Data Rows populated here -->
+                </tbody>
+                <tfoot>
+                    <tr class="bg-slate-900 text-white font-bold text-xs border-t-2 border-slate-900">
+                        <td class="px-5 py-3.5 uppercase tracking-wider">Overall Net GOP</td>
+                        <td class="px-4 py-3.5 text-right font-mono" id="foot-total-revenue">0.00</td>
+                        <td class="px-4 py-3.5 text-right font-mono" id="foot-total-cogs">0.00</td>
+                        <td class="px-4 py-3.5 text-right font-mono" id="foot-total-expenses">0.00</td>
+                        <td class="px-4 py-3.5 text-right font-mono text-emerald-300" id="foot-net-gop">0.00</td>
+                        <td class="px-4 py-3.5 text-right font-mono text-emerald-400" id="foot-gop-margin">0.0%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</section>
  
 <section id="posreport" class="section bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
     <!-- Section Header -->
@@ -5227,14 +5365,12 @@ Manage payment providers used for guest payments.            </p>
       </div>
 
       <div>
-  <label class="text-xs font-semibold text-gray-600 block mb-1">Payment Channel / Route</label>
+  <label class="text-xs font-semibold text-gray-600 block mb-1">Payment Method</label>
   <select id="payMethod" onchange="toggleDigitalPaymentFields(this.value)" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none">
     <option value="">Select method</option>
     <option value="Cash">Cash (Manual Reconciliation)</option>
     <option value="MTN Momo">Pesapal: Mobile Money (MTN / Airtel)</option>
     <option value="Airtel Pay">Pesapal: Card / International Transfers</option>
-    <!-- New Option Added Below -->
-    <option value="Stripe">Stripe (Card / Global Wallets)</option>
   </select>
       </div>
 
