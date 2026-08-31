@@ -11109,44 +11109,57 @@ app.post('api/sync-imports', auth, async (req, res) => {
 app.get('/api/reports/profit-loss', auth, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const hotelId = req.headers['x-hotel-id'] || req.user?.hotelId;
+        const rawHotelId = req.headers['x-hotel-id'] || req.user?.hotelId;
 
-        if (!hotelId) {
+        if (!rawHotelId) {
             return res.status(400).json({ success: false, message: "Hotel ID is missing." });
         }
 
-        // 1. Build Date Filters
-        const dateFilter = {};
-        if (startDate || endDate) {
-            dateFilter.date = {};
-            if (startDate) dateFilter.date.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                dateFilter.date.$lte = end;
-            }
+        const hotelObjectId = new mongoose.Types.ObjectId(rawHotelId);
+
+        // 1. Build Date Filters for BSON Dates (createdAt) and String Dates (checkIn)
+        let createdAtFilter = {};
+        let checkInFilter = {};
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            createdAtFilter = { $gte: start, $lte: end };
+            checkInFilter = { $gte: startDate, $lte: endDate };
         }
 
         // 2. Aggregate Room Revenues (Front Office / Rooms Dept)
-        const roomBookingFilter = { hotelId, ...dateFilter };
-        // Exclude cancelled/void bookings
-        roomBookingFilter.gueststatus = { $nin: ['cancelled', 'void'] };
+        const roomBookingFilter = {
+            hotelId: hotelObjectId,
+            gueststatus: { $nin: ['cancelled', 'void'] }
+        };
+
+        if (startDate && endDate) {
+            roomBookingFilter.$or = [
+                { createdAt: createdAtFilter },
+                { checkIn: checkInFilter }
+            ];
+        }
 
         const roomRevenueAgg = await Booking.aggregate([
             { $match: roomBookingFilter },
             {
                 $group: {
                     _id: null,
-                    totalRevenue: { $sum: "$amountPaid" },
+                    totalRevenue: { $sum: { $ifNull: ["$amountPaid", 0] } },
                     totalRefunds: {
                         $sum: {
                             $reduce: {
-                                input: "$refunds",
+                                input: { $ifNull: ["$refunds", []] },
                                 initialValue: 0,
                                 in: {
                                     $add: [
                                         "$$value",
-                                        { $cond: [{ $eq: ["$$this.status", "Completed"] }, "$$this.amount", 0] }
+                                        { $cond: [{ $eq: ["$$this.status", "Completed"] }, { $ifNull: ["$$this.amount", 0] }, 0] }
                                     ]
                                 }
                             }
@@ -11157,12 +11170,15 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
         ]);
 
         const netRoomRevenue = roomRevenueAgg.length > 0 
-            ? (roomRevenueAgg[0].totalRevenue - roomRevenueAgg[0].totalRefunds) 
+            ? Math.max(0, roomRevenueAgg[0].totalRevenue - roomRevenueAgg[0].totalRefunds)
             : 0;
+
+        // Common filter for Sale and Expense using createdAt
+        const commonDateFilter = (startDate && endDate) ? { createdAt: createdAtFilter } : {};
 
         // 3. Aggregate F&B Sales (Bar, Restaurant, Kitchen)
         const salesAgg = await Sale.aggregate([
-            { $match: { hotelId: new mongoose.Types.ObjectId(hotelId), ...dateFilter } },
+            { $match: { hotelId: hotelObjectId, ...commonDateFilter } },
             {
                 $group: {
                     _id: "$department",
@@ -11174,7 +11190,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
 
         // 4. Aggregate Expenses by Department
         const expenseAgg = await Expense.aggregate([
-            { $match: { hotelId: new mongoose.Types.ObjectId(hotelId), ...dateFilter } },
+            { $match: { hotelId: hotelObjectId, ...commonDateFilter } },
             {
                 $group: {
                     _id: "$department",
@@ -11191,7 +11207,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         };
 
-        // Seed Rooms Department
+        // Seed Front Office
         ensureDept('Front Office');
         deptMap['Front Office'].revenue = netRoomRevenue;
 
