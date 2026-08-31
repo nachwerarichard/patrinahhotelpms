@@ -11106,7 +11106,119 @@ app.post('api/sync-imports', auth, async (req, res) => {
 });
 
 
+app.get('/api/reports/profit-loss', auth, async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const hotelId = req.headers['x-hotel-id'] || req.user?.hotelId;
 
+        if (!hotelId) {
+            return res.status(400).json({ success: false, message: "Hotel ID is missing." });
+        }
+
+        // 1. Build Date Filters
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.date = {};
+            if (startDate) dateFilter.date.$gte = new Date(startDate);
+            if (endDate) {
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                dateFilter.date.$lte = end;
+            }
+        }
+
+        // 2. Aggregate Room Revenues (Front Office / Rooms Dept)
+        const roomBookingFilter = { hotelId, ...dateFilter };
+        // Exclude cancelled/void bookings
+        roomBookingFilter.gueststatus = { $nin: ['cancelled', 'void'] };
+
+        const roomRevenueAgg = await Booking.aggregate([
+            { $match: roomBookingFilter },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: "$amountPaid" },
+                    totalRefunds: {
+                        $sum: {
+                            $reduce: {
+                                input: "$refunds",
+                                initialValue: 0,
+                                in: {
+                                    $add: [
+                                        "$$value",
+                                        { $cond: [{ $eq: ["$$this.status", "Completed"] }, "$$this.amount", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const netRoomRevenue = roomRevenueAgg.length > 0 
+            ? (roomRevenueAgg[0].totalRevenue - roomRevenueAgg[0].totalRefunds) 
+            : 0;
+
+        // 3. Aggregate F&B Sales (Bar, Restaurant, Kitchen)
+        const salesAgg = await Sale.aggregate([
+            { $match: { hotelId: new mongoose.Types.ObjectId(hotelId), ...dateFilter } },
+            {
+                $group: {
+                    _id: "$department",
+                    revenue: { $sum: { $multiply: ["$sp", "$number"] } },
+                    cogs: { $sum: { $multiply: ["$bp", "$number"] } }
+                }
+            }
+        ]);
+
+        // 4. Aggregate Expenses by Department
+        const expenseAgg = await Expense.aggregate([
+            { $match: { hotelId: new mongoose.Types.ObjectId(hotelId), ...dateFilter } },
+            {
+                $group: {
+                    _id: "$department",
+                    totalExpense: { $sum: "$amount" }
+                }
+            }
+        ]);
+
+        // 5. Structure into USALI standard departmental accounts
+        const deptMap = {};
+        const ensureDept = (deptName) => {
+            if (!deptMap[deptName]) {
+                deptMap[deptName] = { revenue: 0, cogs: 0, expenses: 0 };
+            }
+        };
+
+        // Seed Rooms Department
+        ensureDept('Front Office');
+        deptMap['Front Office'].revenue = netRoomRevenue;
+
+        // Populate Sales data
+        salesAgg.forEach(item => {
+            ensureDept(item._id);
+            deptMap[item._id].revenue += item.revenue;
+            deptMap[item._id].cogs += item.cogs;
+        });
+
+        // Populate Expense data
+        expenseAgg.forEach(item => {
+            ensureDept(item._id);
+            deptMap[item._id].expenses += item.totalExpense;
+        });
+
+        return res.status(200).json({
+            success: true,
+            period: { startDate, endDate },
+            departments: deptMap
+        });
+
+    } catch (error) {
+        console.error("P&L Calculation Error:", error);
+        return res.status(500).json({ success: false, message: "Error calculating profit report." });
+    }
+});
 
 
 
