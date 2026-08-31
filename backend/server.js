@@ -11129,10 +11129,8 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
 
-            // BSON Date range (for Expense.date and Sale/Booking createdAt)
             dateQueryFilter = { $gte: start, $lte: end };
             createdAtFilter = { $gte: start, $lte: end };
-            // String date range (for Booking.checkIn)
             checkInFilter = { $gte: startDate, $lte: endDate };
         }
 
@@ -11177,7 +11175,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             ? Math.max(0, roomRevenueAgg[0].totalRevenue - roomRevenueAgg[0].totalRefunds)
             : 0;
 
-        // 3. Aggregate F&B Sales (Matches date or createdAt)
+        // 3. Aggregate F&B Sales
         const saleMatchFilter = { hotelId: hotelObjectId };
         if (startDate && endDate) {
             saleMatchFilter.$or = [
@@ -11197,7 +11195,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         ]);
 
-        // 4. Aggregate Expenses (Matches date or createdAt on Expense model)
+        // 4. Aggregate Expenses
         const expenseMatchFilter = { hotelId: hotelObjectId };
         if (startDate && endDate) {
             expenseMatchFilter.$or = [
@@ -11216,7 +11214,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         ]);
 
-        // 5. Structure into standard departmental accounts
+        // 5. Build Dynamic Department Map
         const deptMap = {};
         const ensureDept = (deptName) => {
             if (!deptMap[deptName]) {
@@ -11224,34 +11222,42 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
             }
         };
 
-        // Explicitly seed all departments defined in ExpenseSchema enum
-        const standardDepartments = ['Front Office', 'Bar', 'Restaurant', 'Housekeeping', 'Maintenance', 'Other'];
-        standardDepartments.forEach(dept => ensureDept(dept));
+        // Assign Front Office net revenue if room bookings exist
+        if (netRoomRevenue > 0) {
+            ensureDept('Front Office');
+            deptMap['Front Office'].revenue = netRoomRevenue;
+        }
 
-        // Assign Front Office Room Revenue
-        deptMap['Front Office'].revenue = netRoomRevenue;
-
-        // Populate Sales data
+        // Populate Sales data dynamically
         salesAgg.forEach(item => {
-            if (item._id) {
+            if (item._id && (item.revenue > 0 || item.cogs > 0)) {
                 ensureDept(item._id);
                 deptMap[item._id].revenue += item.revenue;
                 deptMap[item._id].cogs += item.cogs;
             }
         });
 
-        // Populate Expense data
+        // Populate Expense data dynamically
         expenseAgg.forEach(item => {
-            if (item._id) {
+            if (item._id && item.totalExpense > 0) {
                 ensureDept(item._id);
                 deptMap[item._id].expenses += item.totalExpense;
+            }
+        });
+
+        // Filter out any departments where revenue, COGS, and expenses are all zero
+        const filteredDeptMap = {};
+        Object.keys(deptMap).forEach(deptKey => {
+            const dept = deptMap[deptKey];
+            if (dept.revenue !== 0 || dept.cogs !== 0 || dept.expenses !== 0) {
+                filteredDeptMap[deptKey] = dept;
             }
         });
 
         return res.status(200).json({
             success: true,
             period: { startDate, endDate },
-            departments: deptMap
+            departments: filteredDeptMap
         });
 
     } catch (error) {
