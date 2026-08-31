@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway', 'nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
+        'nav-staff', 'nav-paymentgateway','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
     ];
 
     // Hide all navigation links first
