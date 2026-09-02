@@ -1471,17 +1471,19 @@ const bookingSchema = new mongoose.Schema({
     guestEmail: { type: String },
     nationalIdNo: { type: String },
     synced: { type: Boolean, default: false },
-refunds: [{
+    refunds: [{
         refundId: { type: String, required: true },
         amount: { type: Number, required: true },
-        
         // Method Enum defined directly in schema
         method: { 
             type: String, 
             required: true,
-            enum: ['Cash', 'Mobile Money', 'Bank Transfer', 'Credit Card', 'Other']
+            enum: [
+            'Pesapal', 'Online', 'Visa', 'MasterCard', 'Mobile Money', 
+            'Cash', 'M-Pesa', 'MTN Momo', 'Airtel Pay', 'Bank',
+            'Stripe', 'Stripe Card'
+        ]
         },
-        
         reason: { type: String, required: true },
         recordedBy: { type: String, required: true },
         
