@@ -2432,10 +2432,11 @@
 
                 <select id="refundMethodFilter" onchange="filterRefundsTable()" class="border border-slate-200 rounded-lg px-3 py-2 text-xs bg-white text-slate-700 outline-none focus:ring-2 focus:ring-rose-500">
                     <option value="ALL">All Methods</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Pesapal">Pesapal / Gateway</option>
+                    <option value="Cash">Cash </option>
+                    <option value="MTN Momo">MTN MoMo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Visa">Visa Card</option>
+                    <option value="MasterCard">MasterCard</option>
                 </select>
 
                 <button onclick="resetRefundFilters()" class="p-2 text-slate-500 hover:text-slate-800 text-xs font-medium" title="Reset Filters">
@@ -2569,9 +2570,10 @@
             <select id="refund-method-filter" class="w-full text-xs rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="ALL">All Methods</option>
                 <option value="Cash">Cash</option>
-                <option value="Mobile Money">Mobile Money</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Credit Card">Credit Card</option>
+                <option value="MTN Momo">MTN MoMo</option>
+                <option value="Airtel Pay">Airtel Pay</option>
+                <option value="Visa">Visa Card</option>
+                <option value="MasterCard">MasterCard</option>
             </select>
         </div>
 
@@ -3591,7 +3593,7 @@
                 <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
                 <h2 class="text-xl font-bold text-slate-900 tracking-tight">Departmental Profit & Loss Statement </h2>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Net Operating Profit (GOP), revenue streams, direct cost of sales, and overhead allocations</p>
+            <p class="text-xs text-slate-500 mt-1">Net Operating Profit (NOP), revenue streams, direct cost of sales, and overhead allocations</p>
         </div>
         
         <!-- Action Toolbar -->
@@ -5424,18 +5426,18 @@ Manage payment providers used for guest payments.            </p>
                 <input type="number" id="refundAmount" class="border p-2 w-full rounded focus:ring-2 focus:ring-rose-500 outline-none text-sm" placeholder="Enter amount to refund">
             </div>
 
-            <div>
-                <label class="text-xs font-semibold text-gray-600 block mb-1">Refund Channel / Route</label>
-                <!-- Values strictly map to Mongoose Enum -->
-                <select id="refundMethod" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-rose-500 outline-none text-xs">
-                    <option value="">Select payout method</option>
-                    <option value="Cash">Cash (From Till/Drawer)</option>
-                    <option value="Mobile Money">Mobile Money Transfer</option>
-                    <option value="Bank Transfer">Bank Wire Transfer</option>
-                    <option value="Credit Card">Credit Card Reversal</option>
-                    <option value="Other">Other Channel</option>
-                </select>
-            </div>
+           <div>
+    <label class="text-xs font-semibold text-gray-600 block mb-1">Refund Channel / Route</label>
+    <!-- Strictly Ugandan payment methods matching Mongoose Enum -->
+    <select id="refundMethod" class="border p-2 w-full rounded bg-white focus:ring-2 focus:ring-rose-500 outline-none text-xs">
+        <option value="">Select payout method</option>
+        <option value="Cash">Cash</option>
+        <option value="MTN Momo">MTN MoMo</option>
+        <option value="Airtel Pay">Airtel Pay</option>
+        <option value="Visa">Visa Card</option>
+        <option value="MasterCard">MasterCard</option>
+    </select>
+</div>
 
             <div>
                 <label class="text-xs font-semibold text-gray-600 block mb-1">Reason for Refund</label>
@@ -5763,12 +5765,10 @@ Manage payment providers used for guest payments.            </p>
             <p id="statusMessage" class="text-center mt-4 font-bold text-blue-500"></p>
         </div>
     </div>
-</div>
-    
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</div> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="script4.js"></script>
-
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
 </script>
