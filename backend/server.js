@@ -1496,7 +1496,7 @@ refunds: [{
         date: { type: Date, default: Date.now }
     }],
 // Add inside bookingSchema
-recordedBy: { type: String, required: true, index: true }, // Username/ID who created the booking
+recordedBy: { type: String, index: true }, // Username/ID who created the booking
 updatedBy: { type: String, default: null },               // Username/ID who last modified it
     // 🇺🇬 MUST ADD: EFRIS FISCAL TRACKING FIELDS
     isFiscalized: { type: Boolean, default: false, index: true },

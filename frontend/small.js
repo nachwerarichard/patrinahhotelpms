@@ -2306,6 +2306,7 @@ document.getElementById('confirmVoidBtn').addEventListener('click', async () => 
         showMessage('Error', error.message, true);
     }
 });
+
 async function moveBooking(id) {
     selectedBookingId = id;
 
