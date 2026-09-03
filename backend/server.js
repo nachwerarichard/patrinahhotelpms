@@ -61,6 +61,7 @@ const upload = multer({ storage: storage });
 
 const app = express();
 
+
 // ==========================================
 // 1. CORS MIDDLEWARE (Always placed first!)
 // ==========================================
@@ -77,6 +78,11 @@ app.use(cors({
   ],
   credentials: true
 }));
+
+const path = require('path');
+
+// Serve static release archives from a 'releases' folder in your project
+app.use('/releases', express.static(path.join(__dirname, 'releases')));
 
 // Expose the uploads directory to the browser
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -11269,7 +11275,19 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
 });
 
 
-
+// Express endpoint on Render
+app.get('/api/pms/latest.json', (req, res) => {
+  res.json({
+    version: '1.1.0',
+    downloadUrl: 'https://novuspms.onrender.com/releases/v1.1.0.zip',
+    releaseDate: '2026-09-03',
+    changelog: [
+      'Added new POS order customization features',
+      'Improved database query speed for daily reports',
+      'Fixed room status sync delay on KDS'
+    ]
+  });
+});
 
 
 const port = process.env.PORT || 3000;
@@ -11277,30 +11295,4 @@ const port = process.env.PORT || 3000;
 // --- 8. Start the Server ---
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
-    console.log('Backend API Endpoints:');
-    console.log(`- POST /api/login`);
-    console.log(`- POST /api/audit-log/action (New: for general actions like login/logout)`);
-    console.log(`- POST /api/rooms/init (Run once to populate initial rooms)`);
-    console.log(`- GET /api/rooms`);
-    console.log(`- GET /api/rooms/available?checkIn={date}&checkOut={date}`);
-    console.log(`- PUT /api/rooms/:id`);
-    console.log(`- GET /api/bookings/id/:customId (NEW: Get booking by custom ID)`);
-    console.log(`- GET /api/bookings?page={num}&limit={num}&search={term} (UPDATED: now supports search)`);
-    console.log(`- GET /api/bookings/all (for calendar)`);
-    console.log(`- POST /api/bookings`);
-    console.log(`- PUT /api/bookings/:id`);
-    console.log(`- DELETE /api/bookings/:id (requires reason and username in body)`);
-    console.log(`- POST /api/bookings/:id/checkout`);
-    console.log(`- POST /api/incidental-charges`);
-    console.log(`- GET /api/incidental-charges/booking/:bookingObjectId (by MongoDB _id)`);
-    console.log(`- GET /api/incidental-charges/booking-custom-id/:bookingCustomId (by custom ID)`);
-    console.log(`- DELETE /api/incidental-charges/:chargeId (requires reason and username in body)`);
-    console.log(`- PUT /api/incidental-charges/pay-all/:bookingObjectId`);
-    console.log(`- GET /api/reports/services?startDate={date}&endDate={date}`);
-    console.log(`- GET /api/audit-logs?user={username}&action={type}&startDate={date}&endDate={date}`);
-    console.log(`- POST /api/channel-manager/sync (simulated)`);
-    console.log(`--- NEW PUBLIC BOOKING ENDPOINTS ---`);
-    console.log(`- GET /api/public/room-types`);
-    console.log(`- GET /api/public/rooms/available?checkIn={date}&checkOut={date}&roomType={type}&people={num}`);
-    console.log(`- POST /api/public/bookings`);
 });
