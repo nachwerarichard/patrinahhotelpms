@@ -1127,7 +1127,8 @@
 <!-- MODAL 1: Add Master Item to Central Store -->
 <div id="masterItemModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
     <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full relative mx-4">
-        <button onclick="closeMasterItemModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+        <!-- Top Right Close Button -->
+        <button type="button" onclick="closeMasterItemModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
         <h3 class="text-xl font-bold mb-4 text-gray-800">Add Item to Central Store Catalog</h3>
         <form id="masterItemForm" onsubmit="handleCreateMasterItem(event)" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
@@ -1165,9 +1166,16 @@
                     <input type="number" id="masterCost" min="0" step="0.01" value="0" required class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
             </div>
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">
-                Save Master Item
-            </button>
+
+            <!-- Action Buttons Row -->
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeMasterItemModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">
+                    Save Master Item
+                </button>
+            </div>
         </form>
         <p id="masterModalMsg" class="text-center text-sm font-medium mt-3"></p>
     </div>
@@ -1176,7 +1184,8 @@
 <!-- MODAL 2: Issue / Transfer Stock to Department -->
 <div id="transferModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
     <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
-        <button onclick="closeTransferModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">✕</button>
+        <!-- Top Right Close Button -->
+        <button type="button" onclick="closeTransferModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
         <h3 class="text-xl font-bold mb-4 text-gray-800">Departmental Stock Requisition</h3>
         <form id="transferForm" onsubmit="handleStockTransfer(event)" class="space-y-4">
             <div>
@@ -1209,9 +1218,16 @@
                     <input type="number" id="transferQty" min="1" required class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" />
                 </div>
             </div>
-            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg shadow transition">
-                Confirm Transfer
-            </button>
+
+            <!-- Action Buttons Row -->
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeTransferModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg shadow transition">
+                    Confirm Transfer
+                </button>
+            </div>
         </form>
         <p id="transferModalMsg" class="text-center text-sm font-medium mt-3"></p>
     </div>
