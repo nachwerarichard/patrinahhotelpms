@@ -79,7 +79,7 @@ app.use(cors({
   credentials: true
 }));
 
-const path = require('path');
+
 
 // Serve static release archives from a 'releases' folder in your project
 app.use('/releases', express.static(path.join(__dirname, 'releases')));
