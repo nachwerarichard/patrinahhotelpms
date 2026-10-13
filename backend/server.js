@@ -692,7 +692,27 @@ const stockTransferSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 const StockTransfer = mongoose.model('StockTransfer', stockTransferSchema);
+// Get Departmental Stock Allocations
+app.get('/api/central-store/department-stock', auth, async (req, res) => {
+  const { department } = req.query;
+  const hotelId = req.user.hotelId;
 
+  try {
+    const query = { hotelId };
+    if (department) {
+      query.department = department;
+    }
+
+    const allocations = await DepartmentStock.find(query)
+      .populate('itemId', 'itemName sku unitOfMeasure unitCost')
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json(allocations);
+  } catch (err) {
+    console.error('Error fetching department stock:', err);
+    res.status(500).json({ message: 'Failed to retrieve department stock ledger' });
+  }
+});
 // 1. Get Central Store Stock & Department Breakdown
 app.get('/api/central-store', auth, async (req, res) => {
   try {
