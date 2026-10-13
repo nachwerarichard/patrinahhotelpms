@@ -688,10 +688,39 @@ const stockTransferSchema = new mongoose.Schema({
   quantityRequested: { type: Number, required: true },
   actionType: { type: String, enum: ['issue_to_dept', 'return_to_store', 'direct_consumption'], required: true },
   requestedBy: { type: String, required: true },
-  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Completed'], default: 'Completed' },
-  timestamp: { type: Date, default: Date.now }
-});
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Completed'], default: 'Completed' }
+}, { timestamps: true }); // <--- This automatically adds createdAt and updatedAt dates!
+
 const StockTransfer = mongoose.model('StockTransfer', stockTransferSchema);
+
+// Get Stock Transfers / Issuance Log Over Time with Date Filtering
+app.get('/api/central-store/transfers', auth, async (req, res) => {
+  const { startDate, endDate, department } = req.query;
+  const hotelId = req.user.hotelId;
+
+  try {
+    const query = { hotelId };
+    
+    if (department) {
+      query.department = department;
+    }
+
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),$lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) // Include full end day
+      };
+    }
+
+    const transfers = await StockTransfer.find(query)
+      .populate('itemId', 'itemName sku unitOfMeasure unitCost')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(transfers);
+  } catch (err) {
+    console.error('Error fetching stock transfers:', err);
+    res.status(500).json({ message: 'Failed to retrieve transfer history' });
+  }
+});
 // Get Departmental Stock Allocations
 app.get('/api/central-store/department-stock', auth, async (req, res) => {
   const { department } = req.query;

@@ -1020,8 +1020,55 @@
     <div class="flex border-b mb-6 gap-6 text-sm font-medium">
         <button onclick="switchStoreTab('masterCatalog')" id="tabMasterCatalog" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 transition">Central Store Catalog</button>
         <button onclick="switchStoreTab('deptLedger')" id="tabDeptLedger" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Departmental Balances</button>
+        <button onclick="switchStoreTab('transferHistory')" id="tabTransferHistory" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Issuance History & Reports</button>
+    </div>
+<!-- TAB 3: Stock Issuance History & Date Filter View -->
+<div id="subtabTransferHistory" class="store-subtab hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Start Date:</label>
+            <input type="date" id="filterStartDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">End Date:</label>
+            <input type="date" id="filterEndDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Department:</label>
+            <select id="filterHistoryDept" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm bg-white">
+                <option value="">All Departments</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Front Office">Front Office</option>
+                <option value="Spa">Spa</option>
+                <option value="Administrative">Administrative</option>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button onclick="loadTransferHistory()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm shadow">
+                Generate Report
+            </button>
+        </div>
     </div>
 
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="min-w-full table-auto border-collapse">
+            <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                <tr>
+                    <th class="border-b px-4 py-3 text-left">Date & Time</th>
+                    <th class="border-b px-4 py-3 text-left">Req #</th>
+                    <th class="border-b px-4 py-3 text-left">Department</th>
+                    <th class="border-b px-4 py-3 text-left">Item Name</th>
+                    <th class="border-b px-4 py-3 text-left">Action</th>
+                    <th class="border-b px-4 py-3 text-left">Quantity</th>
+                    <th class="border-b px-4 py-3 text-left">Requested By</th>
+                </tr>
+            </thead>
+            <tbody id="transferHistoryBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+        </table>
+    </div>
+</div>
     <!-- TAB 1: Central Store Catalog Table -->
     <div id="subtabMasterCatalog" class="store-subtab">
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">

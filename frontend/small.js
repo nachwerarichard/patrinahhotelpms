@@ -18937,3 +18937,82 @@ window.closeTransferModal = closeTransferModal;
 window.filterMasterStore = filterMasterStore;
 window.loadCentralStoreData = loadCentralStoreData;
 window.loadDepartmentLedger = loadDepartmentLedger;
+
+// Update switchStoreTab to handle the third tab
+function switchStoreTab(tabName) {
+  document.getElementById('subtabMasterCatalog').classList.add('hidden');
+  document.getElementById('subtabDeptLedger').classList.add('hidden');
+  document.getElementById('subtabTransferHistory').classList.add('hidden');
+  
+  document.getElementById('tabMasterCatalog').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabDeptLedger').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabTransferHistory').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tabName === 'masterCatalog') {
+    document.getElementById('subtabMasterCatalog').classList.remove('hidden');
+    document.getElementById('tabMasterCatalog').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadCentralStoreData();
+  } else if (tabName === 'deptLedger') {
+    document.getElementById('subtabDeptLedger').classList.remove('hidden');
+    document.getElementById('tabDeptLedger').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadDepartmentLedger();
+  } else if (tabName === 'transferHistory') {
+    document.getElementById('subtabTransferHistory').classList.remove('hidden');
+    document.getElementById('tabTransferHistory').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadTransferHistory();
+  }
+}
+
+// Load transfer history with optional date filters
+async function loadTransferHistory() {
+  const startDate = document.getElementById('filterStartDate').value;
+  const endDate = document.getElementById('filterEndDate').value;
+  const department = document.getElementById('filterHistoryDept').value;
+  const tbody = document.getElementById('transferHistoryBody');
+  
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">Loading issuance history...</td></tr>`;
+
+  try {
+    let url = `${API_BASE_URL}/central-store/transfers?`;
+    if (startDate) url += `startDate=${startDate}&`;
+    if (endDate) url += `endDate=${endDate}&`;
+    if (department) url += `department=${encodeURIComponent(department)}`;
+
+    const res = await authenticatedFetch(url);
+    if (!res || !res.ok) throw new Error('Failed to fetch transfer history');
+
+    const transfers = await res.json();
+    tbody.innerHTML = '';
+
+    if (transfers.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-500">No transfer history found for this period.</td></tr>`;
+      return;
+    }
+
+    transfers.forEach(t => {
+      const formattedDate = new Date(t.createdAt).toLocaleString();
+      const actionBadge = t.actionType === 'issue_to_dept' 
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Issue to Dept</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Return to Store</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${formattedDate}</td>
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${t.requisitionNumber}</td>
+          <td class="border-b px-4 py-3 font-medium text-gray-800">${t.department}</td>
+          <td class="border-b px-4 py-3 font-medium text-gray-900">${t.itemId?.itemName || 'Deleted Item'}</td>
+          <td class="border-b px-4 py-3">${actionBadge}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-800">${t.quantityRequested} ${t.itemId?.unitOfMeasure || ''}</td>
+          <td class="border-b px-4 py-3 text-gray-600">${t.requestedBy}</td>
+        </tr>
+      `;
+    });
+  } catch (err) {
+    console.error('Error loading transfer history:', err);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-red-500">Failed to load issuance history report.</td></tr>`;
+  }
+}
+
+// Bind globally
+window.loadTransferHistory = loadTransferHistory;
