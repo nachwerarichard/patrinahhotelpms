@@ -645,7 +645,160 @@ const roomSchema = new mongoose.Schema({
 roomSchema.index({ hotelId: 1, number: 1 }, { unique: true });
 const Room = mongoose.model('Room', roomSchema);
 
+// 1. Central Store Catalog (Master Inventory for the Hotel)
+const centralStoreSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  sku: { type: String, required: true }, // e.g., STORES-HS-001
+  itemName: { type: String, required: true },
+  category: { 
+    type: String, 
+    enum: ['Housekeeping', 'Food & Beverage', 'Maintenance', 'Front Office', 'Spa', 'Administrative'],
+    required: true 
+  },
+  unitOfMeasure: { type: String, required: true }, // e.g., pcs, cartons, liters, kg
+  totalStockQuantity: { type: Number, required: true, min: 0, default: 0 },
+  unitCost: { type: Number, default: 0 }, // For valuation and financial reporting
+  minimumThreshold: { type: Number, required: true, min: 0, default: 5 }
+}, { timestamps: true });
 
+centralStoreSchema.index({ hotelId: 1, sku: 1 }, { unique: true });
+const CentralStore = mongoose.model('CentralStore', centralStoreSchema);
+
+// 2. Departmental Stock & Requisition Ledger (Tracks what each department holds & consumes)
+const departmentStockSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  department: { 
+    type: String, 
+    enum: ['Housekeeping', 'Food & Beverage', 'Maintenance', 'Front Office', 'Spa', 'Administrative'],
+    required: true 
+  },
+  itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'CentralStore', required: true },
+  quantityInDepartment: { type: Number, required: true, min: 0, default: 0 }
+}, { timestamps: true });
+
+departmentStockSchema.index({ hotelId: 1, department: 1, itemId: 1 }, { unique: true });
+const DepartmentStock = mongoose.model('DepartmentStock', departmentStockSchema);
+
+// 3. Stock Transfer / Requisition Log (International Audit Trail)
+const stockTransferSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  requisitionNumber: { type: String, required: true },
+  department: { type: String, required: true },
+  itemId: { type: mongoose.Schema.Types.ObjectId, ref: 'CentralStore', required: true },
+  quantityRequested: { type: Number, required: true },
+  actionType: { type: String, enum: ['issue_to_dept', 'return_to_store', 'direct_consumption'], required: true },
+  requestedBy: { type: String, required: true },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Completed'], default: 'Completed' },
+  timestamp: { type: Date, default: Date.now }
+});
+const StockTransfer = mongoose.model('StockTransfer', stockTransferSchema);
+
+// 1. Get Central Store Stock & Department Breakdown
+app.get('/api/central-store', auth, async (req, res) => {
+  try {
+    const items = await CentralStore.find({ hotelId: req.user.hotelId }).sort({ category: 1, itemName: 1 });
+    res.status(200).json(items);
+  } catch (err) {
+    console.error('Error fetching central store:', err);
+    res.status(500).json({ message: 'Failed to retrieve central store inventory' });
+  }
+});
+
+// 2. Add New Master Item to Central Store
+app.post('/api/central-store/item', auth, async (req, res) => {
+  const { sku, itemName, category, unitOfMeasure, totalStockQuantity, unitCost, minimumThreshold } = req.body;
+  
+  if (!sku || !itemName || !category || !unitOfMeasure) {
+    return res.status(400).json({ message: 'Missing required master item fields' });
+  }
+
+  try {
+    const newItem = new CentralStore({
+      hotelId: req.user.hotelId,
+      sku: sku.toUpperCase(),
+      itemName,
+      category,
+      unitOfMeasure,
+      totalStockQuantity: totalStockQuantity || 0,
+      unitCost: unitCost || 0,
+      minimumThreshold: minimumThreshold || 5
+    });
+
+    await newItem.save();
+    await addAuditLog('Central Store Item Created', req.user.username, req.user.hotelId, { sku, itemName, category });
+    
+    res.status(201).json({ message: 'Master item successfully added to Central Store', newItem });
+  } catch (err) {
+    console.error('Error adding central item:', err);
+    res.status(500).json({ message: 'Server error while registering item' });
+  }
+});
+
+// 3. Issue Stock from Central Store to a Specific Department (Requisition / Transfer)
+app.post('/api/central-store/transfer', auth, async (req, res) => {
+  const { department, itemId, quantity, actionType } = req.body; // actionType: 'issue_to_dept' or 'return_to_store'
+  const hotelId = req.user.hotelId;
+
+  if (!department || !itemId || !quantity || !actionType) {
+    return res.status(400).json({ message: 'Missing transfer parameters' });
+  }
+
+  try {
+    const storeItem = await CentralStore.findOne({ _id: itemId, hotelId });
+    if (!storeItem) {
+      return res.status(404).json({ message: 'Item not found in Central Store' });
+    }
+
+    if (actionType === 'issue_to_dept') {
+      if (storeItem.totalStockQuantity < quantity) {
+        return res.status(400).json({ message: `Insufficient central stock. Only ${storeItem.totalStockQuantity} available.` });
+      }
+      storeItem.totalStockQuantity -= quantity;
+    } else if (actionType === 'return_to_store') {
+      storeItem.totalStockQuantity += quantity;
+    }
+
+    await storeItem.save();
+
+    // Update or Initialize Department Stock Allocation Ledger
+    let deptStock = await DepartmentStock.findOne({ hotelId, department, itemId });
+    if (deptStock) {
+      if (actionType === 'issue_to_dept') {
+        deptStock.quantityInDepartment += quantity;
+      } else {
+        deptStock.quantityInDepartment = Math.max(0, deptStock.quantityInDepartment - quantity);
+      }
+      await deptStock.save();
+    } else if (actionType === 'issue_to_dept') {
+      deptStock = new DepartmentStock({
+        hotelId,
+        department,
+        itemId,
+        quantityInDepartment: quantity
+      });
+      await deptStock.save();
+    }
+
+    // Log the transfer
+    const transferLog = new StockTransfer({
+      hotelId,
+      requisitionNumber: `REQ-${Date.now().toString().slice(-6)}`,
+      department,
+      itemId,
+      quantityRequested: quantity,
+      actionType,
+      requestedBy: req.user.username
+    });
+    await transferLog.save();
+
+    await addAuditLog('Department Stock Transfer', req.user.username, hotelId, { department, item: storeItem.itemName, quantity, actionType });
+
+    res.status(200).json({ message: `Successfully processed transfer for ${department}` });
+  } catch (err) {
+    console.error('Error executing stock transfer:', err);
+    res.status(500).json({ message: 'Failed to process departmental stock movement' });
+  }
+});
 
 // GET ALL HOTELS
 app.get('/api/admin/hotels', auth, authorize('super-admin'), async (req, res) => {
