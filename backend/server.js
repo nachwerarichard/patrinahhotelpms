@@ -559,6 +559,114 @@ async function addAuditLog(action, username, hotelId, details = {}) {
     }
 }
 
+// 1. Function Space (Venue) Schema
+const functionSpaceSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  spaceName: { type: String, required: true }, // e.g., "Grand Ballroom"
+  code: { type: String, required: true },     // e.g., "GB-01"
+  maxCapacity: { type: Number, required: true },
+  setupStyles: [{ type: String }],            // ['Theater', 'Classroom', 'Banquet', 'U-Shape']
+  rentalRateHalfDay: { type: Number, default: 0 },
+  rentalRateFullDay: { type: Number, default: 0 },
+  status: { type: String, enum: ['Active', 'Maintenance', 'Inactive'], default: 'Active' }
+}, { timestamps: true });
+
+const FunctionSpace = mongoose.model('FunctionSpace', functionSpaceSchema);
+
+// 2. Banquet Event Order (BEO) Schema
+const banquetEventSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  beoNumber: { type: String, required: true, unique: true }, // e.g., BEO-2026-001
+  clientName: { type: String, required: true },
+  companyName: { type: String },
+  eventTitle: { type: String, required: true }, // e.g., "Annual Tech Summit"
+  functionSpaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'FunctionSpace', required: true },
+  eventDate: { type: Date, required: true },
+  startTime: { type: String, required: true }, // e.g., "08:00"
+  endTime: { type: String, required: true },   // e.g., "17:00"
+  guestCount: { type: Number, required: true },
+  setupStyle: { type: String, required: true }, // "Banquet" / "Theater"
+  cateringPackage: { type: String },           // e.g., "Full Day Conference Package"
+  beverageDetails: { type: String },           // e.g., "Open Bar / Coffee Breaks"
+  estimatedRevenue: {
+    roomRental: { type: Number, default: 0 },
+    foodAndBeverage: { type: Number, default: 0 },
+    audioVisual: { type: Number, default: 0 },
+    total: { type: Number, default: 0 }
+  },
+  status: { type: String, enum: ['Tentative', 'Confirmed', 'Executed', 'Cancelled'], default: 'Tentative' },
+  createdBy: { type: String, required: true }
+}, { timestamps: true });
+
+const BanquetEvent = mongoose.model('BanquetEvent', banquetEventSchema);
+
+// Get Function Spaces
+app.get('/api/banquets/spaces', auth, async (req, res) => {
+  try {
+    const spaces = await FunctionSpace.find({ hotelId: req.user.hotelId });
+    res.status(200).json(spaces);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch function spaces' });
+  }
+});
+
+// Create Function Space
+app.post('/api/banquets/space', auth, async (req, res) => {
+  try {
+    const newSpace = new FunctionSpace({ ...req.body, hotelId: req.user.hotelId });
+    await newSpace.save();
+    res.status(201).json({ message: 'Function space registered successfully', space: newSpace });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create function space' });
+  }
+});
+
+// Get Banquet Events (BEOs) with date filtering
+app.get('/api/banquets/events', auth, async (req, res) => {
+  const { startDate, endDate, status } = req.query;
+  try {
+    const query = { hotelId: req.user.hotelId };
+    if (status) query.status = status;
+    if (startDate && endDate) {
+      query.eventDate = {
+        $gte: new Date(startDate),$lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+      };
+    }
+
+    const events = await BanquetEvent.find(query)
+      .populate('functionSpaceId', 'spaceName code maxCapacity')
+      .sort({ eventDate: 1 });
+
+    res.status(200).json(events);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to retrieve banquet events' });
+  }
+});
+
+// Create Banquet Event Order (BEO)
+app.post('/api/banquets/event', auth, async (req, res) => {
+  try {
+    const count = await BanquetEvent.countDocuments({ hotelId: req.user.hotelId });
+    const beoNumber = `BEO-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+
+    const rev = req.body.estimatedRevenue || {};
+    const total = (Number(rev.roomRental) || 0) + (Number(rev.foodAndBeverage) || 0) + (Number(rev.audioVisual) || 0);
+
+    const newEvent = new BanquetEvent({
+      ...req.body,
+      hotelId: req.user.hotelId,
+      beoNumber,
+      estimatedRevenue: { ...rev, total },
+      createdBy: req.user.username
+    });
+
+    await newEvent.save();
+    res.status(201).json({ message: `BEO ${beoNumber} created successfully`, event: newEvent });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to create banquet event order' });
+  }
+});
 
 // Add this new schema and model definition with your other schemas
 const walkInChargeSchema = new mongoose.Schema({
