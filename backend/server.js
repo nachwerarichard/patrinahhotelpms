@@ -668,6 +668,147 @@ app.post('/api/banquets/event', auth, async (req, res) => {
   }
 });
 
+// 1. Employee Profile Schema
+const employeeSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  employeeId: { type: String, required: true }, // e.g., "EMP-HK-001"
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  department: { type: String, required: true }, // 'Housekeeping', 'Food & Beverage', 'Engineering', etc.
+  position: { type: String, required: true },     // e.g., "Room Attendant", "Waiter", "Front Desk Agent"
+  employmentType: { type: String, enum: ['Full-Time', 'Part-Time', 'Contractor', 'Intern'], default: 'Full-Time' },
+  dateJoined: { type: Date, required: true },
+  baseSalary: { type: Number, required: true },
+  status: { type: String, enum: ['Active', 'On Leave', 'Suspended', 'Terminated'], default: 'Active' },
+  emergencyContact: {
+    name: String,
+    phone: String,
+    relation: String
+  },
+  certifications: [{
+    certName: String, // e.g., "Food Handler Certificate"
+    expiryDate: Date
+  }]
+}, { timestamps: true });
+
+const Employee = mongoose.model('Employee', employeeSchema);
+
+// 2. Staff Attendance & Shift Schema
+const attendanceSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+  workDate: { type: Date, required: true },
+  shift: { type: String, enum: ['Morning', 'Evening', 'Night Audit', 'Off'], required: true },
+  status: { type: String, enum: ['Present', 'Absent', 'Late', 'On Leave'], default: 'Present' },
+  clockInTime: { type: String },
+  clockOutTime: { type: String },
+  notes: { type: String }
+}, { timestamps: true });
+
+const Attendance = mongoose.model('Attendance', attendanceSchema);
+
+// Get All Employees
+app.get('/api/hr/employees', auth, async (req, res) => {
+  const { department, status } = req.query;
+  try {
+    const query = { hotelId: req.user.hotelId };
+    if (department) query.department = department;
+    if (status) query.status = status;
+
+    const employees = await Employee.find(query).sort({ lastName: 1 });
+    res.status(200).json(employees);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to retrieve employee records' });
+  }
+});
+
+// Register New Employee
+app.post('/api/hr/employee', auth, async (req, res) => {
+  try {
+    const count = await Employee.countDocuments({ hotelId: req.user.hotelId });
+    const employeeId = `EMP-${req.body.department.substring(0, 2).toUpperCase()}-${String(count + 1).padStart(3, '0')}`;
+
+    const newEmp = new Employee({
+      ...req.body,
+      hotelId: req.user.hotelId,
+      employeeId
+    });
+
+    await newEmp.save();
+    res.status(201).json({ message: `Employee ${employeeId} registered successfully`, employee: newEmp });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to register employee' });
+  }
+});
+
+// Get Attendance Roster by Date
+app.get('/api/hr/attendance', auth, async (req, res) => {
+  const { date, department } = req.query;
+  try {
+    const query = { hotelId: req.user.hotelId };
+    if (date) {
+      const start = new Date(date);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+      query.workDate = { $gte: start,$lte: end };
+    }
+
+    let attendance = await Attendance.find(query).populate('employeeId', 'firstName lastName department position employeeId');
+    
+    // If department filter is requested, filter populated records
+    if (department) {
+      attendance = attendance.filter(a => a.employeeId?.department === department);
+    }
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch attendance logs' });
+  }
+});
+
+// Log or Update Shift Attendance
+app.post('/api/hr/attendance', auth, async (req, res) => {
+  try {
+    const { employeeId, workDate, shift, status, clockInTime, clockOutTime } = req.body;
+    
+    // Check if attendance for this employee on this date already exists
+    const start = new Date(workDate);
+    const end = new Date(workDate);
+    end.setHours(23, 59, 59, 999);
+
+    let record = await Attendance.findOne({
+      hotelId: req.user.hotelId,
+      employeeId,
+      workDate: { $gte: start,$lte: end }
+    });
+
+    if (record) {
+      record.shift = shift || record.shift;
+      record.status = status || record.status;
+      record.clockInTime = clockInTime || record.clockInTime;
+      record.clockOutTime = clockOutTime || record.clockOutTime;
+      await record.save();
+    } else {
+      record = new Attendance({
+        hotelId: req.user.hotelId,
+        employeeId,
+        workDate: new Date(workDate),
+        shift,
+        status,
+        clockInTime,
+        clockOutTime
+      });
+      await record.save();
+    }
+
+    res.status(200).json({ message: 'Attendance record saved successfully', record });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to record attendance' });
+  }
+});
 // Add this new schema and model definition with your other schemas
 const walkInChargeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },

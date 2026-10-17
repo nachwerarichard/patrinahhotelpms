@@ -6126,6 +6126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
+     const navHR = document.getElementById('nav-hrSection');
     const navBanquets = document.getElementById('nav-banquetsSection');
     const navReceivable= document.getElementById('nav-receivable');
     const navRefunds = document.getElementById('nav-refunds');
@@ -6147,6 +6148,12 @@ document.addEventListener('DOMContentLoaded', () => {
             navReceivables.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('receivables');
+            });
+        }
+        if (navHR) {
+            navHR.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('hrSection');
             });
         }
 
@@ -19211,3 +19218,199 @@ window.closeSpaceModal = closeSpaceModal;
 window.handleCreateSpace = handleCreateSpace;
 window.handleCreateBeo = handleCreateBeo;
 window.loadBanquetEvents = loadBanquetEvents;
+// Switch HR Sub-tabs
+function switchHrTab(tab) {
+  document.getElementById('subtabEmployeeList').classList.add('hidden');
+  document.getElementById('subtabAttendanceList').classList.add('hidden');
+  document.getElementById('tabEmployeeList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabAttendanceList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tab === 'employeeList') {
+    document.getElementById('subtabEmployeeList').classList.remove('hidden');
+    document.getElementById('tabEmployeeList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadEmployees();
+  } else {
+    document.getElementById('subtabAttendanceList').classList.remove('hidden');
+    document.getElementById('tabAttendanceList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadAttendanceRoster();
+  }
+}
+
+// Modal controls
+function openEmployeeModal() { document.getElementById('employeeModal').classList.remove('hidden'); }
+function closeEmployeeModal() { document.getElementById('employeeModal').classList.add('hidden'); document.getElementById('employeeForm').reset(); }
+function openAttendanceModal() { document.getElementById('attendanceModal').classList.remove('hidden'); populateEmployeeDropdown(); }
+function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); document.getElementById('attendanceForm').reset(); }
+
+// Load Employees Directory
+async function loadEmployees() {
+  const dept = document.getElementById('filterHrDept').value;
+  const status = document.getElementById('filterHrStatus').value;
+  const tbody = document.getElementById('employeeTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading personnel records...</td></tr>`;
+
+  try {
+    let url = `${backendURL}/api/hr/employees?`;
+    if (dept) url += `department=${encodeURIComponent(dept)}&`;
+    if (status) url += `status=${status}`;
+
+    const res = await authenticatedFetch(url);
+    const employees = await res.json();
+    tbody.innerHTML = '';
+
+    if (!employees.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No employee records found.</td></tr>`;
+      return;
+    }
+
+    employees.forEach(emp => {
+      const joinedDate = new Date(emp.dateJoined).toLocaleDateString();
+      const statusBadge = emp.status === 'Active'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Active</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">On Leave</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${emp.employeeId}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${emp.firstName} ${emp.lastName}</td>
+          <td class="border-b px-4 py-3">
+            <div class="font-medium text-gray-800">${emp.department}</div>
+            <div class="text-xs text-gray-500">${emp.position}</div>
+          </td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${emp.employmentType}<br/>Joined: ${joinedDate}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700">${emp.email}<br/>${emp.phone}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load employee list.</td></tr>`;
+  }
+}
+
+// Populate Employee Dropdown for Attendance Modal
+async function populateEmployeeDropdown() {
+  const select = document.getElementById('attEmpId');
+  select.innerHTML = '<option value="">Loading employees...</option>';
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/hr/employees?status=Active`);
+    const employees = await res.json();
+    select.innerHTML = employees.length ? '<option value="">Select Employee</option>' : '<option value="">No active employees</option>';
+    employees.forEach(emp => {
+      select.innerHTML += `<option value="${emp._id}">${emp.firstName} ${emp.lastName} (${emp.department} - ${emp.position})</option>`;
+    });
+  } catch (err) {
+    select.innerHTML = '<option value="">Failed to load employees</option>';
+  }
+}
+
+// Load Attendance Roster
+async function loadAttendanceRoster() {
+  const date = document.getElementById('attendanceFilterDate').value;
+  const dept = document.getElementById('attendanceFilterDept').value;
+  const tbody = document.getElementById('attendanceTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading attendance roster...</td></tr>`;
+
+  try {
+    let url = `${backendURL}/api/hr/attendance?`;
+    if (date) url += `date=${date}&`;
+    if (dept) url += `department=${encodeURIComponent(dept)}`;
+
+    const res = await authenticatedFetch(url);
+    const records = await res.json();
+    tbody.innerHTML = '';
+
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No attendance logged for this date.</td></tr>`;
+      return;
+    }
+
+    records.forEach(rec => {
+      const workDate = new Date(rec.workDate).toLocaleDateString();
+      const statusBadge = rec.status === 'Present'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Present</span>'
+        : rec.status === 'Late'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Late</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-red-50 text-red-700">Absent</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${workDate}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${rec.employeeId?.firstName || ''} ${rec.employeeId?.lastName || 'Staff'} <span class="text-xs font-mono text-indigo-600 font-normal">(${rec.employeeId?.employeeId})</span></td>
+          <td class="border-b px-4 py-3 font-medium text-gray-800">${rec.employeeId?.department || 'N/A'}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700 font-semibold">${rec.shift}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${rec.clockInTime || '--:--'} to ${rec.clockOutTime || '--:--'}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load attendance roster.</td></tr>`;
+  }
+}
+
+// Handle Employee Creation
+async function handleCreateEmployee(e) {
+  e.preventDefault();
+  const payload = {
+    firstName: document.getElementById('empFirst').value,
+    lastName: document.getElementById('empLast').value,
+    department: document.getElementById('empDept').value,
+    position: document.getElementById('empPosition').value,
+    email: document.getElementById('empEmail').value,
+    phone: document.getElementById('empPhone').value,
+    employmentType: document.getElementById('empType').value,
+    dateJoined: document.getElementById('empJoined').value,
+    baseSalary: parseFloat(document.getElementById('empSalary').value) || 0
+  };
+
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/hr/employee`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to register employee');
+    document.getElementById('employeeModalMsg').textContent = data.message;
+    document.getElementById('employeeModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeEmployeeModal(); loadEmployees(); }, 1200);
+  } catch (err) {
+    document.getElementById('employeeModalMsg').textContent = err.message;
+    document.getElementById('employeeModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Handle Attendance Logging
+async function handleLogAttendance(e) {
+  e.preventDefault();
+  const payload = {
+    employeeId: document.getElementById('attEmpId').value,
+    workDate: document.getElementById('attDate').value,
+    shift: document.getElementById('attShift').value,
+    status: document.getElementById('attStatus').value,
+    clockInTime: document.getElementById('attClockIn').value,
+    clockOutTime: document.getElementById('attClockOut').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/hr/attendance`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to log attendance');
+    document.getElementById('attendanceModalMsg').textContent = data.message;
+    document.getElementById('attendanceModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeAttendanceModal(); loadAttendanceRoster(); }, 1200);
+  } catch (err) {
+    document.getElementById('attendanceModalMsg').textContent = err.message;
+    document.getElementById('attendanceModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.switchHrTab = switchHrTab;
+window.openEmployeeModal = openEmployeeModal;
+window.closeEmployeeModal = closeEmployeeModal;
+window.openAttendanceModal = openAttendanceModal;
+window.closeAttendanceModal = closeAttendanceModal;
+window.handleCreateEmployee = handleCreateEmployee;
+window.handleLogAttendance = handleLogAttendance;
+window.loadEmployees = loadEmployees;
+window.loadAttendanceRoster = loadAttendanceRoster;

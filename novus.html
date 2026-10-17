@@ -391,6 +391,7 @@
                 <ul id="admin-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-staff"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Users</a></li>
                     <li id="nav-banquetsSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Banquets</a></li>
+                    <li id="nav-hrSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Human Resource</a></li>
                     <li id="nav-store"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Store</a></li>
                     <li id="nav-paymentgateway"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Payment Gateways</a></li>
                     <li id="nav-integrations"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Third-party Integrations</a></li>
@@ -642,6 +643,225 @@
 
     </div>
 </section>
+<section id="hrSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-indigo-600">Human Resources & Staffing (HRM)</h2>
+            <p class="text-sm text-gray-500">Manage hotel personnel registries, departmental rosters, shifts, and compliance</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openEmployeeModal()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm">
+                + Register Employee
+            </button>
+            <button onclick="openAttendanceModal()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm">
+                + Log Shift / Attendance
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="flex border-b mb-6 gap-6 text-sm font-medium">
+        <button onclick="switchHrTab('employeeList')" id="tabEmployeeList" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold">Employee Directory</button>
+        <button onclick="switchHrTab('attendanceList')" id="tabAttendanceList" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Shift Attendance Roster</button>
+    </div>
+
+    <!-- TAB 1: Employee Directory Table -->
+    <div id="subtabEmployeeList" class="hr-subtab">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <select id="filterHrDept" onchange="loadEmployees()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Departments</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Front Office">Front Office</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Security">Security</option>
+                <option value="Administration">Administration</option>
+            </select>
+            <select id="filterHrStatus" onchange="loadEmployees()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Terminated">Terminated</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Emp ID</th>
+                        <th class="border-b px-4 py-3 text-left">Full Name</th>
+                        <th class="border-b px-4 py-3 text-left">Department / Position</th>
+                        <th class="border-b px-4 py-3 text-left">Type / Joined</th>
+                        <th class="border-b px-4 py-3 text-left">Contact Info</th>
+                        <th class="border-b px-4 py-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Attendance Roster Table -->
+    <div id="subtabAttendanceList" class="hr-subtab hidden">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <input type="date" id="attendanceFilterDate" onchange="loadAttendanceRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white" />
+            </div>
+            <select id="attendanceFilterDept" onchange="loadAttendanceRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                <option value="">All Departments</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Front Office">Front Office</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Security">Security</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Date</th>
+                        <th class="border-b px-4 py-3 text-left">Employee</th>
+                        <th class="border-b px-4 py-3 text-left">Department</th>
+                        <th class="border-b px-4 py-3 text-left">Assigned Shift</th>
+                        <th class="border-b px-4 py-3 text-left">Clock In/Out</th>
+                        <th class="border-b px-4 py-3 text-left">Attendance Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: Register Employee -->
+<div id="employeeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full relative mx-4 max-h-[90vh] overflow-y-auto">
+        <button type="button" onclick="closeEmployeeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Register New Employee</h3>
+        <form id="employeeForm" onsubmit="handleCreateEmployee(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">First Name:</label>
+                    <input type="text" id="empFirst" required placeholder="Jane" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Last Name:</label>
+                    <input type="text" id="empLast" required placeholder="Doe" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Department:</label>
+                    <select id="empDept" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Housekeeping">Housekeeping</option>
+                        <option value="Food & Beverage">Food & Beverage</option>
+                        <option value="Front Office">Front Office</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Security">Security</option>
+                        <option value="Administration">Administration</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Job Position:</label>
+                    <input type="text" id="empPosition" required placeholder="Room Attendant" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Email Address:</label>
+                    <input type="email" id="empEmail" required placeholder="jane@hotel.com" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Phone Number:</label>
+                    <input type="text" id="empPhone" required placeholder="+256..." class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Employment Type:</label>
+                    <select id="empType" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Full-Time">Full-Time</option>
+                        <option value="Part-Time">Part-Time</option>
+                        <option value="Contractor">Contractor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Date Joined:</label>
+                    <input type="date" id="empJoined" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Base Salary:</label>
+                    <input type="number" id="empSalary" min="0" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeEmployeeModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Employee</button>
+            </div>
+        </form>
+        <p id="employeeModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
+
+<!-- MODAL: Log Attendance / Shift -->
+<div id="attendanceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeAttendanceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Assign Shift & Attendance</h3>
+        <form id="attendanceForm" onsubmit="handleLogAttendance(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Select Employee:</label>
+                <select id="attEmpId" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                    <!-- Populated via JS -->
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Work Date:</label>
+                    <input type="date" id="attDate" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Assigned Shift:</label>
+                    <select id="attShift" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Morning">Morning (07:00 - 15:00)</option>
+                        <option value="Evening">Evening (15:00 - 23:00)</option>
+                        <option value="Night Audit">Night Audit (23:00 - 07:00)</option>
+                        <option value="Off">Rest Day (Off)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Attendance Status:</label>
+                    <select id="attStatus" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                        <option value="On Leave">On Leave</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">In:</label>
+                        <input type="time" id="attClockIn" class="w-full mt-1 px-2 py-2 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Out:</label>
+                        <input type="time" id="attClockOut" class="w-full mt-1 px-2 py-2 border rounded-lg text-xs" />
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeAttendanceModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Attendance</button>
+            </div>
+        </form>
+        <p id="attendanceModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
 <section id="booking-management" class="section bg-white p-4 md:p-5 rounded-md border border-slate-200 shadow-sm mb-6 hidden">
     <!-- Header Row -->
     <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
