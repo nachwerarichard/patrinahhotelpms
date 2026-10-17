@@ -4063,6 +4063,89 @@ app.get('/api/bookings/:id/fiscal-receipt', auth, async (req, res) => {
 // --- Updated User Schema ---
 
 // Ensure a username is unique ONLY within the same hotel
+// 1. Guest Portal Login (Authentication via Booking ID + Last Name)
+// Flexible Guest Portal Login (Supports Booking ID OR Room Number + Last Name)
+app.post('/api/guest-portal/login', async (req, res) => {
+  const { identifier, lastName } = req.body; // identifier can be Booking ID (e.g. BKG001) or Room Number (e.g. 204)
+  
+  if (!identifier || !lastName) {
+    return res.status(400).json({ message: 'Please provide your Room Number (or Booking ID) and Last Name.' });
+  }
+
+  try {
+    const cleanIdentifier = identifier.trim();
+    const cleanLastName = lastName.trim();
+
+    // Query matching either custom Booking ID OR Room Number, combined with Last Name
+    const booking = await Booking.findOne({ 
+      $or: [
+        { id: cleanIdentifier.toUpperCase() },
+        { room: cleanIdentifier }
+      ],
+      name: { $regex: new RegExp(cleanLastName, 'i') }
+    }).populate('hotelId', 'hotelName currency');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'No active stay found matching this Room / Booking ID and Last Name.' });
+    }
+
+    // Check if stay is active or confirmed
+    if (['cancelled', 'void', 'checkedout', 'no show'].includes(booking.gueststatus)) {
+      return res.status(400).json({ message: `This booking is currently ${booking.gueststatus} and cannot access the portal.` });
+    }
+
+    // Return guest booking details securely
+    res.status(200).json({
+      message: 'Authentication successful',
+      token: booking._id,
+      guest: {
+        bookingId: booking.id,
+        name: booking.name,
+        room: booking.room || 'Pending Assignment',
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        nights: booking.nights,
+        totalDue: booking.totalDue,
+        amountPaid: booking.amountPaid,
+        balance: booking.balance,
+        paymentStatus: booking.paymentStatus,
+        guestStatus: booking.gueststatus,
+        hotelName: booking.hotelId?.hotelName || 'Grand Hotel',
+        currency: booking.hotelId?.currency || 'USD'
+      }
+    });
+  } catch (err) {
+    console.error('Guest portal login error:', err);
+    res.status(500).json({ message: 'Server error during guest authentication' });
+  }
+});
+
+// 2. Fetch Live Guest Folio & Incidentals
+app.get('/api/guest-portal/folio/:bookingId', async (req, res) => {
+  const { bookingId } = req.params;
+  try {
+    const booking = await Booking.findOne({ id: bookingId.toUpperCase() });
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    // Fetch live incidental charges linked to this booking
+    const incidentals = await IncidentalCharge.find({ bookingId: booking._id }).sort({ date: -1 });
+
+    res.status(200).json({
+      booking: {
+        id: booking.id,
+        name: booking.name,
+        room: booking.room,
+        totalDue: booking.totalDue,
+        amountPaid: booking.amountPaid,
+        balance: booking.balance,
+        paymentStatus: booking.paymentStatus
+      },
+      incidentals
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to retrieve folio details' });
+  }
+});
 
 // --- New Hotel Schema ---
 

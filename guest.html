@@ -1,0 +1,195 @@
+<!-- GUEST PORTAL CONTAINER -->
+<div id="guestPortalSection" class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    
+    <!-- LOGIN VIEW (Shown initially if unauthenticated) -->
+    <!-- LOGIN VIEW -->
+<div id="guestLoginCard" class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="text-center mb-6">
+        <h2 class="text-3xl font-extrabold text-gray-900">Guest Access Portal</h2>
+        <p class="text-sm text-gray-600 mt-1">View your live bill, folio, and stay details</p>
+    </div>
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200">
+        <form id="guestLoginForm" onsubmit="handleGuestLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold uppercase text-gray-600">Room Number or Booking ID:</label>
+                <input type="text" id="portalIdentifier" required placeholder="e.g., 204 or BKG001" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                <span class="text-[10px] text-gray-400 mt-1 block">In-house guests can simply enter their assigned room number.</span>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold uppercase text-gray-600">Last Name:</label>
+                <input type="text" id="portalLastName" required placeholder="e.g., Smith" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">
+                Access My Portal
+            </button>
+        </form>
+        <p id="guestLoginMsg" class="text-center text-sm font-medium mt-3 text-red-600"></p>
+    </div>
+</div>
+
+    <!-- DASHBOARD VIEW (Shown after successful login) -->
+    <div id="guestDashboard" class="max-w-4xl mx-auto px-4 w-full hidden">
+        <div class="bg-indigo-700 text-white p-6 rounded-t-xl shadow flex justify-between items-center">
+            <div>
+                <h1 id="gpHotelName" class="text-xl font-bold">Grand Hotel Portal</h1>
+                <p id="gpWelcomeText" class="text-indigo-200 text-sm">Welcome back, Guest</p>
+            </div>
+            <button onclick="logoutGuestPortal()" class="bg-indigo-800 hover:bg-indigo-900 text-xs text-white px-3 py-2 rounded-lg transition font-semibold">
+                Sign Out
+            </button>
+        </div>
+
+        <div class="bg-white shadow rounded-b-xl p-6 border border-t-0 border-gray-200 space-y-6">
+            <!-- Stay Summary Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Assigned Room</span>
+                    <p id="gpRoomNumber" class="text-xl font-bold text-gray-900 mt-1">--</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Current Balance Due</span>
+                    <p id="gpBalanceDue" class="text-xl font-bold text-emerald-600 mt-1">--</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Payment Status</span>
+                    <p id="gpPayStatus" class="text-sm font-bold text-indigo-600 mt-2 uppercase">--</p>
+                </div>
+            </div>
+
+            <!-- Live Folio & Incidentals -->
+            <div>
+                <h3 class="text-lg font-bold text-gray-800 mb-3">Live Folio & Incidental Charges</h3>
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full table-auto border-collapse">
+                        <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                            <tr>
+                                <th class="border-b px-4 py-3 text-left">Date</th>
+                                <th class="border-b px-4 py-3 text-left">Department / Type</th>
+                                <th class="border-b px-4 py-3 text-left">Description</th>
+                                <th class="border-b px-4 py-3 text-left">Amount</th>
+                                <th class="border-b px-4 py-3 text-left">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gpFolioTableBody" class="bg-white divide-y divide-gray-200 text-sm">
+                            <tr><td colspan="5" class="text-center py-6 text-gray-400">Loading your folio...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const API_BASE_URL = "https://patrinahhotelpms.onrender.com/api";
+    let currentGuestSession = null;
+
+// Handle Guest Login
+async function handleGuestLogin(e) {
+  e.preventDefault();
+  const identifier = document.getElementById('portalIdentifier').value.trim();
+  const lastName = document.getElementById('portalLastName').value.trim();
+  const msgEl = document.getElementById('guestLoginMsg');
+
+  msgEl.textContent = 'Authenticating...';
+  msgEl.className = 'text-center text-sm font-medium mt-3 text-gray-600';
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/guest-portal/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, lastName })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Login failed');
+
+    currentGuestSession = data.guest;
+    localStorage.setItem('guestToken', data.token);
+    localStorage.setItem('guestBookingId', data.guest.bookingId);
+
+    // Switch to Dashboard View
+    document.getElementById('guestLoginCard').classList.add('hidden');
+    document.getElementById('guestDashboard').classList.remove('hidden');
+
+    loadGuestDashboardData();
+  } catch (err) {
+    msgEl.textContent = err.message;
+    msgEl.className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Load Guest Dashboard Folio & Summary Data
+async function loadGuestDashboardData() {
+  if (!currentGuestSession) {
+    const storedId = localStorage.getItem('guestBookingId');
+    if (!storedId) return logoutGuestPortal();
+    // Quick reload placeholder
+  }
+
+  const bookingId = currentGuestSession?.bookingId || localStorage.getItem('guestBookingId');
+  
+  document.getElementById('gpHotelName').textContent = currentGuestSession?.hotelName || 'Hotel Guest Portal';
+  document.getElementById('gpWelcomeText').textContent = `Welcome, ${currentGuestSession?.name}`;
+  document.getElementById('gpRoomNumber').textContent = currentGuestSession?.room;
+  document.getElementById('gpBalanceDue').textContent = `${currentGuestSession?.currency || 'USD'} ${currentGuestSession?.balance?.toLocaleString() || 0}`;
+  document.getElementById('gpPayStatus').textContent = currentGuestSession?.paymentStatus;
+
+  const tbody = document.getElementById('gpFolioTableBody');
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Refreshing charges...</td></tr>`;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/guest-portal/folio/${bookingId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error('Failed to load folio');
+
+    tbody.innerHTML = '';
+    
+    // Add base room charge entry if available
+    tbody.innerHTML += `
+      <tr class="hover:bg-gray-50">
+        <td class="border-b px-4 py-3 text-xs text-gray-600">Check-in Date</td>
+        <td class="border-b px-4 py-3 font-semibold text-indigo-600">Accommodation</td>
+        <td class="border-b px-4 py-3 text-gray-800">Room Accommodation (${data.booking.name})</td>
+        <td class="border-b px-4 py-3 font-bold text-gray-900">${data.booking.totalDue?.toLocaleString()}</td>
+        <td class="border-b px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Billed</span></td>
+      </tr>`;
+
+    if (!data.incidentals.length) {
+      tbody.innerHTML += `<tr><td colspan="5" class="text-center py-4 text-gray-400 text-xs">No additional incidental charges posted.</td></tr>`;
+      return;
+    }
+
+    data.incidentals.forEach(inc => {
+      const incDate = new Date(inc.date).toLocaleDateString();
+      const statusBadge = inc.isPaid 
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Paid</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-800">Unpaid</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${incDate}</td>
+          <td class="border-b px-4 py-3 font-semibold text-gray-800">${inc.type}</td>
+          <td class="border-b px-4 py-3 text-gray-700">${inc.description}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${inc.amount.toLocaleString()}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">Failed to load folio statement.</td></tr>`;
+  }
+}
+
+// Logout Guest
+function logoutGuestPortal() {
+  currentGuestSession = null;
+  localStorage.removeItem('guestToken');
+  localStorage.removeItem('guestBookingId');
+  document.getElementById('guestDashboard').classList.add('hidden');
+  document.getElementById('guestLoginCard').classList.remove('hidden');
+  document.getElementById('guestLoginForm').reset();
+}
+
+// Bind globally
+window.handleGuestLogin = handleGuestLogin;
+window.logoutGuestPortal = logoutGuestPortal;
+</script>
