@@ -48,6 +48,32 @@
                     Sign Out
                 </button>
             </div>
+            <!-- PRE-CHECKOUT FEEDBACK CARD (Add inside guestDashboard div) -->
+<div class="bg-white shadow rounded-xl p-6 border border-gray-200 mt-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-2">How is your stay going?</h3>
+    <p class="text-xs text-gray-500 mb-4">Let us know if anything needs our immediate attention before you check out.</p>
+    
+    <form id="feedbackForm" onsubmit="handleGuestFeedback(event)" class="space-y-4">
+        <div class="flex items-center gap-4">
+            <span class="text-xs font-semibold uppercase text-gray-600">Overall Experience:</span>
+            <div class="flex gap-2" id="ratingStars">
+                <button type="button" onclick="setRating(1)" class="text-2xl text-gray-300 hover:text-amber-400 star-btn" data-val="1">★</button>
+                <button type="button" onclick="setRating(2)" class="text-2xl text-gray-300 hover:text-amber-400 star-btn" data-val="2">★</button>
+                <button type="button" onclick="setRating(3)" class="text-2xl text-gray-300 hover:text-amber-400 star-btn" data-val="3">★</button>
+                <button type="button" onclick="setRating(4)" class="text-2xl text-gray-300 hover:text-amber-400 star-btn" data-val="4">★</button>
+                <button type="button" onclick="setRating(5)" class="text-2xl text-gray-300 hover:text-amber-400 star-btn" data-val="5">★</button>
+            </div>
+            <input type="hidden" id="selectedRating" value="5" required />
+        </div>
+        <div>
+            <textarea id="feedbackComments" rows="3" placeholder="Tell us what you love or how we can make your stay better..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+        </div>
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition shadow">
+            Submit Feedback
+        </button>
+        <p id="feedbackMsg" class="text-sm font-medium mt-2"></p>
+    </form>
+</div>
 
             <div class="bg-white shadow rounded-b-xl p-6 border border-t-0 border-gray-200 space-y-6">
                 <!-- Stay Summary Grid -->
@@ -202,6 +228,67 @@
         // Bind globally
         window.handleGuestLogin = handleGuestLogin;
         window.logoutGuestPortal = logoutGuestPortal;
+        let currentRating = 5;
+
+function setRating(val) {
+  currentRating = val;
+  document.getElementById('selectedRating').value = val;
+  const stars = document.querySelectorAll('.star-btn');
+  stars.forEach((star, index) => {
+    if (index < val) {
+      star.classList.remove('text-gray-300');
+      star.classList.add('text-amber-400');
+    } else {
+      star.classList.remove('text-amber-400');
+      star.classList.add('text-gray-300');
+    }
+  });
+}
+
+async function handleGuestFeedback(e) {
+  e.preventDefault();
+  const comments = document.getElementById('feedbackComments').value.trim();
+  const msgEl = document.getElementById('feedbackMsg');
+  const bookingId = localStorage.getItem('guestToken'); // Using booking _id stored as token
+
+  if (!bookingId) {
+    msgEl.textContent = 'Session error. Please log back in.';
+    msgEl.className = 'text-sm font-medium text-red-600';
+    return;
+  }
+
+  msgEl.textContent = 'Sending feedback...';
+  msgEl.className = 'text-sm font-medium text-gray-600';
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/guest-portal/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bookingId,
+        overallRating: currentRating,
+        cleanlinessRating: currentRating,
+        staffRating: currentRating,
+        diningRating: currentRating,
+        comments
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to submit feedback');
+
+    msgEl.textContent = data.message;
+    msgEl.className = 'text-sm font-medium text-emerald-600';
+  } catch (err) {
+    msgEl.textContent = err.message;
+    msgEl.className = 'text-sm font-medium text-red-600';
+  }
+}
+
+// Initialize stars as fully active on load
+window.addEventListener('DOMContentLoaded', () => {
+  setRating(5);
+});
     </script>
 </body>
 </html>

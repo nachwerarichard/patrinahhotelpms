@@ -4061,7 +4061,95 @@ app.get('/api/bookings/:id/fiscal-receipt', auth, async (req, res) => {
 
 // --- 6. Hardcoded Users for Authentication (Highly Insecure for Production!) ---
 // --- Updated User Schema ---
+const guestFeedbackSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true, index: true },
+  bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true },
+  bookingCustomId: { type: String, required: true },
+  guestName: { type: String, required: true },
+  roomNumber: { type: String, required: true },
+  overallRating: { type: Number, required: true, min: 1, max: 5 }, // 1 to 5 Stars
+  cleanlinessRating: { type: Number, min: 1, max: 5 },
+  staffRating: { type: Number, min: 1, max: 5 },
+  diningRating: { type: Number, min: 1, max: 5 },
+  comments: { type: String },
+  isResolved: { type: Boolean, default: false }, // Service recovery status
+  resolutionNotes: { type: String },
+  handledBy: { type: String }
+}, { timestamps: true });
 
+const GuestFeedback = mongoose.models.GuestFeedback || mongoose.model('GuestFeedback', guestFeedbackSchema);
+
+// 1. Submit Guest Feedback (From Portal)
+app.post('/api/guest-portal/feedback', async (req, res) => {
+  const { bookingId, overallRating, cleanlinessRating, staffRating, diningRating, comments } = req.body;
+  try {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+    // Check if feedback already submitted for this stay
+    const existing = await GuestFeedback.findOne({ bookingId: booking._id });
+    if (existing) {
+      existing.overallRating = overallRating;
+      existing.cleanlinessRating = cleanlinessRating;
+      existing.staffRating = staffRating;
+      existing.diningRating = diningRating;
+      existing.comments = comments;
+      await existing.save();
+      return res.status(200).json({ message: 'Feedback updated successfully. Thank you!' });
+    }
+
+    const feedback = new GuestFeedback({
+      hotelId: booking.hotelId,
+      bookingId: booking._id,
+      bookingCustomId: booking.id,
+      guestName: booking.name,
+      roomNumber: booking.room || 'N/A',
+      overallRating,
+      cleanlinessRating,
+      staffRating,
+      diningRating,
+      comments
+    });
+
+    await feedback.save();
+
+    // If rating is 3 or lower, flag it automatically as an urgent service recovery task for management
+    if (overallRating <= 3) {
+      // Optional: Automatically push a high-priority alert or notification to front office
+      console.warn(`[SERVICE RECOVERY ALERT] Low rating (${overallRating}/5) received from Room ${booking.room} (${booking.name})`);
+    }
+
+    res.status(201).json({ message: 'Feedback submitted successfully. We appreciate your insights!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to submit feedback' });
+  }
+});
+
+// 2. Get Hotel Feedback & Service Recovery Log (For Managers/Front Desk)
+app.get('/api/hotel/feedback', auth, async (req, res) => {
+  try {
+    const feedbackList = await GuestFeedback.find({ hotelId: req.user.hotelId }).sort({ createdAt: -1 });
+    res.status(200).json(feedbackList);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to retrieve feedback records' });
+  }
+});
+
+// 3. Resolve Service Recovery Issue
+app.patch('/api/hotel/feedback/:id/resolve', auth, async (req, res) => {
+  try {
+    const { resolutionNotes } = req.body;
+    const updated = await GuestFeedback.findOneAndUpdate(
+      { _id: req.params.id, hotelId: req.user.hotelId },
+      { isResolved: true, resolutionNotes, handledBy: req.user.username },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Feedback record not found' });
+    res.status(200).json({ message: 'Service recovery marked as resolved', feedback: updated });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update recovery status' });
+  }
+});
 // Ensure a username is unique ONLY within the same hotel
 // 1. Guest Portal Login (Authentication via Booking ID + Last Name)
 // Flexible Guest Portal Login (Supports Booking ID OR Room Number + Last Name)
