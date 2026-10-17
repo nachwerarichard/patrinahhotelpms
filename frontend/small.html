@@ -390,6 +390,9 @@
                 </button>
                 <ul id="admin-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-staff"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Users</a></li>
+                    <li id="nav-banquetsSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Banquets</a></li>
+                    <li id="nav-hrSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Human Resource</a></li>
+                    <li id="nav-maintenace"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Maintenace</a></li>
                     <li id="nav-store"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Store</a></li>
                     <li id="nav-paymentgateway"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Payment Gateways</a></li>
                     <li id="nav-integrations"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Third-party Integrations</a></li>
@@ -641,6 +644,394 @@
 
     </div>
 </section>
+<section id="maintenanceSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-indigo-600">Assets Maintenance & Repairs (CMMS)</h2>
+            <p class="text-sm text-gray-500">Manage engineering work orders, plant equipment, preventive maintenance, and repairs</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openAssetModal()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm">
+                + Register Plant Asset
+            </button>
+            <button onclick="openWorkOrderModal()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm">
+                + Log Repair Work Order
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="flex border-b mb-6 gap-6 text-sm font-medium">
+        <button onclick="switchMaintenanceTab('workOrdersList')" id="tabWorkOrdersList" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold">Repair Work Orders</button>
+        <button onclick="switchMaintenanceTab('assetsList')" id="tabAssetsList" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Engineering Asset Register</button>
+    </div>
+
+    <!-- TAB 1: Work Orders Table -->
+    <div id="subtabWorkOrdersList" class="maintenance-subtab">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <select id="filterWoStatus" onchange="loadWorkOrders()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+            <select id="filterWoPriority" onchange="loadWorkOrders()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Priorities</option>
+                <option value="Emergency">Emergency</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">WO #</th>
+                        <th class="border-b px-4 py-3 text-left">Location / Room</th>
+                        <th class="border-b px-4 py-3 text-left">Issue Description</th>
+                        <th class="border-b px-4 py-3 text-left">Priority / Type</th>
+                        <th class="border-b px-4 py-3 text-left">Assigned Tech</th>
+                        <th class="border-b px-4 py-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="workOrdersTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Asset Register Table -->
+    <div id="subtabAssetsList" class="maintenance-subtab hidden">
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Asset Code</th>
+                        <th class="border-b px-4 py-3 text-left">Equipment Name</th>
+                        <th class="border-b px-4 py-3 text-left">Category / Location</th>
+                        <th class="border-b px-4 py-3 text-left">Serial Number</th>
+                        <th class="border-b px-4 py-3 text-left">Operational Status</th>
+                    </tr>
+                </thead>
+                <tbody id="assetsTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: Log Work Order -->
+<div id="workOrderModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full relative mx-4 max-h-[90vh] overflow-y-auto">
+        <button type="button" onclick="closeWorkOrderModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Log Maintenance Work Order</h3>
+        <form id="workOrderForm" onsubmit="handleCreateWorkOrder(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Location / Room #:</label>
+                    <input type="text" id="woLocation" required placeholder="Room 305 / Lobby" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Related Asset (Optional):</label>
+                    <select id="woAssetId" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Issue Description:</label>
+                <textarea id="woDescription" required rows="3" placeholder="Describe the defect or repair needed..." class="w-full mt-1 px-3 py-2 border rounded-lg text-sm"></textarea>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Priority:</label>
+                    <select id="woPriority" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Maintenance Type:</label>
+                    <select id="woType" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Corrective">Corrective (Breakdown)</option>
+                        <option value="Preventative">Preventative Service</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Assign Technician:</label>
+                    <input type="text" id="woTechnician" placeholder="Technician Name" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeWorkOrderModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Work Order</button>
+            </div>
+        </form>
+        <p id="workOrderModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
+
+<!-- MODAL: Register Asset -->
+<div id="assetModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeAssetModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Register Plant Asset</h3>
+        <form id="assetForm" onsubmit="handleCreateAsset(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Equipment Name:</label>
+                <input type="text" id="assetName" required placeholder="Main Lobby Chiller Unit" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Category:</label>
+                    <select id="assetCategory" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="HVAC">HVAC / Cooling</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Elevator">Elevator / Lift</option>
+                        <option value="IT">IT / Network</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Physical Location:</label>
+                    <input type="text" id="assetLocation" required placeholder="Roof Top" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Serial Number (Optional):</label>
+                <input type="text" id="assetSerial" placeholder="SN-98234-XYZ" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono" />
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeAssetModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Asset</button>
+            </div>
+        </form>
+        <p id="assetModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
+<section id="hrSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-indigo-600">Human Resources & Staffing (HRM)</h2>
+            <p class="text-sm text-gray-500">Manage hotel personnel registries, departmental rosters, shifts, and compliance</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openEmployeeModal()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm">
+                + Register Employee
+            </button>
+            <button onclick="openAttendanceModal()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm">
+                + Log Shift / Attendance
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="flex border-b mb-6 gap-6 text-sm font-medium">
+        <button onclick="switchHrTab('employeeList')" id="tabEmployeeList" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold">Employee Directory</button>
+        <button onclick="switchHrTab('attendanceList')" id="tabAttendanceList" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Shift Attendance Roster</button>
+    </div>
+
+    <!-- TAB 1: Employee Directory Table -->
+    <div id="subtabEmployeeList" class="hr-subtab">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <select id="filterHrDept" onchange="loadEmployees()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Departments</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Front Office">Front Office</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Security">Security</option>
+                <option value="Administration">Administration</option>
+            </select>
+            <select id="filterHrStatus" onchange="loadEmployees()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Terminated">Terminated</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Emp ID</th>
+                        <th class="border-b px-4 py-3 text-left">Full Name</th>
+                        <th class="border-b px-4 py-3 text-left">Department / Position</th>
+                        <th class="border-b px-4 py-3 text-left">Type / Joined</th>
+                        <th class="border-b px-4 py-3 text-left">Contact Info</th>
+                        <th class="border-b px-4 py-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Attendance Roster Table -->
+    <div id="subtabAttendanceList" class="hr-subtab hidden">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <input type="date" id="attendanceFilterDate" onchange="loadAttendanceRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white" />
+            </div>
+            <select id="attendanceFilterDept" onchange="loadAttendanceRoster()" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                <option value="">All Departments</option>
+                <option value="Housekeeping">Housekeeping</option>
+                <option value="Food & Beverage">Food & Beverage</option>
+                <option value="Front Office">Front Office</option>
+                <option value="Engineering">Engineering</option>
+                <option value="Security">Security</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Date</th>
+                        <th class="border-b px-4 py-3 text-left">Employee</th>
+                        <th class="border-b px-4 py-3 text-left">Department</th>
+                        <th class="border-b px-4 py-3 text-left">Assigned Shift</th>
+                        <th class="border-b px-4 py-3 text-left">Clock In/Out</th>
+                        <th class="border-b px-4 py-3 text-left">Attendance Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: Register Employee -->
+<div id="employeeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-lg w-full relative mx-4 max-h-[90vh] overflow-y-auto">
+        <button type="button" onclick="closeEmployeeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Register New Employee</h3>
+        <form id="employeeForm" onsubmit="handleCreateEmployee(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">First Name:</label>
+                    <input type="text" id="empFirst" required placeholder="Jane" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Last Name:</label>
+                    <input type="text" id="empLast" required placeholder="Doe" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Department:</label>
+                    <select id="empDept" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Housekeeping">Housekeeping</option>
+                        <option value="Food & Beverage">Food & Beverage</option>
+                        <option value="Front Office">Front Office</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Security">Security</option>
+                        <option value="Administration">Administration</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Job Position:</label>
+                    <input type="text" id="empPosition" required placeholder="Room Attendant" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Email Address:</label>
+                    <input type="email" id="empEmail" required placeholder="jane@hotel.com" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Phone Number:</label>
+                    <input type="text" id="empPhone" required placeholder="+256..." class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Employment Type:</label>
+                    <select id="empType" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Full-Time">Full-Time</option>
+                        <option value="Part-Time">Part-Time</option>
+                        <option value="Contractor">Contractor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Date Joined:</label>
+                    <input type="date" id="empJoined" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Base Salary:</label>
+                    <input type="number" id="empSalary" min="0" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeEmployeeModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Employee</button>
+            </div>
+        </form>
+        <p id="employeeModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
+
+<!-- MODAL: Log Attendance / Shift -->
+<div id="attendanceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeAttendanceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Assign Shift & Attendance</h3>
+        <form id="attendanceForm" onsubmit="handleLogAttendance(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Select Employee:</label>
+                <select id="attEmpId" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                    <!-- Populated via JS -->
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Work Date:</label>
+                    <input type="date" id="attDate" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Assigned Shift:</label>
+                    <select id="attShift" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Morning">Morning (07:00 - 15:00)</option>
+                        <option value="Evening">Evening (15:00 - 23:00)</option>
+                        <option value="Night Audit">Night Audit (23:00 - 07:00)</option>
+                        <option value="Off">Rest Day (Off)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Attendance Status:</label>
+                    <select id="attStatus" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Late">Late</option>
+                        <option value="On Leave">On Leave</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">In:</label>
+                        <input type="time" id="attClockIn" class="w-full mt-1 px-2 py-2 border rounded-lg text-xs" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Out:</label>
+                        <input type="time" id="attClockOut" class="w-full mt-1 px-2 py-2 border rounded-lg text-xs" />
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeAttendanceModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Attendance</button>
+            </div>
+        </form>
+        <p id="attendanceModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
 <section id="booking-management" class="section bg-white p-4 md:p-5 rounded-md border border-slate-200 shadow-sm mb-6 hidden">
     <!-- Header Row -->
     <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
@@ -1456,6 +1847,210 @@
 
     <audio id="orderDing" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 </section>
+<section id="banquetsSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-indigo-600">Events & Banqueting (BEO Hub)</h2>
+            <p class="text-sm text-gray-500">Manage function spaces, client catering orders, setup styles, and banquet revenues</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openSpaceModal()" 
+                class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm">
+                + Add Venue Space
+            </button>
+            <button onclick="openBeoModal()" 
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm">
+                + New Banquet Booking (BEO)
+            </button>
+        </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="flex border-b mb-6 gap-6 text-sm font-medium">
+        <button onclick="switchBanquetTab('beoList')" id="tabBeoList" class="pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold">BEO Bookings Schedule</button>
+        <button onclick="switchBanquetTab('spacesList')" id="tabSpacesList" class="pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition">Function Venues</button>
+    </div>
+
+    <!-- TAB 1: BEO Bookings Table -->
+    <div id="subtabBeoList" class="banquet-subtab">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <input type="date" id="beoFilterStart" class="px-3 py-2 border rounded-lg text-sm bg-white" />
+                <input type="date" id="beoFilterEnd" class="px-3 py-2 border rounded-lg text-sm bg-white" />
+                <button onclick="loadBanquetEvents()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700">Filter</button>
+            </div>
+            <select id="beoFilterStatus" onchange="loadBanquetEvents()" class="px-3 py-2 border rounded-lg text-sm bg-white">
+                <option value="">All Statuses</option>
+                <option value="Tentative">Tentative</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Executed">Executed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">BEO #</th>
+                        <th class="border-b px-4 py-3 text-left">Event & Client</th>
+                        <th class="border-b px-4 py-3 text-left">Venue Space</th>
+                        <th class="border-b px-4 py-3 text-left">Date & Time</th>
+                        <th class="border-b px-4 py-3 text-left">Setup / Pax</th>
+                        <th class="border-b px-4 py-3 text-left">Est. Revenue</th>
+                        <th class="border-b px-4 py-3 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="beoTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Function Venues Table -->
+    <div id="subtabSpacesList" class="banquet-subtab hidden">
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="min-w-full table-auto border-collapse">
+                <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                    <tr>
+                        <th class="border-b px-4 py-3 text-left">Code</th>
+                        <th class="border-b px-4 py-3 text-left">Venue Name</th>
+                        <th class="border-b px-4 py-3 text-left">Max Capacity</th>
+                        <th class="border-b px-4 py-3 text-left">Setup Styles</th>
+                        <th class="border-b px-4 py-3 text-left">Full Day Rate</th>
+                    </tr>
+                </thead>
+                <tbody id="spacesTableBody" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- MODAL: Create BEO Booking -->
+<div id="beoModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-2xl w-full relative mx-4 max-h-[90vh] overflow-y-auto">
+        <button type="button" onclick="closeBeoModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">New Banquet Event Order (BEO)</h3>
+        <form id="beoForm" onsubmit="handleCreateBeo(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Client Name:</label>
+                    <input type="text" id="beoClient" required placeholder="e.g., John Doe" class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Company / Organization:</label>
+                    <input type="text" id="beoCompany" placeholder="e.g., Tech Corp Africa" class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Event Title:</label>
+                <input type="text" id="beoTitle" required placeholder="e.g., Annual General Meeting" class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Function Venue:</label>
+                    <select id="beoSpaceId" required class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Event Date:</label>
+                    <input type="date" id="beoDate" required class="w-full mt-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Start Time:</label>
+                    <input type="time" id="beoStart" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">End Time:</label>
+                    <input type="time" id="beoEnd" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Guest Count (Pax):</label>
+                    <input type="number" id="beoPax" min="1" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Setup Style:</label>
+                    <select id="beoSetup" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Banquet">Banquet Style</option>
+                        <option value="Theater">Theater Style</option>
+                        <option value="Classroom">Classroom Style</option>
+                        <option value="U-Shape">U-Shape Style</option>
+                        <option value="Boardroom">Boardroom</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Booking Status:</label>
+                    <select id="beoStatus" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                        <option value="Tentative">Tentative</option>
+                        <option value="Confirmed">Confirmed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded-lg border">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Room Rental Revenue:</label>
+                    <input type="number" id="revRoom" min="0" value="0" class="w-full mt-1 px-2 py-1 border rounded text-sm bg-white" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">F&B Catering Revenue:</label>
+                    <input type="number" id="revFb" min="0" value="0" class="w-full mt-1 px-2 py-1 border rounded text-sm bg-white" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">AV / Equipment Revenue:</label>
+                    <input type="number" id="revAv" min="0" value="0" class="w-full mt-1 px-2 py-1 border rounded text-sm bg-white" />
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeBeoModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save BEO Booking</button>
+            </div>
+        </form>
+        <p id="beoModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
+
+<!-- MODAL: Add Function Venue -->
+<div id="spaceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeSpaceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Register Function Venue</h3>
+        <form id="spaceForm" onsubmit="handleCreateSpace(event)" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Venue Code:</label>
+                    <input type="text" id="spaceCode" required placeholder="GB-01" class="w-full mt-1 px-3 py-2 border rounded-lg uppercase text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Max Capacity (Pax):</label>
+                    <input type="number" id="spaceCap" min="1" required class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Venue Name:</label>
+                <input type="text" id="spaceName" required placeholder="Grand Ballroom" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Half-Day Rental Rate:</label>
+                    <input type="number" id="spaceHalf" min="0" value="0" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700">Full-Day Rental Rate:</label>
+                    <input type="number" id="spaceFull" min="0" value="0" class="w-full mt-1 px-3 py-2 border rounded-lg text-sm" />
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeSpaceModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition">Cancel</button>
+                <button type="submit" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition">Save Venue</button>
+            </div>
+        </form>
+        <p id="spaceModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
 
 <section id="prep-list-section" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
     <div class="bg-white rounded-[1.5rem] shadow-lg border border-slate-200 overflow-hidden">
@@ -5993,7 +6588,7 @@ Manage payment providers used for guest payments.            </p>
     
         <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="small.js"></script>
+    <script src="small.js.js"></script>
 
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">

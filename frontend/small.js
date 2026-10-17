@@ -6126,6 +6126,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
+        const navMaintenace = document.getElementById('nav-maintenace');
+     const navHR = document.getElementById('nav-hrSection');
+    const navBanquets = document.getElementById('nav-banquetsSection');
     const navReceivable= document.getElementById('nav-receivable');
     const navRefunds = document.getElementById('nav-refunds');
     const navRefundReports = document.getElementById('nav-refundreports');
@@ -6149,10 +6152,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        if (navMaintenace) {
+            navMaintenace.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('maintenanceSection');
+            });
+        }
+
+        if (navHR) {
+            navHR.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('hrSection');
+            });
+        }
+
         if (navReceivable) {
             navReceivable.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('receivable');
+            });
+        }
+         if (navBanquets) {
+            navBanquets.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('banquetsSection');
             });
         }
          if (navStoreSection) {
@@ -19016,3 +19039,568 @@ async function loadTransferHistory() {
 
 // Bind globally
 window.loadTransferHistory = loadTransferHistory;
+// Switch Banquet Sub-tabs
+function switchBanquetTab(tab) {
+  document.getElementById('subtabBeoList').classList.add('hidden');
+  document.getElementById('subtabSpacesList').classList.add('hidden');
+  document.getElementById('tabBeoList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabSpacesList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tab === 'beoList') {
+    document.getElementById('subtabBeoList').classList.remove('hidden');
+    document.getElementById('tabBeoList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadBanquetEvents();
+  } else {
+    document.getElementById('subtabSpacesList').classList.remove('hidden');
+    document.getElementById('tabSpacesList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadFunctionSpaces();
+  }
+}
+
+// Modal controls
+function openBeoModal() { document.getElementById('beoModal').classList.remove('hidden'); populateVenueDropdown(); }
+function closeBeoModal() { document.getElementById('beoModal').classList.add('hidden'); document.getElementById('beoForm').reset(); }
+function openSpaceModal() { document.getElementById('spaceModal').classList.remove('hidden'); }
+function closeSpaceModal() { document.getElementById('spaceModal').classList.add('hidden'); document.getElementById('spaceForm').reset(); }
+
+// Load Function Venues
+async function loadFunctionSpaces() {
+  const tbody = document.getElementById('spacesTableBody');
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading venues...</td></tr>`;
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/spaces`);
+    const spaces = await res.json();
+    tbody.innerHTML = '';
+    if (!spaces.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No function venues registered.</td></tr>`;
+      return;
+    }
+    const currency = localStorage.getItem('hotelCurrency') || 'UGX';
+    spaces.forEach(s => {
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${s.code}</td>
+          <td class="border-b px-4 py-3 font-medium text-gray-900">${s.spaceName}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-800">${s.maxCapacity} Pax</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${s.setupStyles?.join(', ') || 'Standard'}</td>
+          <td class="border-b px-4 py-3 font-semibold text-emerald-600">${currency} ${s.rentalRateFullDay.toLocaleString()}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">Failed to load venues.</td></tr>`;
+  }
+}
+
+// Populate Venue Dropdown for BEO Form
+async function populateVenueDropdown() {
+  const select = document.getElementById('beoSpaceId');
+  select.innerHTML = '<option value="">Loading venues...</option>';
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/spaces`);
+    const spaces = await res.json();
+    select.innerHTML = spaces.length ? '<option value="">Select Venue Space</option>' : '<option value="">No venues found</option>';
+    spaces.forEach(s => {
+      select.innerHTML += `<option value="${s._id}">${s.spaceName} (Max: ${s.maxCapacity} Pax)</option>`;
+    });
+  } catch (err) {
+    select.innerHTML = '<option value="">Failed to load venues</option>';
+  }
+}
+
+// Load BEO Events Schedule
+async function loadBanquetEvents() {
+  const status = document.getElementById('beoFilterStatus').value;
+  const startDate = document.getElementById('beoFilterStart').value;
+  const endDate = document.getElementById('beoFilterEnd').value;
+  const tbody = document.getElementById('beoTableBody');
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">Loading BEO schedule...</td></tr>`;
+
+  try {
+    let url = `${API_BASE_URL}/banquets/events?`;
+    if (status) url += `status=${status}&`;
+    if (startDate) url += `startDate=${startDate}&`;
+    if (endDate) url += `endDate=${endDate}`;
+
+    const res = await authenticatedFetch(url);
+    const events = await res.json();
+    tbody.innerHTML = '';
+
+    if (!events.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-500">No banquet bookings found.</td></tr>`;
+      return;
+    }
+
+    const currency = localStorage.getItem('hotelCurrency') || 'UGX';
+    events.forEach(ev => {
+      const dateStr = new Date(ev.eventDate).toLocaleDateString();
+      const statusBadge = ev.status === 'Confirmed' 
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Confirmed</span>'
+        : ev.status === 'Executed'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-50 text-blue-700">Executed</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Tentative</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${ev.beoNumber}</td>
+          <td class="border-b px-4 py-3">
+            <div class="font-bold text-gray-900">${ev.eventTitle}</div>
+            <div class="text-xs text-gray-500">${ev.clientName} ${ev.companyName ? '(' + ev.companyName + ')' : ''}</div>
+          </td>
+          <td class="border-b px-4 py-3 font-medium text-gray-800">${ev.functionSpaceId?.spaceName || 'Venue Removed'}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${dateStr}<br/>${ev.startTime} - ${ev.endTime}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700">${ev.setupStyle}<br/><strong>${ev.guestCount} Pax</strong></td>
+          <td class="border-b px-4 py-3 font-semibold text-emerald-600">${currency} ${ev.estimatedRevenue?.total?.toLocaleString() || 0}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-red-500">Failed to load BEO schedule.</td></tr>`;
+  }
+}
+
+// Handle Venue Creation
+async function handleCreateSpace(e) {
+  e.preventDefault();
+  const payload = {
+    code: document.getElementById('spaceCode').value,
+    spaceName: document.getElementById('spaceName').value,
+    maxCapacity: parseInt(document.getElementById('spaceCap').value, 10),
+    rentalRateHalfDay: parseFloat(document.getElementById('spaceHalf').value) || 0,
+    rentalRateFullDay: parseFloat(document.getElementById('spaceFull').value) || 0
+  };
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/space`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to save venue');
+    document.getElementById('spaceModalMsg').textContent = 'Venue registered successfully!';
+    document.getElementById('spaceModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeSpaceModal(); loadFunctionSpaces(); }, 1000);
+  } catch (err) {
+    document.getElementById('spaceModalMsg').textContent = 'Error saving venue.';
+    document.getElementById('spaceModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Handle BEO Booking Creation
+async function handleCreateBeo(e) {
+  e.preventDefault();
+  const payload = {
+    clientName: document.getElementById('beoClient').value,
+    companyName: document.getElementById('beoCompany').value,
+    eventTitle: document.getElementById('beoTitle').value,
+    functionSpaceId: document.getElementById('beoSpaceId').value,
+    eventDate: document.getElementById('beoDate').value,
+    startTime: document.getElementById('beoStart').value,
+    endTime: document.getElementById('beoEnd').value,
+    guestCount: parseInt(document.getElementById('beoPax').value, 10),
+    setupStyle: document.getElementById('beoSetup').value,
+    status: document.getElementById('beoStatus').value,
+    estimatedRevenue: {
+      roomRental: parseFloat(document.getElementById('revRoom').value) || 0,
+      foodAndBeverage: parseFloat(document.getElementById('revFb').value) || 0,
+      audioVisual: parseFloat(document.getElementById('revAv').value) || 0
+    }
+  };
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/event`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create BEO');
+    document.getElementById('beoModalMsg').textContent = data.message;
+    document.getElementById('beoModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeBeoModal(); loadBanquetEvents(); }, 1200);
+  } catch (err) {
+    document.getElementById('beoModalMsg').textContent = err.message;
+    document.getElementById('beoModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.switchBanquetTab = switchBanquetTab;
+window.openBeoModal = openBeoModal;
+window.closeBeoModal = closeBeoModal;
+window.openSpaceModal = openSpaceModal;
+window.closeSpaceModal = closeSpaceModal;
+window.handleCreateSpace = handleCreateSpace;
+window.handleCreateBeo = handleCreateBeo;
+window.loadBanquetEvents = loadBanquetEvents;
+// Switch HR Sub-tabs
+function switchHrTab(tab) {
+  document.getElementById('subtabEmployeeList').classList.add('hidden');
+  document.getElementById('subtabAttendanceList').classList.add('hidden');
+  document.getElementById('tabEmployeeList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabAttendanceList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tab === 'employeeList') {
+    document.getElementById('subtabEmployeeList').classList.remove('hidden');
+    document.getElementById('tabEmployeeList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadEmployees();
+  } else {
+    document.getElementById('subtabAttendanceList').classList.remove('hidden');
+    document.getElementById('tabAttendanceList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadAttendanceRoster();
+  }
+}
+
+// Modal controls
+function openEmployeeModal() { document.getElementById('employeeModal').classList.remove('hidden'); }
+function closeEmployeeModal() { document.getElementById('employeeModal').classList.add('hidden'); document.getElementById('employeeForm').reset(); }
+function openAttendanceModal() { document.getElementById('attendanceModal').classList.remove('hidden'); populateEmployeeDropdown(); }
+function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); document.getElementById('attendanceForm').reset(); }
+
+// Load Employees Directory
+async function loadEmployees() {
+  const dept = document.getElementById('filterHrDept').value;
+  const status = document.getElementById('filterHrStatus').value;
+  const tbody = document.getElementById('employeeTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading personnel records...</td></tr>`;
+
+  try {
+    let url = `${API_BASE_URL}/hr/employees?`;
+    if (dept) url += `department=${encodeURIComponent(dept)}&`;
+    if (status) url += `status=${status}`;
+
+    const res = await authenticatedFetch(url);
+    const employees = await res.json();
+    tbody.innerHTML = '';
+
+    if (!employees.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No employee records found.</td></tr>`;
+      return;
+    }
+
+    employees.forEach(emp => {
+      const joinedDate = new Date(emp.dateJoined).toLocaleDateString();
+      const statusBadge = emp.status === 'Active'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Active</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">On Leave</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${emp.employeeId}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${emp.firstName} ${emp.lastName}</td>
+          <td class="border-b px-4 py-3">
+            <div class="font-medium text-gray-800">${emp.department}</div>
+            <div class="text-xs text-gray-500">${emp.position}</div>
+          </td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${emp.employmentType}<br/>Joined: ${joinedDate}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700">${emp.email}<br/>${emp.phone}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load employee list.</td></tr>`;
+  }
+}
+
+// Populate Employee Dropdown for Attendance Modal
+async function populateEmployeeDropdown() {
+  const select = document.getElementById('attEmpId');
+  select.innerHTML = '<option value="">Loading employees...</option>';
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/employees?status=Active`);
+    const employees = await res.json();
+    select.innerHTML = employees.length ? '<option value="">Select Employee</option>' : '<option value="">No active employees</option>';
+    employees.forEach(emp => {
+      select.innerHTML += `<option value="${emp._id}">${emp.firstName} ${emp.lastName} (${emp.department} - ${emp.position})</option>`;
+    });
+  } catch (err) {
+    select.innerHTML = '<option value="">Failed to load employees</option>';
+  }
+}
+
+// Load Attendance Roster
+async function loadAttendanceRoster() {
+  const date = document.getElementById('attendanceFilterDate').value;
+  const dept = document.getElementById('attendanceFilterDept').value;
+  const tbody = document.getElementById('attendanceTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading attendance roster...</td></tr>`;
+
+  try {
+    let url = `${API_BASE_URL}/hr/attendance?`;
+    if (date) url += `date=${date}&`;
+    if (dept) url += `department=${encodeURIComponent(dept)}`;
+
+    const res = await authenticatedFetch(url);
+    const records = await res.json();
+    tbody.innerHTML = '';
+
+    if (!records.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No attendance logged for this date.</td></tr>`;
+      return;
+    }
+
+    records.forEach(rec => {
+      const workDate = new Date(rec.workDate).toLocaleDateString();
+      const statusBadge = rec.status === 'Present'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Present</span>'
+        : rec.status === 'Late'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Late</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-red-50 text-red-700">Absent</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${workDate}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${rec.employeeId?.firstName || ''} ${rec.employeeId?.lastName || 'Staff'} <span class="text-xs font-mono text-indigo-600 font-normal">(${rec.employeeId?.employeeId})</span></td>
+          <td class="border-b px-4 py-3 font-medium text-gray-800">${rec.employeeId?.department || 'N/A'}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700 font-semibold">${rec.shift}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${rec.clockInTime || '--:--'} to ${rec.clockOutTime || '--:--'}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load attendance roster.</td></tr>`;
+  }
+}
+
+// Handle Employee Creation
+async function handleCreateEmployee(e) {
+  e.preventDefault();
+  const payload = {
+    firstName: document.getElementById('empFirst').value,
+    lastName: document.getElementById('empLast').value,
+    department: document.getElementById('empDept').value,
+    position: document.getElementById('empPosition').value,
+    email: document.getElementById('empEmail').value,
+    phone: document.getElementById('empPhone').value,
+    employmentType: document.getElementById('empType').value,
+    dateJoined: document.getElementById('empJoined').value,
+    baseSalary: parseFloat(document.getElementById('empSalary').value) || 0
+  };
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/employee`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to register employee');
+    document.getElementById('employeeModalMsg').textContent = data.message;
+    document.getElementById('employeeModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeEmployeeModal(); loadEmployees(); }, 1200);
+  } catch (err) {
+    document.getElementById('employeeModalMsg').textContent = err.message;
+    document.getElementById('employeeModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Handle Attendance Logging
+async function handleLogAttendance(e) {
+  e.preventDefault();
+  const payload = {
+    employeeId: document.getElementById('attEmpId').value,
+    workDate: document.getElementById('attDate').value,
+    shift: document.getElementById('attShift').value,
+    status: document.getElementById('attStatus').value,
+    clockInTime: document.getElementById('attClockIn').value,
+    clockOutTime: document.getElementById('attClockOut').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/attendance`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to log attendance');
+    document.getElementById('attendanceModalMsg').textContent = data.message;
+    document.getElementById('attendanceModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeAttendanceModal(); loadAttendanceRoster(); }, 1200);
+  } catch (err) {
+    document.getElementById('attendanceModalMsg').textContent = err.message;
+    document.getElementById('attendanceModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.switchHrTab = switchHrTab;
+window.openEmployeeModal = openEmployeeModal;
+window.closeEmployeeModal = closeEmployeeModal;
+window.openAttendanceModal = openAttendanceModal;
+window.closeAttendanceModal = closeAttendanceModal;
+window.handleCreateEmployee = handleCreateEmployee;
+window.handleLogAttendance = handleLogAttendance;
+window.loadEmployees = loadEmployees;
+window.loadAttendanceRoster = loadAttendanceRoster;
+
+// Switch Maintenance Sub-tabs
+function switchMaintenanceTab(tab) {
+  document.getElementById('subtabWorkOrdersList').classList.add('hidden');
+  document.getElementById('subtabAssetsList').classList.add('hidden');
+  document.getElementById('tabWorkOrdersList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabAssetsList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tab === 'workOrdersList') {
+    document.getElementById('subtabWorkOrdersList').classList.remove('hidden');
+    document.getElementById('tabWorkOrdersList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadWorkOrders();
+  } else {
+    document.getElementById('subtabAssetsList').classList.remove('hidden');
+    document.getElementById('tabAssetsList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadHotelAssets();
+  }
+}
+
+// Modal controls
+function openWorkOrderModal() { document.getElementById('workOrderModal').classList.remove('hidden'); populateAssetDropdown(); }
+function closeWorkOrderModal() { document.getElementById('workOrderModal').classList.add('hidden'); document.getElementById('workOrderForm').reset(); }
+function openAssetModal() { document.getElementById('assetModal').classList.remove('hidden'); }
+function closeAssetModal() { document.getElementById('assetModal').classList.add('hidden'); document.getElementById('assetForm').reset(); }
+
+// Load Hotel Assets Register
+async function loadHotelAssets() {
+  const tbody = document.getElementById('assetsTableBody');
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading asset register...</td></tr>`;
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/assets`);
+    const assets = await res.json();
+    tbody.innerHTML = '';
+
+    if (!assets.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No plant assets registered.</td></tr>`;
+      return;
+    }
+
+    assets.forEach(ast => {
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${ast.assetCode}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${ast.assetName}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700"><strong>${ast.category}</strong><br/>${ast.location}</td>
+          <td class="border-b px-4 py-3 font-mono text-xs text-gray-600">${ast.serialNumber || 'N/A'}</td>
+          <td class="border-b px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">${ast.status}</span></td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">Failed to load asset register.</td></tr>`;
+  }
+}
+
+// Populate Asset Dropdown for Work Order Form
+async function populateAssetDropdown() {
+  const select = document.getElementById('woAssetId');
+  select.innerHTML = '<option value="">General Room / No Specific Asset</option>';
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/assets`);
+    const assets = await res.json();
+    assets.forEach(ast => {
+      select.innerHTML += `<option value="${ast._id}">${ast.assetName} (${ast.location})</option>`;
+    });
+  } catch (err) {
+    console.error('Failed to load asset dropdown');
+  }
+}
+
+// Load Work Orders
+async function loadWorkOrders() {
+  const status = document.getElementById('filterWoStatus').value;
+  const priority = document.getElementById('filterWoPriority').value;
+  const tbody = document.getElementById('workOrdersTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading work orders...</td></tr>`;
+
+  try {
+    let url = `${API_BASE_URL}/maintenance/work-orders?`;
+    if (status) url += `status=${status}&`;
+    if (priority) url += `priority=${priority}`;
+
+    const res = await authenticatedFetch(url);
+    const workOrders = await res.json();
+    tbody.innerHTML = '';
+
+    if (!workOrders.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No work orders found.</td></tr>`;
+      return;
+    }
+
+    workOrders.forEach(wo => {
+      const priorityBadge = wo.priority === 'Emergency'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-800">Emergency</span>'
+        : wo.priority === 'High'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-100 text-amber-800">High</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800">Medium</span>';
+
+      const statusBadge = wo.status === 'Resolved'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Resolved</span>'
+        : wo.status === 'In Progress'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-50 text-blue-700">In Progress</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Open</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${wo.workOrderNumber}</td>
+          <td class="border-b px-4 py-3 font-medium text-gray-900">${wo.locationRoom}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700">${wo.issueDescription}<br/><span class="text-gray-400 font-mono">By: ${wo.reportedBy}</span></td>
+          <td class="border-b px-4 py-3 text-xs">${priorityBadge}<br/><span class="text-gray-500">${wo.maintenanceType}</span></td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${wo.assignedTo || 'Unassigned'}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load work orders.</td></tr>`;
+  }
+}
+
+// Handle Asset Creation
+async function handleCreateAsset(e) {
+  e.preventDefault();
+  const payload = {
+    assetName: document.getElementById('assetName').value,
+    category: document.getElementById('assetCategory').value,
+    location: document.getElementById('assetLocation').value,
+    serialNumber: document.getElementById('assetSerial').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/asset`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to register asset');
+    document.getElementById('assetModalMsg').textContent = data.message;
+    document.getElementById('assetModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeAssetModal(); loadHotelAssets(); }, 1200);
+  } catch (err) {
+    document.getElementById('assetModalMsg').textContent = err.message;
+    document.getElementById('assetModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Handle Work Order Creation
+async function handleCreateWorkOrder(e) {
+  e.preventDefault();
+  const payload = {
+    locationRoom: document.getElementById('woLocation').value,
+    assetId: document.getElementById('woAssetId').value || null,
+    issueDescription: document.getElementById('woDescription').value,
+    priority: document.getElementById('woPriority').value,
+    maintenanceType: document.getElementById('woType').value,
+    assignedTo: document.getElementById('woTechnician').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/work-order`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create work order');
+    document.getElementById('workOrderModalMsg').textContent = data.message;
+    document.getElementById('workOrderModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeWorkOrderModal(); loadWorkOrders(); }, 1200);
+  } catch (err) {
+    document.getElementById('workOrderModalMsg').textContent = err.message;
+    document.getElementById('workOrderModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.switchMaintenanceTab = switchMaintenanceTab;
+window.openWorkOrderModal = openWorkOrderModal;
+window.closeWorkOrderModal = closeWorkOrderModal;
+window.openAssetModal = openAssetModal;
+window.closeAssetModal = closeAssetModal;
+window.loadWorkOrders = loadWorkOrders;
+window.loadHotelAssets = loadHotelAssets;
+window.handleCreateAsset = handleCreateAsset;
+window.handleCreateWorkOrder = handleCreateWorkOrder;
