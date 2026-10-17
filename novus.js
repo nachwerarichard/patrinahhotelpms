@@ -19052,7 +19052,7 @@ async function loadFunctionSpaces() {
   const tbody = document.getElementById('spacesTableBody');
   tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading venues...</td></tr>`;
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/banquets/spaces`);
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/spaces`);
     const spaces = await res.json();
     tbody.innerHTML = '';
     if (!spaces.length) {
@@ -19080,7 +19080,7 @@ async function populateVenueDropdown() {
   const select = document.getElementById('beoSpaceId');
   select.innerHTML = '<option value="">Loading venues...</option>';
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/banquets/spaces`);
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/spaces`);
     const spaces = await res.json();
     select.innerHTML = spaces.length ? '<option value="">Select Venue Space</option>' : '<option value="">No venues found</option>';
     spaces.forEach(s => {
@@ -19100,7 +19100,7 @@ async function loadBanquetEvents() {
   tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">Loading BEO schedule...</td></tr>`;
 
   try {
-    let url = `${backendURL}/api/banquets/events?`;
+    let url = `${API_BASE_URL}/banquets/events?`;
     if (status) url += `status=${status}&`;
     if (startDate) url += `startDate=${startDate}&`;
     if (endDate) url += `endDate=${endDate}`;
@@ -19153,7 +19153,7 @@ async function handleCreateSpace(e) {
     rentalRateFullDay: parseFloat(document.getElementById('spaceFull').value) || 0
   };
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/banquets/space`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/space`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Failed to save venue');
@@ -19188,7 +19188,7 @@ async function handleCreateBeo(e) {
   };
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/banquets/event`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/banquets/event`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
