@@ -6126,7 +6126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
-        const navMaintenace = document.getElementById('nav-maintenance');
+        const navMaintenace = document.getElementById('nav-maintenace');
      const navHR = document.getElementById('nav-hrSection');
     const navBanquets = document.getElementById('nav-banquetsSection');
     const navReceivable= document.getElementById('nav-receivable');
@@ -6158,6 +6158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showSection('maintenanceSection');
             });
         }
+        
         if (navHR) {
             navHR.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
