@@ -6126,6 +6126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
+        const navMaintenace = document.getElementById('nav-maintenance');
      const navHR = document.getElementById('nav-hrSection');
     const navBanquets = document.getElementById('nav-banquetsSection');
     const navReceivable= document.getElementById('nav-receivable');
@@ -6148,6 +6149,13 @@ document.addEventListener('DOMContentLoaded', () => {
             navReceivables.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('receivables');
+            });
+        }
+
+        if (navMaintenace) {
+            navMaintenace.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('maintenanceSection');
             });
         }
         if (navHR) {
@@ -19414,3 +19422,184 @@ window.handleCreateEmployee = handleCreateEmployee;
 window.handleLogAttendance = handleLogAttendance;
 window.loadEmployees = loadEmployees;
 window.loadAttendanceRoster = loadAttendanceRoster;
+
+// Switch Maintenance Sub-tabs
+function switchMaintenanceTab(tab) {
+  document.getElementById('subtabWorkOrdersList').classList.add('hidden');
+  document.getElementById('subtabAssetsList').classList.add('hidden');
+  document.getElementById('tabWorkOrdersList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+  document.getElementById('tabAssetsList').className = "pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition";
+
+  if (tab === 'workOrdersList') {
+    document.getElementById('subtabWorkOrdersList').classList.remove('hidden');
+    document.getElementById('tabWorkOrdersList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadWorkOrders();
+  } else {
+    document.getElementById('subtabAssetsList').classList.remove('hidden');
+    document.getElementById('tabAssetsList').className = "pb-2 border-b-2 border-indigo-600 text-indigo-600 transition font-semibold";
+    loadHotelAssets();
+  }
+}
+
+// Modal controls
+function openWorkOrderModal() { document.getElementById('workOrderModal').classList.remove('hidden'); populateAssetDropdown(); }
+function closeWorkOrderModal() { document.getElementById('workOrderModal').classList.add('hidden'); document.getElementById('workOrderForm').reset(); }
+function openAssetModal() { document.getElementById('assetModal').classList.remove('hidden'); }
+function closeAssetModal() { document.getElementById('assetModal').classList.add('hidden'); document.getElementById('assetForm').reset(); }
+
+// Load Hotel Assets Register
+async function loadHotelAssets() {
+  const tbody = document.getElementById('assetsTableBody');
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading asset register...</td></tr>`;
+
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/maintenance/assets`);
+    const assets = await res.json();
+    tbody.innerHTML = '';
+
+    if (!assets.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-500">No plant assets registered.</td></tr>`;
+      return;
+    }
+
+    assets.forEach(ast => {
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${ast.assetCode}</td>
+          <td class="border-b px-4 py-3 font-bold text-gray-900">${ast.assetName}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700"><strong>${ast.category}</strong><br/>${ast.location}</td>
+          <td class="border-b px-4 py-3 font-mono text-xs text-gray-600">${ast.serialNumber || 'N/A'}</td>
+          <td class="border-b px-4 py-3"><span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">${ast.status}</span></td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">Failed to load asset register.</td></tr>`;
+  }
+}
+
+// Populate Asset Dropdown for Work Order Form
+async function populateAssetDropdown() {
+  const select = document.getElementById('woAssetId');
+  select.innerHTML = '<option value="">General Room / No Specific Asset</option>';
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/maintenance/assets`);
+    const assets = await res.json();
+    assets.forEach(ast => {
+      select.innerHTML += `<option value="${ast._id}">${ast.assetName} (${ast.location})</option>`;
+    });
+  } catch (err) {
+    console.error('Failed to load asset dropdown');
+  }
+}
+
+// Load Work Orders
+async function loadWorkOrders() {
+  const status = document.getElementById('filterWoStatus').value;
+  const priority = document.getElementById('filterWoPriority').value;
+  const tbody = document.getElementById('workOrdersTableBody');
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading work orders...</td></tr>`;
+
+  try {
+    let url = `${backendURL}/api/maintenance/work-orders?`;
+    if (status) url += `status=${status}&`;
+    if (priority) url += `priority=${priority}`;
+
+    const res = await authenticatedFetch(url);
+    const workOrders = await res.json();
+    tbody.innerHTML = '';
+
+    if (!workOrders.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No work orders found.</td></tr>`;
+      return;
+    }
+
+    workOrders.forEach(wo => {
+      const priorityBadge = wo.priority === 'Emergency'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-red-100 text-red-800">Emergency</span>'
+        : wo.priority === 'High'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-100 text-amber-800">High</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800">Medium</span>';
+
+      const statusBadge = wo.status === 'Resolved'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700">Resolved</span>'
+        : wo.status === 'In Progress'
+        ? '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-50 text-blue-700">In Progress</span>'
+        : '<span class="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700">Open</span>';
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 font-mono text-xs font-semibold text-indigo-600">${wo.workOrderNumber}</td>
+          <td class="border-b px-4 py-3 font-medium text-gray-900">${wo.locationRoom}</td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700">${wo.issueDescription}<br/><span class="text-gray-400 font-mono">By: ${wo.reportedBy}</span></td>
+          <td class="border-b px-4 py-3 text-xs">${priorityBadge}<br/><span class="text-gray-500">${wo.maintenanceType}</span></td>
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${wo.assignedTo || 'Unassigned'}</td>
+          <td class="border-b px-4 py-3">${statusBadge}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load work orders.</td></tr>`;
+  }
+}
+
+// Handle Asset Creation
+async function handleCreateAsset(e) {
+  e.preventDefault();
+  const payload = {
+    assetName: document.getElementById('assetName').value,
+    category: document.getElementById('assetCategory').value,
+    location: document.getElementById('assetLocation').value,
+    serialNumber: document.getElementById('assetSerial').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/maintenance/asset`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to register asset');
+    document.getElementById('assetModalMsg').textContent = data.message;
+    document.getElementById('assetModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeAssetModal(); loadHotelAssets(); }, 1200);
+  } catch (err) {
+    document.getElementById('assetModalMsg').textContent = err.message;
+    document.getElementById('assetModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Handle Work Order Creation
+async function handleCreateWorkOrder(e) {
+  e.preventDefault();
+  const payload = {
+    locationRoom: document.getElementById('woLocation').value,
+    assetId: document.getElementById('woAssetId').value || null,
+    issueDescription: document.getElementById('woDescription').value,
+    priority: document.getElementById('woPriority').value,
+    maintenanceType: document.getElementById('woType').value,
+    assignedTo: document.getElementById('woTechnician').value
+  };
+
+  try {
+    const res = await authenticatedFetch(`${backendURL}/api/maintenance/work-order`, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create work order');
+    document.getElementById('workOrderModalMsg').textContent = data.message;
+    document.getElementById('workOrderModalMsg').className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+    setTimeout(() => { closeWorkOrderModal(); loadWorkOrders(); }, 1200);
+  } catch (err) {
+    document.getElementById('workOrderModalMsg').textContent = err.message;
+    document.getElementById('workOrderModalMsg').className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.switchMaintenanceTab = switchMaintenanceTab;
+window.openWorkOrderModal = openWorkOrderModal;
+window.closeWorkOrderModal = closeWorkOrderModal;
+window.openAssetModal = openAssetModal;
+window.closeAssetModal = closeAssetModal;
+window.loadWorkOrders = loadWorkOrders;
+window.loadHotelAssets = loadHotelAssets;
+window.handleCreateAsset = handleCreateAsset;
+window.handleCreateWorkOrder = handleCreateWorkOrder;

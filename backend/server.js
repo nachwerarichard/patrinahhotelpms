@@ -809,6 +809,134 @@ app.post('/api/hr/attendance', auth, async (req, res) => {
     res.status(500).json({ message: 'Failed to record attendance' });
   }
 });
+
+// 1. Hotel Asset / Equipment Schema
+const hotelAssetSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  assetCode: { type: String, required: true },     // e.g., "AST-ENG-001"
+  assetName: { type: String, required: true },     // e.g., "Main Lobby Chiller Unit"
+  category: { type: String, required: true },      // 'HVAC', 'Plumbing', 'Electrical', 'Elevator', 'IT'
+  location: { type: String, required: true },      // e.g., "Roof Top / Main Building"
+  serialNumber: { type: String },
+  installationDate: { type: Date },
+  status: { type: String, enum: ['Operational', 'Under Maintenance', 'Decommissioned'], default: 'Operational' }
+}, { timestamps: true });
+
+const HotelAsset = mongoose.model('HotelAsset', hotelAssetSchema);
+
+// 2. Maintenance Work Order Schema
+const workOrderSchema = new mongoose.Schema({
+  hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
+  workOrderNumber: { type: String, required: true, unique: true }, // e.g., "WO-2026-001"
+  assetId: { type: mongoose.Schema.Types.ObjectId, ref: 'HotelAsset' }, // Optional if general room issue
+  locationRoom: { type: String, required: true },                  // e.g., "Room 402" or "Lobby"
+  issueDescription: { type: String, required: true },
+  priority: { type: String, enum: ['Low', 'Medium', 'High', 'Emergency'], default: 'Medium' },
+  maintenanceType: { type: String, enum: ['Corrective', 'Preventative'], default: 'Corrective' },
+  assignedTo: { type: String },                                    // e.g., "John Technician"
+  status: { type: String, enum: ['Open', 'In Progress', 'Resolved', 'Cancelled'], default: 'Open' },
+  reportedBy: { type: String, required: true },
+  resolutionNotes: { type: String },
+  completedAt: { type: Date }
+}, { timestamps: true });
+
+const WorkOrder = mongoose.model('WorkOrder', workOrderSchema);
+
+// Get Hotel Assets
+app.get('/api/maintenance/assets', auth, async (req, res) => {
+  try {
+    const assets = await HotelAsset.find({ hotelId: req.user.hotelId }).sort({ assetName: 1 });
+    res.status(200).json(assets);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch hotel assets' });
+  }
+});
+
+// Register New Asset
+app.post('/api/maintenance/asset', auth, async (req, res) => {
+  try {
+    const count = await HotelAsset.countDocuments({ hotelId: req.user.hotelId });
+    const assetCode = `AST-${req.body.category.substring(0, 3).toUpperCase()}-${String(count + 1).padStart(3, '0')}`;
+
+    const newAsset = new HotelAsset({
+      ...req.body,
+      hotelId: req.user.hotelId,
+      assetCode
+    });
+
+    await newAsset.save();
+    res.status(201).json({ message: `Asset ${assetCode} registered successfully`, asset: newAsset });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to register asset' });
+  }
+});
+
+// Get Work Orders with status filtering
+app.get('/api/maintenance/work-orders', auth, async (req, res) => {
+  const { status, priority } = req.query;
+  try {
+    const query = { hotelId: req.user.hotelId };
+    if (status) query.status = status;
+    if (priority) query.priority = priority;
+
+    const workOrders = await WorkOrder.find(query)
+      .populate('assetId', 'assetCode assetName location')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(workOrders);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to retrieve work orders' });
+  }
+});
+
+// Create Work Order
+app.post('/api/maintenance/work-order', auth, async (req, res) => {
+  try {
+    const count = await WorkOrder.countDocuments({ hotelId: req.user.hotelId });
+    const workOrderNumber = `WO-${new Date().getFullYear()}-${String(count + 1).padStart(3, '0')}`;
+
+    const newWo = new WorkOrder({
+      ...req.body,
+      hotelId: req.user.hotelId,
+      workOrderNumber,
+      reportedBy: req.user.username
+    });
+
+    await newWo.save();
+    res.status(201).json({ message: `Work Order ${workOrderNumber} logged successfully`, workOrder: newWo });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to create work order' });
+  }
+});
+
+// Update Work Order Status / Resolution
+app.patch('/api/maintenance/work-order/:id', auth, async (req, res) => {
+  try {
+    const { status, assignedTo, resolutionNotes } = req.body;
+    const updateData = {};
+    
+    if (status) updateData.status = status;
+    if (assignedTo) updateData.assignedTo = assignedTo;
+    if (resolutionNotes) updateData.resolutionNotes = resolutionNotes;
+    if (status === 'Resolved' || status === 'Cancelled') {
+      updateData.completedAt = new Date();
+    }
+
+    const updated = await WorkOrder.findOneAndUpdate(
+      { _id: req.params.id, hotelId: req.user.hotelId },
+      updateData,
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: 'Work order not found' });
+    res.status(200).json({ message: 'Work order updated successfully', workOrder: updated });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update work order' });
+  }
+});
+
+
 // Add this new schema and model definition with your other schemas
 const walkInChargeSchema = new mongoose.Schema({
     hotelId: { type: mongoose.Schema.Types.ObjectId, ref: 'Hotel', required: true },
