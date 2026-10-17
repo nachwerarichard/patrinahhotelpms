@@ -19250,7 +19250,7 @@ async function loadEmployees() {
   tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading personnel records...</td></tr>`;
 
   try {
-    let url = `${backendURL}/api/hr/employees?`;
+    let url = `${API_BASE_URL}/hr/employees?`;
     if (dept) url += `department=${encodeURIComponent(dept)}&`;
     if (status) url += `status=${status}`;
 
@@ -19292,7 +19292,7 @@ async function populateEmployeeDropdown() {
   const select = document.getElementById('attEmpId');
   select.innerHTML = '<option value="">Loading employees...</option>';
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/hr/employees?status=Active`);
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/employees?status=Active`);
     const employees = await res.json();
     select.innerHTML = employees.length ? '<option value="">Select Employee</option>' : '<option value="">No active employees</option>';
     employees.forEach(emp => {
@@ -19311,7 +19311,7 @@ async function loadAttendanceRoster() {
   tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading attendance roster...</td></tr>`;
 
   try {
-    let url = `${backendURL}/api/hr/attendance?`;
+    let url = `${API_BASE_URL}/hr/attendance?`;
     if (date) url += `date=${date}&`;
     if (dept) url += `department=${encodeURIComponent(dept)}`;
 
@@ -19363,7 +19363,7 @@ async function handleCreateEmployee(e) {
   };
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/hr/employee`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/employee`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -19390,7 +19390,7 @@ async function handleLogAttendance(e) {
   };
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/hr/attendance`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hr/attendance`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
