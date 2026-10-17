@@ -6158,7 +6158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showSection('maintenanceSection');
             });
         }
-        
+
         if (navHR) {
             navHR.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
@@ -19454,7 +19454,7 @@ async function loadHotelAssets() {
   tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Loading asset register...</td></tr>`;
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/maintenance/assets`);
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/assets`);
     const assets = await res.json();
     tbody.innerHTML = '';
 
@@ -19483,7 +19483,7 @@ async function populateAssetDropdown() {
   const select = document.getElementById('woAssetId');
   select.innerHTML = '<option value="">General Room / No Specific Asset</option>';
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/maintenance/assets`);
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/assets`);
     const assets = await res.json();
     assets.forEach(ast => {
       select.innerHTML += `<option value="${ast._id}">${ast.assetName} (${ast.location})</option>`;
@@ -19501,7 +19501,7 @@ async function loadWorkOrders() {
   tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading work orders...</td></tr>`;
 
   try {
-    let url = `${backendURL}/api/maintenance/work-orders?`;
+    let url = `${API_BASE_URL}/maintenance/work-orders?`;
     if (status) url += `status=${status}&`;
     if (priority) url += `priority=${priority}`;
 
@@ -19553,7 +19553,7 @@ async function handleCreateAsset(e) {
   };
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/maintenance/asset`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/asset`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -19580,7 +19580,7 @@ async function handleCreateWorkOrder(e) {
   };
 
   try {
-    const res = await authenticatedFetch(`${backendURL}/api/maintenance/work-order`, {
+    const res = await authenticatedFetch(`${API_BASE_URL}/maintenance/work-order`, {
       method: 'POST', body: JSON.stringify(payload)
     });
     const data = await res.json();
