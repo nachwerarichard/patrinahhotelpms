@@ -6,6 +6,24 @@
     <title> Novus Hotel Management System</title>
 <link rel="stylesheet" href="styles4.css">
 <link rel="stylesheet" href="styles1.css">
+<style>
+    @media print {
+  body * {
+    visibility: hidden;
+  }
+  #qrPrintModal, #qrPrintModal * {
+    visibility: visible;
+  }
+  #qrPrintModal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: white !important;
+  }
+}
+    </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -17,6 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -3041,15 +3060,19 @@
 </section>
 
 <!-- MANAGERIAL SERVICE RECOVERY & GUEST FEEDBACK DASHBOARD -->
+<!-- MANAGERIAL SERVICE RECOVERY & GUEST FEEDBACK DASHBOARD -->
 <section id="feedbackSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
         <div>
             <h2 class="text-2xl font-bold text-indigo-600">Guest Experience & Service Recovery Hub</h2>
             <p class="text-sm text-gray-500">Monitor live in-house guest feedback, track ratings, and resolve service issues before checkout</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             <button onclick="loadGuestFeedbackLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm flex items-center gap-1">
                 🔄 Refresh Logs
+            </button>
+            <button onclick="openQrPrintModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition text-sm flex items-center gap-2">
+                📱 Print In-Room QR Stand
             </button>
         </div>
     </div>
@@ -3103,6 +3126,39 @@
         </table>
     </div>
 </section>
+
+<!-- MODAL: PRINTABLE IN-ROOM QR STAND CARD -->
+<div id="qrPrintModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeQrPrintModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold print:hidden">✕</button>
+        
+        <!-- PRINTABLE STAND CONTENT -->
+        <div id="printableQrContainer" class="text-center p-6 border-2 border-dashed border-indigo-200 rounded-xl bg-gradient-to-b from-indigo-50/50 to-white">
+            <h2 id="qrHotelTitle" class="text-2xl font-extrabold text-indigo-900 mb-1">Grand Hotel</h2>
+            <p class="text-xs uppercase font-semibold text-indigo-600 tracking-widest mb-6">In-Room Guest Portal</p>
+            
+            <!-- QR Code Canvas Container -->
+            <div id="qrCanvas" class="flex justify-center my-4 p-3 bg-white shadow-md rounded-xl inline-block border"></div>
+            
+            <p class="text-sm font-bold text-gray-800 mt-4">Scan with your Phone Camera</p>
+            <p class="text-xs text-gray-500 mt-1 max-w-xs mx-auto">Access your live room folio, request housekeeping, or rate your stay before checkout.</p>
+            
+            <div class="mt-4 pt-4 border-t text-[11px] text-gray-400 font-mono">
+                Log in using your <strong class="text-gray-700">Room Number</strong> & <strong class="text-gray-700">Last Name</strong>
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="flex gap-3 mt-6 print:hidden">
+            <button type="button" onclick="closeQrPrintModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition text-sm">
+                Cancel
+            </button>
+            <button type="button" onclick="window.print()" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg shadow transition text-sm flex items-center justify-center gap-2">
+                🖨️ Print Display Card
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- MODAL: Resolve Service Recovery -->
 <div id="resolveRecoveryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">

@@ -19743,3 +19743,49 @@ window.loadGuestFeedbackLogs = loadGuestFeedbackLogs;
 window.openResolveModal = openResolveModal;
 window.closeResolveModal = closeResolveModal;
 window.handleResolveFeedback = handleResolveFeedback;
+
+// Open and Generate Tenant-Specific QR Code Stand
+function openQrPrintModal() {
+  const modal = document.getElementById('qrPrintModal');
+  const qrContainer = document.getElementById('qrCanvas');
+  const hotelTitle = document.getElementById('qrHotelTitle');
+  
+  // 1. Get logged-in tenant hotel details
+  const hotelName = localStorage.getItem('hotelName') || 'Patrinah Hotel & Suites';
+  const hotelId = localStorage.getItem('hotelId') || 'default-tenant';
+  
+  hotelTitle.textContent = hotelName;
+
+  // 2. Build tenant specific URL for the Guest Portal
+  // e.g., https://patrinahhotelpms.onrender.com/portal?hotel=HOTEL_ID
+  const portalBaseUrl = window.location.origin + '/portal';
+  const tenantPortalUrl = `${portalBaseUrl}?hotel=${encodeURIComponent(hotelId)}`;
+
+  // 3. Clear existing QR code canvas
+  qrContainer.innerHTML = '';
+
+  // 4. Draw new QR Code on the fly
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(qrContainer, {
+      text: tenantPortalUrl,
+      width: 180,
+      height: 180,
+      colorDark: "#312e81", // Indigo 900
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } else {
+    qrContainer.innerHTML = `<p class="text-xs text-red-500 py-4">QR Library missing. Target URL:<br/><strong class="font-mono text-[10px]">${tenantPortalUrl}</strong></p>`;
+  }
+
+  // 5. Display Modal
+  modal.classList.remove('hidden');
+}
+
+function closeQrPrintModal() {
+  document.getElementById('qrPrintModal').classList.add('hidden');
+}
+
+// Bind globally
+window.openQrPrintModal = openQrPrintModal;
+window.closeQrPrintModal = closeQrPrintModal;
