@@ -19758,7 +19758,7 @@ function openQrPrintModal() {
 
   // 2. Build tenant specific URL for the Guest Portal
   // e.g., https://patrinahhotelpms.onrender.com/portal?hotel=HOTEL_ID
-  const portalBaseUrl = window.location.origin + '/frontend/guestportal.html';
+  const portalBaseUrl = window.location.origin + '/guestportal.html';
   const tenantPortalUrl = `${portalBaseUrl}?hotel=${encodeURIComponent(hotelId)}`;
 
   // 3. Clear existing QR code canvas
