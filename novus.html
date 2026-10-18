@@ -391,6 +391,7 @@
                 <ul id="admin-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-staff"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Users</a></li>
                     <li id="nav-banquetsSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Banquets</a></li>
+                    <li id="nav-feedback"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Feedback</a></li>
                     <li id="nav-hrSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Human Resource</a></li>
                     <li id="nav-maintenace"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Maintenace</a></li>
                     <li id="nav-store"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Store</a></li>
@@ -3038,6 +3039,92 @@
     </div>
   
 </section>
+
+<!-- MANAGERIAL SERVICE RECOVERY & GUEST FEEDBACK DASHBOARD -->
+<section id="feedbackSection" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden tab-content">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-indigo-600">Guest Experience & Service Recovery Hub</h2>
+            <p class="text-sm text-gray-500">Monitor live in-house guest feedback, track ratings, and resolve service issues before checkout</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="loadGuestFeedbackLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-lg transition text-sm flex items-center gap-1">
+                🔄 Refresh Logs
+            </button>
+        </div>
+    </div>
+
+    <!-- Analytics KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+            <span class="text-xs font-semibold text-indigo-600 uppercase">Average Rating</span>
+            <p id="kpiAvgRating" class="text-2xl font-extrabold text-indigo-900 mt-1">0.0 / 5.0</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-100 p-4 rounded-xl">
+            <span class="text-xs font-semibold text-amber-700 uppercase">Pending Service Recoveries</span>
+            <p id="kpiPendingRecovery" class="text-2xl font-extrabold text-amber-900 mt-1">0</p>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+            <span class="text-xs font-semibold text-emerald-700 uppercase">Resolved Cases</span>
+            <p id="kpiResolvedCases" class="text-2xl font-extrabold text-emerald-900 mt-1">0</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 bg-gray-50 p-4 rounded-lg border">
+        <select id="filterFeedbackStatus" onchange="loadGuestFeedbackLogs()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+            <option value="">All Feedback Statuses</option>
+            <option value="pending">Pending Action (Urgent)</option>
+            <option value="resolved">Resolved Cases</option>
+        </select>
+        <select id="filterFeedbackRating" onchange="loadGuestFeedbackLogs()" class="px-3 py-2 border rounded-lg text-sm bg-white w-full sm:w-auto">
+            <option value="">All Ratings</option>
+            <option value="low">Low Ratings (1-3 Stars)</option>
+            <option value="high">High Ratings (4-5 Stars)</option>
+        </select>
+    </div>
+
+    <!-- Feedback Table -->
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="min-w-full table-auto border-collapse">
+            <thead class="bg-gray-100 text-xs text-gray-600 uppercase tracking-wider">
+                <tr>
+                    <th class="border-b px-4 py-3 text-left">Date / Time</th>
+                    <th class="border-b px-4 py-3 text-left">Room & Guest</th>
+                    <th class="border-b px-4 py-3 text-left">Rating</th>
+                    <th class="border-b px-4 py-3 text-left">Guest Comments</th>
+                    <th class="border-b px-4 py-3 text-left">Recovery Status</th>
+                    <th class="border-b px-4 py-3 text-left">Action</th>
+                </tr>
+            </thead>
+            <tbody id="feedbackTableBody" class="bg-white divide-y divide-gray-200 text-sm">
+                <tr><td colspan="6" class="text-center py-6 text-gray-400">Loading feedback records...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- MODAL: Resolve Service Recovery -->
+<div id="resolveRecoveryModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl max-w-md w-full relative mx-4">
+        <button type="button" onclick="closeResolveModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
+        <h3 class="text-xl font-bold mb-2 text-gray-800">Resolve Service Recovery</h3>
+        <p id="modalGuestInfo" class="text-xs text-gray-500 mb-4"></p>
+        
+        <form id="resolveRecoveryForm" onsubmit="handleResolveFeedback(event)" class="space-y-4">
+            <input type="hidden" id="resolveFeedbackId" />
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Resolution / Action Taken:</label>
+                <textarea id="resolveNotes" required rows="4" placeholder="e.g., Dispatched Housekeeping to replace towels and offered a complimentary breakfast voucher." class="w-full mt-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeResolveModal()" class="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition text-sm">Cancel</button>
+                <button type="submit" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg shadow transition text-sm">Mark Resolved</button>
+            </div>
+        </form>
+        <p id="resolveModalMsg" class="text-center text-sm font-medium mt-3"></p>
+    </div>
+</div>
 
 <!-- ================= Integrations SECTION ================= -->
 <section id="integrations" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
