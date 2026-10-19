@@ -5662,6 +5662,9 @@ app.get('/api/bookings', auth, async (req, res) => {
 });
 
 app.put('/api/bookings/:id', auth, async (req, res) => {
+    // ✅ Make sure to extract id from req.params here!
+    const { id } = req.params; 
+    
     const { username, updatedBy, ...updatedBookingData } = req.body;
     
     // Fallback order: explicit username -> updatedBy -> req.user.username -> 'System'
