@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
+        'nav-staff','nav-feedback','nav-hrSection','nav-banquetsSection','nav-store','nav-maintenace','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -6115,15 +6115,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const navHousekeeping = document.getElementById('nav-housekeeping');
       const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
       const navIntegrations = document.getElementById('nav-integrations');
-            const navEfris = document.getElementById('nav-efris');
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
+                const navFeedback = document.getElementById('nav-feedback');
     const navKDS = document.getElementById('nav-kds');
     const navReports = document.getElementById('nav-reports');
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
-    const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
         const navMaintenace = document.getElementById('nav-maintenace');
@@ -6156,6 +6155,12 @@ document.addEventListener('DOMContentLoaded', () => {
             navMaintenace.addEventListener('click', (e) => {
                 e.preventDefault(); // Prevent default link behavior
                 showSection('maintenanceSection');
+            });
+        }
+        if (navFeedback) {
+            navFeedback.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default link behavior
+                showSection('feedbackSection');
             });
         }
 
@@ -6219,12 +6224,7 @@ if (navPayments) {
             showSection('integrations');
         });
     } 
-    if (navEfris) {
-        navEfris.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            showSection('efris');
-        });
-    }
+    
 
   if (navCash) {
         navCash.addEventListener('click', (e) => {
@@ -6291,13 +6291,7 @@ if (navPayments) {
             showSection('profit');
         });
     }
-     if (navPaymentGateway) {
-        navPaymentGateway.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSection('paymentgateway');
-        });
-    }
-
+     
     if (navInventory) {
         navInventory.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
@@ -19604,3 +19598,181 @@ window.loadWorkOrders = loadWorkOrders;
 window.loadHotelAssets = loadHotelAssets;
 window.handleCreateAsset = handleCreateAsset;
 window.handleCreateWorkOrder = handleCreateWorkOrder;
+
+// Load Feedback Logs for Managers
+async function loadGuestFeedbackLogs() {
+  const tbody = document.getElementById('feedbackTableBody');
+  const statusFilter = document.getElementById('filterFeedbackStatus').value;
+  const ratingFilter = document.getElementById('filterFeedbackRating').value;
+
+  tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-400">Loading guest feedback...</td></tr>`;
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hotel/feedback`);
+    const records = await res.json();
+
+    if (!res.ok) throw new Error('Failed to fetch feedback logs');
+
+    // Calculate KPIs
+    if (records.length > 0) {
+      const avg = (records.reduce((acc, cur) => acc + cur.overallRating, 0) / records.length).toFixed(1);
+      const pending = records.filter(r => !r.isResolved && r.overallRating <= 3).length;
+      const resolved = records.filter(r => r.isResolved).length;
+
+      document.getElementById('kpiAvgRating').textContent = `${avg} / 5.0`;
+      document.getElementById('kpiPendingRecovery').textContent = pending;
+      document.getElementById('kpiResolvedCases').textContent = resolved;
+    }
+
+    // Filter Logic
+    let filtered = records;
+    if (statusFilter === 'pending') filtered = filtered.filter(r => !r.isResolved);
+    if (statusFilter === 'resolved') filtered = filtered.filter(r => r.isResolved);
+    if (ratingFilter === 'low') filtered = filtered.filter(r => r.overallRating <= 3);
+    if (ratingFilter === 'high') filtered = filtered.filter(r => r.overallRating >= 4);
+
+    tbody.innerHTML = '';
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-gray-500">No feedback entries found.</td></tr>`;
+      return;
+    }
+
+    filtered.forEach(item => {
+      const dateStr = new Date(item.createdAt).toLocaleString();
+      const stars = '★'.repeat(item.overallRating) + '☆'.repeat(5 - item.overallRating);
+      
+      const ratingClass = item.overallRating <= 2 
+        ? 'text-red-600 font-bold' 
+        : item.overallRating === 3 
+        ? 'text-amber-600 font-bold' 
+        : 'text-emerald-600 font-bold';
+
+      const recoveryBadge = item.isResolved
+        ? `<span class="px-2 py-1 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">Resolved</span>`
+        : item.overallRating <= 3
+        ? `<span class="px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-800 animate-pulse">Needs Recovery</span>`
+        : `<span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-600">No Action Needed</span>`;
+
+      const actionButton = (!item.isResolved && item.overallRating <= 3)
+        ? `<button onclick="openResolveModal('${item._id}', '${item.roomNumber}', '${item.guestName}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded transition shadow font-medium">Resolve</button>`
+        : item.isResolved
+        ? `<span class="text-xs text-gray-400 block max-w-xs truncate" title="${item.resolutionNotes}">${item.resolutionNotes}</span>`
+        : `<span class="text-xs text-gray-400">Satisfied</span>`;
+
+      tbody.innerHTML += `
+        <tr class="hover:bg-gray-50">
+          <td class="border-b px-4 py-3 text-xs text-gray-600">${dateStr}</td>
+          <td class="border-b px-4 py-3">
+            <div class="font-bold text-gray-900">Room ${item.roomNumber}</div>
+            <div class="text-xs text-gray-500">${item.guestName} (${item.bookingCustomId})</div>
+          </td>
+          <td class="border-b px-4 py-3 ${ratingClass}">
+            <div class="text-base">${stars}</div>
+            <div class="text-[10px]">${item.overallRating} / 5 Stars</div>
+          </td>
+          <td class="border-b px-4 py-3 text-xs text-gray-700 max-w-xs">${item.comments || '<em class="text-gray-400">No written comments</em>'}</td>
+          <td class="border-b px-4 py-3">${recoveryBadge}</td>
+          <td class="border-b px-4 py-3">${actionButton}</td>
+        </tr>`;
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500">Failed to load feedback records.</td></tr>`;
+  }
+}
+
+// Modal Controls
+function openResolveModal(id, room, name) {
+  document.getElementById('resolveFeedbackId').value = id;
+  document.getElementById('modalGuestInfo').textContent = `Room ${room} - Guest: ${name}`;
+  document.getElementById('resolveRecoveryModal').classList.remove('hidden');
+}
+
+function closeResolveModal() {
+  document.getElementById('resolveRecoveryModal').classList.add('hidden');
+  document.getElementById('resolveRecoveryForm').reset();
+}
+
+// Handle Service Recovery Sign-off
+async function handleResolveFeedback(e) {
+  e.preventDefault();
+  const id = document.getElementById('resolveFeedbackId').value;
+  const resolutionNotes = document.getElementById('resolveNotes').value.trim();
+  const msgEl = document.getElementById('resolveModalMsg');
+
+  msgEl.textContent = 'Saving resolution...';
+  msgEl.className = 'text-center text-sm font-medium mt-3 text-gray-600';
+
+  try {
+    const res = await authenticatedFetch(`${API_BASE_URL}/hotel/feedback/${id}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify({ resolutionNotes })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to resolve case');
+
+    msgEl.textContent = 'Service recovery marked as resolved!';
+    msgEl.className = 'text-center text-sm font-medium mt-3 text-emerald-600';
+
+    setTimeout(() => {
+      closeResolveModal();
+      loadGuestFeedbackLogs();
+    }, 1200);
+  } catch (err) {
+    msgEl.textContent = err.message;
+    msgEl.className = 'text-center text-sm font-medium mt-3 text-red-600';
+  }
+}
+
+// Bind globally
+window.loadGuestFeedbackLogs = loadGuestFeedbackLogs;
+window.openResolveModal = openResolveModal;
+window.closeResolveModal = closeResolveModal;
+window.handleResolveFeedback = handleResolveFeedback;
+
+// Open and Generate Tenant-Specific QR Code Stand
+function openQrPrintModal() {
+  const modal = document.getElementById('qrPrintModal');
+  const qrContainer = document.getElementById('qrCanvas');
+  const hotelTitle = document.getElementById('qrHotelTitle');
+  
+  // 1. Get logged-in tenant hotel details
+  const hotelName = localStorage.getItem('hotelName') || 'Patrinah Hotel & Suites';
+  const hotelId = localStorage.getItem('hotelId') || 'default-tenant';
+  
+  hotelTitle.textContent = hotelName;
+
+  // 2. Build tenant specific URL for the Guest Portal
+  // e.g., https://patrinahhotelpms.onrender.com/portal?hotel=HOTEL_ID
+  const portalBaseUrl = window.location.origin + '/guestportal.html';
+  const tenantPortalUrl = `${portalBaseUrl}?hotel=${encodeURIComponent(hotelId)}`;
+
+  // 3. Clear existing QR code canvas
+  qrContainer.innerHTML = '';
+
+  // 4. Draw new QR Code on the fly
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(qrContainer, {
+      text: tenantPortalUrl,
+      width: 180,
+      height: 180,
+      colorDark: "#312e81", // Indigo 900
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } else {
+    qrContainer.innerHTML = `<p class="text-xs text-red-500 py-4">QR Library missing. Target URL:<br/><strong class="font-mono text-[10px]">${tenantPortalUrl}</strong></p>`;
+  }
+
+  // 5. Display Modal
+  modal.classList.remove('hidden');
+}
+
+function closeQrPrintModal() {
+  document.getElementById('qrPrintModal').classList.add('hidden');
+}
+
+// Bind globally
+window.openQrPrintModal = openQrPrintModal;
+window.closeQrPrintModal = closeQrPrintModal;
