@@ -1080,7 +1080,7 @@ function applyRoleAccess(role) {
         'nav-sales', 'nav-posinventory', 'nav-kds', 'nav-prep-list-section',
         'nav-housekeeping', 'nav-checklisttable', 'nav-checklistform', 'nav-missingitems', 'nav-housekeepingreports',
         'nav-payments', 'nav-receivables', 'nav-cash', 'nav-expenses', 'nav-posreports', 'nav-salereport', 'nav-expensereport',
-        'nav-staff', 'nav-paymentgateway','nav-feedback','nav-hrSection','nav-banquetsSection','nav-store','nav-maintenace','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-efris','nav-audit-logs'
+        'nav-staff','nav-feedback','nav-hrSection','nav-banquetsSection','nav-store','nav-maintenace','nav-netprofit','nav-integrations','nav-receivables','nav-refunds','nav-refundreports' ,'nav-audit-logs'
     ];
 
     // Hide all navigation links first
@@ -6115,7 +6115,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const navHousekeeping = document.getElementById('nav-housekeeping');
       const navHousekeepingreports = document.getElementById('nav-housekeepingreports');
       const navIntegrations = document.getElementById('nav-integrations');
-            const navEfris = document.getElementById('nav-efris');
         const navRates = document.getElementById('nav-inventory');
         const navStaff = document.getElementById('nav-staff');
                 const navFeedback = document.getElementById('nav-feedback');
@@ -6124,7 +6123,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const navServiceReports = document.getElementById('nav-service-reports');
     const navCalendar = document.getElementById('nav-calendar');
     const navAuditLogs = document.getElementById('nav-audit-logs');
-    const navPaymentGateway = document.getElementById('nav-paymentgateway');
     const navPOSInventory = document.getElementById('nav-posinventory');
     const navCash = document.getElementById('nav-cash');
         const navMaintenace = document.getElementById('nav-maintenace');
@@ -6226,12 +6224,7 @@ if (navPayments) {
             showSection('integrations');
         });
     } 
-    if (navEfris) {
-        navEfris.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior
-            showSection('efris');
-        });
-    }
+    
 
   if (navCash) {
         navCash.addEventListener('click', (e) => {
@@ -6298,13 +6291,7 @@ if (navPayments) {
             showSection('profit');
         });
     }
-     if (navPaymentGateway) {
-        navPaymentGateway.addEventListener('click', (e) => {
-            e.preventDefault();
-            showSection('paymentgateway');
-        });
-    }
-
+     
     if (navInventory) {
         navInventory.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior

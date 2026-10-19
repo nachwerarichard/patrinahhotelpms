@@ -395,6 +395,40 @@
                     <li id="nav-cash"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Cash Drawer & Reconciliation</a></li>
                 </ul>
             </li>
+            
+            <li id="nav-store">
+                <a href="#" class="flex items-center group p-3 rounded-xl hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line text-slate-500 group-hover:text-white text-sm"></i>
+                    </div>
+                    <span class="ml-3.5 font-medium text-sm">Store</span>
+                </a>
+            </li>
+
+            <li id="nav-banquetsSection">
+                <a href="#" class="flex items-center group p-3 rounded-xl hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line text-slate-500 group-hover:text-white text-sm"></i>
+                    </div>
+                    <span class="ml-3.5 font-medium text-sm">Banquets</span>
+                </a>
+            </li>
+            <li id="nav-hrSection">
+                <a href="#" class="flex items-center group p-3 rounded-xl hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line text-slate-500 group-hover:text-white text-sm"></i>
+                    </div>
+                    <span class="ml-3.5 font-medium text-sm">Human Resource</span>
+                </a>
+            </li>
+            <li id="nav-maintenace">
+                <a href="#" class="flex items-center group p-3 rounded-xl hover:bg-slate-100/80 text-slate-700 hover:text-slate-900 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-chart-line text-slate-500 group-hover:text-white text-sm"></i>
+                    </div>
+                    <span class="ml-3.5 font-medium text-sm">Maintenace</span>
+                </a>
+            </li>
 
             <!-- 6. ADMINISTRATION & SETTINGS -->
             <li id="nav-admin" class="space-y-1">
@@ -409,14 +443,8 @@
                 </button>
                 <ul id="admin-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-staff"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Users</a></li>
-                    <li id="nav-banquetsSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Banquets</a></li>
                     <li id="nav-feedback"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Feedback</a></li>
-                    <li id="nav-hrSection"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Human Resource</a></li>
-                    <li id="nav-maintenace"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Maintenace</a></li>
-                    <li id="nav-store"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Store</a></li>
-                    <li id="nav-paymentgateway"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Payment Gateways</a></li>
                     <li id="nav-integrations"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Third-party Integrations</a></li>
-                    <li id="nav-efris"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">EFRIS</a></li>
                     <li id="nav-audit-logs"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Audit & Activity Logs</a></li>
                 </ul>
             </li>
@@ -3194,6 +3222,136 @@
             <span id="sync-spinner" class="hidden mr-2 animate-spin">🔄</span>
             Sync Financials Now
         </button>
+    </div>
+
+    <!-- Integration Cards Grid (Accounting Platforms) -->
+    <div class="mb-10 pb-8 border-b">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- QuickBooks Online Card -->
+            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="quickbooks">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 bg-green-600 text-white flex items-center justify-center font-bold text-lg rounded-lg">Qb</span>
+                            <div>
+                                <h3 class="font-bold text-gray-800">QuickBooks Online</h3>
+                                <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-200">Cloud ERP</span>
+                            </div>
+                        </div>
+                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                        Automatically sync guest folios, invoices, payments, and restaurant sales into your QuickBooks ledger.
+                    </p>
+                    
+                    <!-- Configurations Form (Hidden if disconnected) -->
+                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Default Deposit Account</label>
+                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option value="">Loading accounts...</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-xs text-gray-700 font-medium">Real-time sync on checkout</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sync-toggle sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 border-t pt-4 flex gap-2">
+                    <button class="connect-btn w-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-md transition">Connect QuickBooks</button>
+                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- Xero Card -->
+            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="xero">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 bg-blue-400 text-white flex items-center justify-center font-bold text-lg rounded-lg">Xe</span>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Xero Accounting</h3>
+                                <span class="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">Modern Books</span>
+                            </div>
+                        </div>
+                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                        Map room rates and tax codes directly to Xero accounts to keep your general ledger updated daily.
+                    </p>
+                    
+                    <!-- Configurations Form (Hidden if disconnected) -->
+                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Sales Revenue Account</label>
+                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option value="">Loading accounts...</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-xs text-gray-700 font-medium">Auto-generate tracking categories</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sync-toggle sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 border-t pt-4 flex gap-2">
+                    <button class="connect-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-2 rounded-md transition">Connect Xero</button>
+                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
+                </div>
+            </div>
+
+            <!-- Zoho Books Card -->
+            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="zoho">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 bg-red-500 text-white flex items-center justify-center font-bold text-lg rounded-lg">Zb</span>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Zoho Books</h3>
+                                <span class="text-xs text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">Global Suite</span>
+                            </div>
+                        </div>
+                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                        Export structured transaction data to Zoho Books to track inventory, departmental taxes, and operational overhead.
+                    </p>
+                    
+                    <!-- Configurations Form (Hidden if disconnected) -->
+                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Receivables Ledger Account</label>
+                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                <option value="">Loading accounts...</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-xs text-gray-700 font-medium">Sync inventory adjustments</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sync-toggle sr-only peer">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 border-t pt-4 flex gap-2">
+                    <button class="connect-btn w-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 rounded-md transition">Connect Zoho Books</button>
+                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <!-- Payment Gateways Sub-Section -->
