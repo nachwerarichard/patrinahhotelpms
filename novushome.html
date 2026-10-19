@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novus CloudPMS - All-in-One Hotel Operating System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- NAVIGATION HEADER -->
+    <!-- NAVIGATION HEADER -->
+<header class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50 border-b border-slate-100 transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <!-- Brand Logo -->
+        <a href="#" class="flex items-center space-x-2">
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-600 leading-none">Novus</div>
+                <span class="text-2xl font-light text-slate-900 tracking-tight">Cloud<span class="font-semibold text-indigo-600">PMS</span></span>
+            </div>
+        </a>
+
+        <!-- Desktop Nav Links -->
+        <nav class="hidden md:flex items-center space-x-8 text-sm font-medium">
+            <a href="#features" class="hover:text-indigo-600 transition-colors">Features</a>
+            <a href="#modules" class="hover:text-indigo-600 transition-colors">Modules</a>
+            <a href="#pricing" class="hover:text-indigo-600 transition-colors">Pricing</a>
+            <a href="#contact" class="hover:text-indigo-600 transition-colors">Contact</a>
+        </nav>
+
+        <!-- Auth Actions & Mobile Toggle -->
+        <div class="flex items-center space-x-3">
+            <!-- Sign In Link -->
+            <a href="/login" class="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-indigo-600 transition-colors">
+                Sign In
+            </a>
+            
+            <!-- Sign Up CTA Button -->
+            <a href="/register" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/25 hover:bg-indigo-700 transition-all hover:-translate-y-0.5">
+                Sign Up
+            </a>
+
+            <!-- Mobile Menu Toggle Button -->
+            <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Dropdown -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-100 px-6 py-4 space-y-3">
+        <a href="#features" class="block text-sm font-medium hover:text-indigo-600">Features</a>
+        <a href="#modules" class="block text-sm font-medium hover:text-indigo-600">Modules</a>
+        <a href="#pricing" class="block text-sm font-medium hover:text-indigo-600">Pricing</a>
+        <a href="#contact" class="block text-sm font-medium hover:text-indigo-600">Contact</a>
+        
+        <!-- Mobile Auth Actions -->
+        <div class="pt-3 border-t border-slate-100 flex flex-col space-y-2">
+            <a href="/login" class="w-full text-center py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+                Sign In
+            </a>
+            <a href="/register" class="w-full text-center py-2.5 text-xs font-bold uppercase tracking-wider text-white bg-indigo-600 rounded-xl shadow-md transition-colors">
+                Sign Up
+            </a>
+        </div>
+    </div>
+</header>
+
+    <!-- HERO SECTION -->
+    <section class="pt-32 pb-20 md:pt-40 md:pb-28 bg-gradient-to-b from-indigo-50/50 via-white to-slate-50 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 text-center relative z-10">
+            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold uppercase tracking-wider mb-6">
+                <i class="fas fa-bolt text-indigo-500"></i> Next-Gen Hotel Management
+            </span>
+            <h1 class="text-4xl md:text-6xl font-light text-slate-900 tracking-tight max-w-4xl mx-auto leading-tight">
+                Run your whole hotel, POS, kitchen, and books from <span class="font-extrabold text-indigo-600">one app.</span>
+            </h1>
+            <p class="mt-6 text-lg text-slate-600 max-w-2xl mx-auto font-normal">
+                Novus CloudPMS connects front desk reservations, kitchen display screens, housekeeping inspection forms, store inventories, and daily financial reconciliations in real-time.
+            </p>
+            <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#pricing" class="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-xl shadow-indigo-500/25 transition-all hover:-translate-y-0.5">Explore Plans & Pricing</a>
+                <a href="#modules" class="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-100 text-slate-800 font-semibold rounded-xl border border-slate-200 shadow-sm transition-all">View All Modules</a>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto border-t border-slate-200/80 pt-10">
+                <div>
+                    <div class="text-3xl font-extrabold text-slate-900">100%</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Real-time Folios</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold text-indigo-600">Zero</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Overbooking Risk</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold text-slate-900">Live KDS</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Kitchen Display</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-extrabold text-indigo-600">EFRIS</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wider mt-1">Tax Integration Ready</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CORE FEATURES / ADVANTAGES -->
+    <section id="features" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-2">Built for Performance</h2>
+                <h3 class="text-3xl font-bold text-slate-900 tracking-tight">Everything your hotel team needs to deliver excellence.</h3>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-indigo-500/20">
+                        <i class="fas fa-concierge-bell"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 mb-2">Front Desk & Reservations</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">Interactive reservation calendars, guest folio management, room rate rules, and instant refund processing without paper logbooks.</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-indigo-500/20">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 mb-2">Food & Beverage (POS + KDS)</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">Streamlined order management for restaurants and bars. Direct billing to guest room folios with live Kitchen Display screens and active preparation tracking.</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="p-8 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl mb-6 shadow-md shadow-indigo-500/20">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-900 mb-2">Reconciliation & Financials</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">Daily cash drawer closing, expense tracking, net profit analytics, and receivables management designed to prevent cash desk leakage.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DETAILED MODULE BREAKDOWN (MIRRORING NAVIGATION CODE) -->
+    <section id="modules" class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-2">Comprehensive Platform</h2>
+                <h3 class="text-3xl font-bold text-slate-900 tracking-tight">Explore the Novus CloudPMS Module Ecosystem</h3>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Module 1 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-chart-line"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Dashboard</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Real-time room occupancy, daily revenue totals, key performance charts, and immediate operational stats.</p>
+                </div>
+
+                <!-- Module 2 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-concierge-bell"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Front Desk</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Bookings, reservations calendar, room availability, front desk reports, refunds, and incidental charge reports.</p>
+                </div>
+
+                <!-- Module 3 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-utensils"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Food & Beverage (POS)</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Sales orders, guest folios & room charges, menu management, active prep lists, and live Kitchen Display Screens (KDS).</p>
+                </div>
+
+                <!-- Module 4 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-broom"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Housekeeping</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Room status board, inspection checklists, room condition logging, missing item reports, and staff efficiency metrics.</p>
+                </div>
+
+                <!-- Module 5 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Financials & Ledger</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Expense tracking, sales reports, net profit calculations, receivables logging, and cash drawer shift reconciliation.</p>
+                </div>
+
+                <!-- Module 6 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-store"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Store Management</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Central stock control, internal store requisitions, ingredient tracking, and vendor receipt logging.</p>
+                </div>
+
+                <!-- Module 7 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-glass-cheers"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">Banquets & Events</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Conference room reservations, event hall rentals, catering schedules, advance deposit logs, and event balances.</p>
+                </div>
+
+                <!-- Module 8 -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="text-indigo-600 text-2xl mb-4"><i class="fas fa-user-shield"></i></div>
+                    <h5 class="font-bold text-slate-900 text-base mb-2">HR, Admin & Audits</h5>
+                    <p class="text-xs text-slate-500 leading-relaxed">Staff rights, channel manager links, maintenance ticketing, third-party integrations, and detailed user audit logs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING SECTION -->
+    <section id="pricing" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-600 mb-2">Simple Transparent Pricing</h2>
+                <h3 class="text-3xl font-bold text-slate-900 tracking-tight">Select the Plan Tailored to Your Property</h3>
+                <p class="text-slate-500 text-sm mt-3">All plans include regular security updates and standard support.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8 items-stretch">
+                <!-- TIER 1: LODGE -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-300 transition-all">
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Novus Lodge</div>
+                        <div class="flex items-baseline gap-1 mb-4">
+                            <span class="text-3xl font-extrabold text-slate-900">UGX 70,000</span>
+                            <span class="text-slate-500 text-sm">/ month</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6 border-b border-slate-200 pb-6">Ideal for smaller lodges, guesthouses, and motels managing room bookings.</p>
+                        
+                        <ul class="space-y-3 text-xs text-slate-600 mb-8">
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Operational Dashboard</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Bookings & Reservations Calendar</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Front Desk & Rates Overview</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Room Status Tracking</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Refunds & Incidental Charge Reports</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Basic Cash Drawer & User Admin</li>
+                        </ul>
+                    </div>
+                    <button onclick="openModal('Novus Lodge')" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors">Select Plan</button>
+                </div>
+
+                <!-- TIER 2: HOTEL (RECOMMENDED) -->
+                <div class="bg-white border-2 border-indigo-600 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-indigo-500/10 relative">
+                    <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">Recommended</span>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-2">Novus Hotel</div>
+                        <div class="flex items-baseline gap-1 mb-4">
+                            <span class="text-4xl font-extrabold text-slate-900">UGX 120,000</span>
+                            <span class="text-slate-500 text-sm">/ month</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6 border-b border-slate-100 pb-6">For hotels needing integrated daily room, bar, kitchen, and accounting operations.</p>
+
+                        <ul class="space-y-3 text-xs text-slate-700 mb-8">
+                            <li class="flex items-center gap-2.5 font-semibold text-slate-900"><i class="fas fa-check text-indigo-600"></i> Everything in Lodge, plus:</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Restaurant & Bar POS (Room Charge Folios)</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Kitchen Display System (KDS) & Prep List</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Housekeeping Inspections & Missing Items</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Expenses, Sales & Net Profit Reports</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Cash Reconciliation & Store Management</li>
+                        </ul>
+                    </div>
+                    <button onclick="openModal('Novus Hotel')" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5">Start Free Trial</button>
+                </div>
+
+                <!-- TIER 3: PREMIUM -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-3xl p-8 flex flex-col justify-between hover:border-slate-300 transition-all">
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Novus Premium</div>
+                        <div class="flex items-baseline gap-1 mb-4">
+                            <span class="text-3xl font-extrabold text-slate-900">UGX 150,000</span>
+                            <span class="text-slate-500 text-sm">/ month</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-6 border-b border-slate-200 pb-6">For resorts and complexes requiring broader enterprise management controls.</p>
+
+                        <ul class="space-y-3 text-xs text-slate-600 mb-8">
+                            <li class="flex items-center gap-2.5 font-semibold text-slate-900"><i class="fas fa-check text-indigo-600"></i> Everything in Hotel, plus:</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Banquets & Event Hall Rentals</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Human Resource (HR) Management</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Maintenance & Repair Work Orders</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Audit Logs & Staff Action History</li>
+                            <li class="flex items-center gap-2.5"><i class="fas fa-check text-indigo-600"></i> Channel Manager & Third-party APIs</li>
+                        </ul>
+                    </div>
+                    <button onclick="openModal('Novus Premium')" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors">Select Plan</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER / CONTACT SECTION -->
+    <footer id="contact" class="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <div class="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400 mb-1">Novus</div>
+                <div class="text-2xl font-light text-white tracking-tight mb-4">Cloud<span class="font-semibold text-indigo-400">PMS</span></div>
+                <p class="text-sm text-slate-400 max-w-md leading-relaxed">
+                    Designed to modernize hospitality management. Seamlessly operating front desk, bar/restaurant POS, kitchen displays, events, and accounting.
+                </p>
+                <div class="mt-6 flex space-x-4 text-slate-400">
+                    <a href="#" class="hover:text-white transition-colors"><i class="fab fa-whatsapp text-lg"></i></a>
+                    <a href="#" class="hover:text-white transition-colors"><i class="fas fa-envelope text-lg"></i></a>
+                    <a href="#" class="hover:text-white transition-colors"><i class="fas fa-phone text-lg"></i></a>
+                </div>
+            </div>
+            
+            <div class="bg-slate-800/60 p-8 rounded-2xl border border-slate-700/60">
+                <h4 class="text-lg font-semibold text-white mb-2">Ready to transform your property?</h4>
+                <p class="text-xs text-slate-400 mb-6">Contact our deployment specialists to schedule a live system demonstration.</p>
+                <form onsubmit="handleContact(event)" class="space-y-3">
+                    <input type="text" required placeholder="Hotel or Lodge Name" class="w-full px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <input type="email" required placeholder="Email Address / Phone Number" class="w-full px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all">Request Demo</button>
+                </form>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-6 mt-12 pt-6 border-t border-slate-800/80 text-center text-xs text-slate-500">
+            &copy; 2026 Novus CloudPMS. All rights reserved.
+        </div>
+    </footer>
+
+    <!-- INTERACTIVE MODAL FOR PLAN SELECTION -->
+    <div id="plan-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Get Started with <span id="modal-plan-name" class="text-indigo-600">Plan</span></h3>
+            <p class="text-xs text-slate-500 mb-6">Enter your contact details to begin your 14-day risk-free trial.</p>
+            
+            <form onsubmit="handleModalSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Property Name</label>
+                    <input type="text" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Your Name</label>
+                    <input type="text" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Mobile / WhatsApp Number</label>
+                    <input type="tel" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-600">
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs uppercase tracking-wider rounded-xl transition-all">Submit & Activate Trial</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- VANILLA JAVASCRIPT -->
+    <script>
+        // Mobile Navigation Menu Toggle
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Close mobile menu on link click
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+
+        // Modal Functionality
+        const modal = document.getElementById('plan-modal');
+        const modalPlanName = document.getElementById('modal-plan-name');
+
+        function openModal(planName) {
+            modalPlanName.textContent = planName;
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        // Handle Contact & Modal Submissions
+        function handleContact(e) {
+            e.preventDefault();
+            alert('Thank you! Our onboarding team will contact you shortly.');
+            e.target.reset();
+        }
+
+        function handleModalSubmit(e) {
+            e.preventDefault();
+            alert(`Your request for ${modalPlanName.textContent} trial has been received!`);
+            closeModal();
+            e.target.reset();
+        }
+    </script>
+</body>
+</html>
