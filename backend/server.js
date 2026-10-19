@@ -5662,11 +5662,12 @@ app.get('/api/bookings', auth, async (req, res) => {
 });
 
 app.put('/api/bookings/:id', auth, async (req, res) => {
-    const { id } = req.params;
-    const { username, ...updatedBookingData } = req.body;
+    const { username, updatedBy, ...updatedBookingData } = req.body;
+    
+    // Fallback order: explicit username -> updatedBy -> req.user.username -> 'System'
+    const currentUsername = username || updatedBy || req.user?.username || 'System';
 
     try {
-
         console.log("User hotelId:", req.user.hotelId);
 
         // ✅ Only find booking for this hotel
@@ -5705,12 +5706,12 @@ app.put('/api/bookings/:id', auth, async (req, res) => {
             { new: true }
         );
 
-        // 📝 Add the missing Audit Log with the correct parameter order
+        // 📝 Audit log now correctly picks up the user's name
         await addAuditLog(
             'Booking Updated', 
-            username || 'System', 
-            req.user.hotelId, // ✅ 3rd argument: hotelId
-            {                 // ✅ 4th argument: details object
+            currentUsername, 
+            req.user.hotelId, 
+            { 
                 bookingId: id,
                 guestName: updatedBooking.name,
                 changes: {
