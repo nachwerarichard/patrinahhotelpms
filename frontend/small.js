@@ -1349,7 +1349,7 @@ async function renderBookings(page = 1, searchTerm = '') {
                                 </button>
                             ` : ''}
 
-${booking.amountPaid > 0 ? `
+${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
     ${booking.isFiscalized ? `
         <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
             <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt

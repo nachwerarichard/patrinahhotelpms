@@ -3270,6 +3270,7 @@
             <!-- EFRIS TAB -->
             <button
                 type="button"
+                id ="efris-tab"
                 class="integration-tab whitespace-nowrap px-1 pb-3 text-sm font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent"
                 data-tab="efris">
 
@@ -8467,6 +8468,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 });
+
+const hotelCurrency = localStorage.getItem('hotelCurrency');
+
+if (hotelCurrency !== 'UGX') {
+    document.getElementById('efris-tab').style.display = 'none';
+}
 
 </script>
 
