@@ -8166,21 +8166,45 @@ if (issueReceiptBtn) {
 
 // EFRIS Button Control
 if (efrisBtn) {
-    efrisBtn.classList.toggle('hidden', !canSettle);
-    
+    const hotelCurrency = localStorage.getItem('hotelCurrency');
+
+    // Show only for UGX hotels AND when the account can be settled
+    efrisBtn.classList.toggle(
+        'hidden',
+        hotelCurrency !== 'UGX' || !canSettle
+    );
+
     // Toggle label/style if already fiscalized
     if (account.isFiscalized) {
         if (efrisBtnText) efrisBtnText.textContent = "EFRIS Receipt";
-        efrisBtn.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-600');
-        efrisBtn.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-600');
+
+        efrisBtn.classList.remove(
+            'bg-blue-50',
+            'text-blue-700',
+            'border-blue-600'
+        );
+
+        efrisBtn.classList.add(
+            'bg-emerald-50',
+            'text-emerald-700',
+            'border-emerald-600'
+        );
     } else {
         if (efrisBtnText) efrisBtnText.textContent = "EFRIS Invoice";
-        efrisBtn.classList.remove('bg-emerald-50', 'text-emerald-700', 'border-emerald-600');
-        efrisBtn.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-600');
-    }
-} 
-};
 
+        efrisBtn.classList.remove(
+            'bg-emerald-50',
+            'text-emerald-700',
+            'border-emerald-600'
+        );
+
+        efrisBtn.classList.add(
+            'bg-blue-50',
+            'text-blue-700',
+            'border-blue-600'
+        );
+    }
+}
 // ==========================================
 // 1. THERMAL PRINT HANDLER FOR EFRIS RECEIPT
 // ==========================================
