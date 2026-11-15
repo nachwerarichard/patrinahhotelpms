@@ -8205,6 +8205,7 @@ if (efrisBtn) {
         );
     }
 }
+};
 // ==========================================
 // 1. THERMAL PRINT HANDLER FOR EFRIS RECEIPT
 // ==========================================
@@ -15261,7 +15262,6 @@ document.addEventListener('DOMContentLoaded', loadRoomTypes);
 
 // 1. Get DOM references
 const settleModal = document.getElementById('settleBillModal');
-const issueReceiptBtn = document.getElementById('issueReceiptBtn');
 const closeSettleModalBtn = document.getElementById('closeSettleModalBtn');
 const settleBillForm = document.getElementById('settleBillForm');
 
