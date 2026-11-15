@@ -12224,14 +12224,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const reportEndDate = document.getElementById('report-end-date');
     if (reportEndDate) reportEndDate.value = todayString;
 
-    // Attach event listeners for login/logout
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            login();
-        });
-    }
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) logoutButton.addEventListener('click', logout);
 
