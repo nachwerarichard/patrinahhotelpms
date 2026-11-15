@@ -1,4 +1,3 @@
-
 // --- Data (will be fetched from backend) ---
 let rooms = [];
 let bookings = []; // This will now hold the currentAly displayed page's bookings or filtered bookings
@@ -234,6 +233,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value.trim();
 
     try {
+        await configPromise;
+
+    if (!API_BASE_URL) {
+        throw new Error('API base URL is not configured.');
+    }
+
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
