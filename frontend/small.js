@@ -135,7 +135,7 @@ async function initConfig() {
         
         // Strip trailing slash to avoid double slashes when joining routes
         API_BASE_URL = (config.apiBaseUrl || '').replace(/\/$/, '');
-        console.log('✅ API Base URL loaded:');
+          console.log('✅ API Base URL loaded:', API_BASE_URL);  
     } catch (err) {
         console.error('❌ Failed to load environment configuration:', err);
     }
