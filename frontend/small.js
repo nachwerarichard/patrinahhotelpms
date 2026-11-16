@@ -232,12 +232,16 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
 
+    console.log("🔑 Frontend login attempt initiated for:", username);
+
     try {
         await configPromise;
 
-    if (!API_BASE_URL) {
-        throw new Error('API base URL is not configured.');
-    }
+        if (!API_BASE_URL) {
+            throw new Error('API base URL is not configured (API_BASE_URL is empty).');
+        }
+
+        console.log(`📡 Sending POST request to: ${API_BASE_URL}/login`);
 
         const response = await fetch(`${API_BASE_URL}/login`, {
             method: 'POST',
@@ -245,9 +249,19 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             body: JSON.stringify({ username, password })
         });
 
-        const result = await response.json();
+        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+
+        // Try parsing JSON safely
+        let result;
+        try {
+            result = await response.json();
+        } catch (jsonErr) {
+            console.error("❌ Failed to parse server response as JSON:", jsonErr);
+            throw new Error(`Server returned non-JSON response (Status: ${response.status})`);
+        }
 
         if (response.ok) {
+            console.log("✅ Login successful! Processing user session...");
             const user = result.user;
             const token = result.token;
 
@@ -279,9 +293,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             };
             localStorage.setItem('loggedInUser', JSON.stringify(targetUserObject));
 
-            // ==========================================
-            // FIX: UPDATE GLOBAL SCOPE & DOM IMMEDIATELY
-            // ==========================================
+            // Update Global Scope & DOM Immediately
             if (typeof currentUsername !== 'undefined') currentUsername = usernameVal;
             if (typeof currentUserRole !== 'undefined') currentUserRole = role;
 
@@ -294,7 +306,6 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             if (displayrhName && hotelName) {
                 displayrhName.textContent = hotelName;
             }
-            // ==========================================
 
             // Feedback UI
             btn.innerHTML = `<span class="flex items-center justify-center gap-2"><i class="fas fa-check"></i> Access Granted</span>`;
@@ -322,13 +333,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
             }, 600);
 
         } else {
+            console.warn("⚠️ Server rejected login credentials:", result);
             err.textContent = result.message || 'Authentication failed.';
             err.classList.remove('hidden');
             btn.disabled = false;
             btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;
         }
     } catch (error) {
-        err.textContent = 'Server unreachable. Check your connection.';
+        console.error("🔥 FRONTEND LOGIN CATCH ERROR:", error);
+        err.textContent = `Error: ${error.message || 'Server unreachable. Check console.'}`;
         err.classList.remove('hidden');
         btn.disabled = false;
         btn.innerHTML = `<i class="fas fa-shield-alt mr-1.5"></i> Sign In`;

@@ -4439,14 +4439,20 @@ app.post('/api/super-admin/login', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
+    console.log("==================== LOGIN DEBUG START ====================");
     try {
         const { username, password } = req.body;
+        console.log(`📥 Incoming login request for username: "${username}"`);
+
+        if (!username || !password) {
+            console.log("❌ LOGIN FAILURE: Missing username or password in request body.");
+            console.log("===================== LOGIN DEBUG END =====================");
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
 
         // 1. Find user (populated with hotelId details)
         const user = await User.findOne({ username }).populate('hotelId');
         
-        console.log("==================== LOGIN DEBUG START ====================");
-        console.log(`👤 User attempting login: ${username}`);
         if (!user) {
             console.log("❌ DB RESULT: No user found matching that username.");
         } else {
@@ -4482,11 +4488,11 @@ app.post('/api/login', async (req, res) => {
                     await addAuditLog('User Logged In', user.username, hotelId, { role: user.role });
                 }
             } catch (auditError) {
-                console.error("Audit log failed, but login continues:", auditError.message);
+                console.error("⚠️ Audit log failed, but login continues:", auditError.message);
             }
         }
 
-        // 6. Response Payload with hotelLocation included
+        // 6. Response Payload
         const responsePayload = { 
             token: authToken, 
             user: { 
@@ -4494,19 +4500,20 @@ app.post('/api/login', async (req, res) => {
                 role: user.role, 
                 hotelId: hotelId, 
                 hotelName: hotelName,
-                hotelLocation: hotelLocation, // 📍 Added location field
+                hotelLocation: hotelLocation,
                 hotelCurrency: finalCurrency 
             } 
         };
         console.log("🚀 SENDING RESPONSE PAYLOAD TO FRONTEND:", JSON.stringify(responsePayload, null, 2));
         console.log("===================== LOGIN DEBUG END =====================");
 
-        res.status(200).json(responsePayload);
+        return res.status(200).json(responsePayload);
 
     } catch (error) {
-        console.error("FULL LOGIN ERROR:", error.message);
+        console.error("🔥 FULL LOGIN SERVER ERROR EXCEPTION:");
+        console.error(error.stack || error);
         console.log("===================== LOGIN DEBUG END =====================");
-        res.status(500).json({ message: 'Internal server error', details: error.message });
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 });
 
