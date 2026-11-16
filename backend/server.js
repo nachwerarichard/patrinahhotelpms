@@ -12054,6 +12054,6 @@ app.get('/api/pms/latest.json', (req, res) => {
 const port = process.env.PORT || 3000;
 
 // --- 8. Start the Server ---
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
 });
