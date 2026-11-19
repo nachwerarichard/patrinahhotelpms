@@ -332,9 +332,6 @@ userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
 
 
-
-const mongoose = require('mongoose');
-
 const userGuideSectionSchema = new mongoose.Schema(
   {
     moduleKey: {

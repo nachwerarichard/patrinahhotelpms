@@ -165,7 +165,7 @@
         <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-bold">Global User Guide Module CRUD</h2>
-            <p class="text-xs text-slate-300">Create, read, edit, and delete Novus CloudPMS modules in MongoDB</p>
+            <p class="text-xs text-slate-300">Copy &amp; paste content for a single module, or edit, read, and delete stored modules</p>
           </div>
           <div class="flex items-center gap-2">
             <button type="button" onclick="loadGuideChapters()"
@@ -202,7 +202,7 @@
             </div>
           </div>
 
-          <!-- CREATE / EDIT: Module Editor Form -->
+          <!-- CREATE / EDIT: Module Editor Form (Plain Copy/Paste Content) -->
           <form id="guideChapterForm" class="lg:col-span-7 p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 id="formModeTitle" class="text-sm font-bold text-slate-900">Create New Module</h3>
@@ -230,8 +230,8 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Content (Markdown) *</label>
-              <textarea id="gmContent" rows="12" required placeholder="Write clear numbered SOP steps, UI button names, and rules..."
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Content (Paste Text or Markdown) *</label>
+              <textarea id="gmContent" rows="12" required placeholder="Paste your module guide content directly here..."
                         class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
             </div>
 
@@ -249,17 +249,25 @@
         </div>
       </div>
 
-      <!-- Bulk Upload All Modules Panel -->
+      <!-- Bulk Upload All Modules Panel (Supports JSON Array OR Paste Blocks) -->
       <div id="bulk-upload-panel" class="section-panel hidden bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-bold">Bulk Upload All Modules</h2>
-            <p class="text-xs text-slate-300">Upload or update all modules at once via POST /api/user-guide/bulk</p>
+            <p class="text-xs text-slate-300">Paste a JSON array or plain text blocks separated by <code class="text-emerald-300">--- MODULE: key | Title ---</code></p>
           </div>
           <div class="flex items-center gap-2">
+            <label class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
+              Import .JSON File
+              <input type="file" id="bulkJsonFileInput" accept=".json,application/json" onchange="handleJsonFileSelect(event)" class="hidden" />
+            </label>
             <button type="button" onclick="loadSampleBulkModules()"
                     class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
-              Load Sample Modules
+              Load JSON Sample
+            </button>
+            <button type="button" onclick="loadSamplePasteBlocks()"
+                    class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
+              Load Paste Sample
             </button>
             <button type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
                     class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition cursor-pointer">
@@ -271,7 +279,7 @@
         <form id="bulkUploadForm" class="p-6 space-y-4">
           <div>
             <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-              JSON Array of Modules (each with moduleKey, title, content, optional order) *
+              All Modules (JSON Array [...] OR Copy/Paste Blocks with --- MODULE: key | Title ---) *
             </label>
             <textarea id="bulkModulesJson" rows="14" required
                       placeholder='[{"moduleKey":"bookings","title":"Bookings Management","order":1,"content":"1. Open Bookings..."}]'
@@ -581,23 +589,56 @@
       }
     }
 
+    // Parse either JSON array OR plain text blocks starting with "--- MODULE: key | Title ---"
+    function parseBulkInput(rawText) {
+      const trimmed = rawText.trim();
+      if (!trimmed) return [];
+
+      // Try JSON first
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : Array.isArray(parsed?.modules) ? parsed.modules : [];
+      }
+
+      // Otherwise parse plain copy-pasted blocks
+      const headerRegex = /^---\s*MODULE:\s*([^|\n]+?)\s*\|\s*([^\n]+?)\s*---$/gim;
+      const matches = [...trimmed.matchAll(headerRegex)];
+      if (matches.length === 0) {
+        throw new Error('Enter a JSON array or use "--- MODULE: key | Title ---" headers to separate pasted modules.');
+      }
+
+      const modules = [];
+      for (let i = 0; i < matches.length; i++) {
+        const m = matches[i];
+        const start = m.index + m[0].length;
+        const end = i + 1 < matches.length ? matches[i + 1].index : trimmed.length;
+        const content = trimmed.slice(start, end).trim();
+        modules.push({
+          moduleKey: m[1].trim().toLowerCase(),
+          title: m[2].trim(),
+          order: i + 1,
+          content
+        });
+      }
+      return modules;
+    }
+
     // BULK UPLOAD ALL MODULES: POST /api/user-guide/bulk
     async function handleBulkUpload(e) {
       e.preventDefault();
       const bulkBtn = document.getElementById('bulkUploadBtn');
-      const rawJson = document.getElementById('bulkModulesJson')?.value.trim() || '';
+      const rawInput = document.getElementById('bulkModulesJson')?.value.trim() || '';
 
-      let parsed;
+      let modulesArray = [];
       try {
-        parsed = JSON.parse(rawJson);
-      } catch (_) {
-        showCrudStatus('Invalid JSON format in bulk upload box.', 'error');
+        modulesArray = parseBulkInput(rawInput);
+      } catch (err) {
+        showCrudStatus(err.message || 'Could not parse bulk modules input.', 'error');
         return;
       }
 
-      const modulesArray = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.modules) ? parsed.modules : null;
-      if (!modulesArray || modulesArray.length === 0) {
-        showCrudStatus('Provide a non-empty JSON array of modules.', 'error');
+      if (!Array.isArray(modulesArray) || modulesArray.length === 0) {
+        showCrudStatus('Provide at least one valid module to upload.', 'error');
         return;
       }
 
@@ -634,6 +675,17 @@
       }
     }
 
+    function handleJsonFileSelect(event) {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('bulkModulesJson').value = String(reader.result || '');
+        showCrudStatus(`Loaded "${file.name}". Click "Upload All Modules Now" to save.`, 'info');
+      };
+      reader.readAsText(file);
+    }
+
     function loadSampleBulkModules() {
       const sample = [
         {
@@ -662,6 +714,20 @@
         }
       ];
       document.getElementById('bulkModulesJson').value = JSON.stringify(sample, null, 2);
+    }
+
+    function loadSamplePasteBlocks() {
+      document.getElementById('bulkModulesJson').value = `--- MODULE: bookings | Bookings & Reservations ---
+1. Open Bookings Management.
+2. Create reservation, assign room, check guest in, and settle folio balance at check-out.
+
+--- MODULE: sales-pos | Sales & Folio Billing ---
+1. Open Sales & Folio Billing.
+2. Add items to a tab or room folio, complete order, and record payment.
+
+--- MODULE: housekeeping | Housekeeping Operations ---
+1. Open Housekeeping.
+2. Update room statuses and log room notes.`;
     }
 
     // DELETE: Remove module via DELETE /api/user-guide/:moduleKey
