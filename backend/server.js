@@ -333,6 +333,56 @@ const User = mongoose.model('User', userSchema);
 
 
 
+const VALID_ROLES = [
+  'admin',
+  'super-admin',
+  'manager',
+  'front office',
+  'bar',
+  'chef',
+  'housekeeper',
+  'cashier'
+];
+
+const userGuideSectionSchema = new mongoose.Schema(
+  {
+    moduleKey: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    allowedRoles: {
+      type: [String],
+      enum: VALID_ROLES,
+      default: ['admin', 'super-admin', 'front office', 'bar', 'chef', 'housekeeper']
+    },
+    content: {
+      type: String,
+      required: true
+    },
+    order: {
+      type: Number,
+      default: 0
+    },
+    updatedBy: {
+      type: String,
+      default: 'System'
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
+
 // 🌍 Note: Ensure your Hotel schema/model is imported at the top of this file
 // const Hotel = require('../models/Hotel'); 
 
@@ -12049,6 +12099,100 @@ app.get('/api/pms/latest.json', (req, res) => {
     ]
   });
 });
+
+const isSuperAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== 'super-admin') {
+    return res.status(403).json({
+      error: 'Forbidden: Only super-admin can modify the global user guide.'
+    });
+  }
+  next();
+};
+
+// GET /api/user-guide - Fetch chapters permitted for the logged-in staff role
+app.get('/', async (req, res) => {
+  try {
+    const role = req.user?.role;
+    const { moduleKey } = req.query;
+
+    if (!role) {
+      return res.status(401).json({ error: 'User role missing from session.' });
+    }
+
+    const query = { allowedRoles: role };
+    if (moduleKey) {
+      query.moduleKey = String(moduleKey).trim().toLowerCase();
+    }
+
+    const sections = await UserGuideSection.find(query).sort({ order: 1, title: 1 });
+    res.status(200).json({ sections });
+  } catch (err) {
+    console.error('GET /api/user-guide error:', err);
+    res.status(500).json({ error: 'Failed to load user guide sections.', message: err.message });
+  }
+});
+
+// POST /api/user-guide - Create or update a global chapter (super-admin only)
+app.post('/', isSuperAdmin, async (req, res) => {
+  try {
+    const { moduleKey, title, allowedRoles, content, order } = req.body;
+
+    if (!moduleKey || !title || !content) {
+      return res.status(400).json({
+        error: 'moduleKey, title, and content are required.'
+      });
+    }
+
+    const normalizedKey = String(moduleKey).trim().toLowerCase();
+    const rolesList =
+      Array.isArray(allowedRoles) && allowedRoles.length > 0
+        ? allowedRoles.map(r => String(r).trim().toLowerCase())
+        : ['admin', 'super-admin', 'front office', 'bar', 'chef', 'housekeeper'];
+
+    const section = await UserGuideSection.findOneAndUpdate(
+      { moduleKey: normalizedKey },
+      {
+        $set: {
+          moduleKey: normalizedKey,
+          title: String(title).trim(),
+          allowedRoles: rolesList,
+          content: String(content).trim(),
+          order: typeof order === 'number' ? order : 0,
+          updatedBy: req.user.username || 'super-admin'
+        }
+      },
+      { new: true, upsert: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      message: 'Global user guide chapter saved.',
+      section
+    });
+  } catch (err) {
+    console.error('POST /api/user-guide error:', err);
+    res.status(500).json({ error: 'Failed to save user guide chapter.', message: err.message });
+  }
+});
+
+// DELETE /api/user-guide/:moduleKey - Delete a global chapter (super-admin only)
+app.delete('/:moduleKey', isSuperAdmin, async (req, res) => {
+  try {
+    const normalizedKey = String(req.params.moduleKey).trim().toLowerCase();
+    const deleted = await UserGuideSection.findOneAndDelete({ moduleKey: normalizedKey });
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'User guide section not found.' });
+    }
+
+    res.status(200).json({ message: 'User guide chapter deleted.', moduleKey: normalizedKey });
+  } catch (err) {
+    console.error('DELETE /api/user-guide/:moduleKey error:', err);
+    res.status(500).json({ error: 'Failed to delete user guide chapter.', message: err.message });
+  }
+});
+
+
+
 
 
 const port = process.env.PORT || 3000;
