@@ -332,6 +332,10 @@ userSchema.index({ hotelId: 1, username: 1 }, { unique: true });
 const User = mongoose.model('User', userSchema);
 
 
+
+// Make sure this is above your routes in your single server file:
+// app.use(express.json());
+
 const userGuideSectionSchema = new mongoose.Schema(
   {
     moduleKey: {
@@ -365,6 +369,9 @@ const userGuideSectionSchema = new mongoose.Schema(
   }
 );
 
+const UserGuideSection =
+  mongoose.models.UserGuideSection || mongoose.model('UserGuideSection', userGuideSectionSchema);
+
 async function upsertGuideModule(item, editorName = 'System') {
   const normalizedKey = String(item.moduleKey || '').trim().toLowerCase();
   const title = String(item.title || '').trim();
@@ -389,34 +396,33 @@ async function upsertGuideModule(item, editorName = 'System') {
   );
 }
 
-// READ: GET /api/user-guide - Fetch all global modules
+// READ: GET /api/user-guide
 app.get('/api/user-guide', async (req, res) => {
   try {
     const { moduleKey } = req.query;
     const query = {};
-
     if (moduleKey) {
       query.moduleKey = String(moduleKey).trim().toLowerCase();
     }
 
     const sections = await UserGuideSection.find(query).sort({ order: 1, title: 1 }).lean();
-    res.status(200).json({ sections });
+    return res.status(200).json({ sections });
   } catch (err) {
     console.error('GET /api/user-guide error:', err);
-    res.status(500).json({ error: 'Failed to load user guide modules.', message: err.message });
+    return res.status(500).json({ error: 'Failed to load user guide modules.', message: err.message });
   }
 });
 
 // CREATE / UPDATE SINGLE OR BULK: POST /api/user-guide
 app.post('/api/user-guide', async (req, res) => {
   try {
-    const editorName = req.body.updatedBy || 'User Guide Manager';
+    const body = req.body || {};
+    const editorName = body.updatedBy || 'User Guide Manager';
 
-    // Support uploading an array directly or { modules: [...] }
-    const batch = Array.isArray(req.body)
-      ? req.body
-      : Array.isArray(req.body.modules)
-        ? req.body.modules
+    const batch = Array.isArray(body)
+      ? body
+      : Array.isArray(body.modules)
+        ? body.modules
         : null;
 
     if (batch) {
@@ -435,39 +441,29 @@ app.post('/api/user-guide', async (req, res) => {
       });
     }
 
-    const { moduleKey, title, content, order } = req.body;
+    const { moduleKey, title, content, order } = body;
     if (!moduleKey || !title || !content) {
-      return res.status(400).json({
-        error: 'moduleKey, title, and content are required.'
-      });
+      return res.status(400).json({ error: 'moduleKey, title, and content are required.' });
     }
 
-    const section = await upsertGuideModule(
-      { moduleKey, title, content, order },
-      editorName
-    );
-
-    res.status(200).json({
-      message: 'Global user guide module saved.',
-      section
-    });
+    const section = await upsertGuideModule({ moduleKey, title, content, order }, editorName);
+    return res.status(200).json({ message: 'Global user guide module saved.', section });
   } catch (err) {
     console.error('POST /api/user-guide error:', err);
-    res.status(400).json({ error: 'Failed to save user guide module.', message: err.message });
+    return res.status(500).json({ error: 'Failed to save user guide module.', message: err.message });
   }
 });
 
-// BULK UPLOAD ALL MODULES AT ONCE: POST /api/user-guide/bulk
+// BULK UPLOAD ALL MODULES: POST /api/user-guide/bulk
 app.post('/api/user-guide/bulk', async (req, res) => {
   try {
-    const modulesList = Array.isArray(req.body) ? req.body : req.body.modules;
+    const body = req.body || {};
+    const modulesList = Array.isArray(body) ? body : body.modules;
     if (!Array.isArray(modulesList) || modulesList.length === 0) {
-      return res.status(400).json({
-        error: 'Send a non-empty array of modules or { "modules": [...] }.'
-      });
+      return res.status(400).json({ error: 'Send a non-empty array of modules or { "modules": [...] }.' });
     }
 
-    const editorName = req.body.updatedBy || 'Bulk Upload';
+    const editorName = body.updatedBy || 'Bulk Upload';
     const savedSections = [];
 
     for (let i = 0; i < modulesList.length; i++) {
@@ -475,18 +471,56 @@ app.post('/api/user-guide/bulk', async (req, res) => {
       savedSections.push(await upsertGuideModule(item, editorName));
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       message: `Successfully uploaded all ${savedSections.length} modules.`,
       count: savedSections.length,
       sections: savedSections
     });
   } catch (err) {
     console.error('POST /api/user-guide/bulk error:', err);
-    res.status(400).json({ error: 'Bulk module upload failed.', message: err.message });
+    return res.status(500).json({ error: 'Bulk module upload failed.', message: err.message });
   }
 });
 
-// DELETE: DELETE /api/user-guide/:moduleKey
+// EDIT MODULE: PUT /api/user-guide/:moduleKey
+app.put('/api/user-guide/:moduleKey', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const normalizedKey = String(req.params.moduleKey).trim().toLowerCase();
+    const { title, content, order, updatedBy } = body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: 'title and content are required to update a module.' });
+    }
+
+    const updateFields = {
+      title: String(title).trim(),
+      content: String(content).trim(),
+      updatedBy: updatedBy || 'User Guide Manager'
+    };
+
+    if (order !== undefined) {
+      updateFields.order = typeof order === 'number' ? order : Number(order) || 0;
+    }
+
+    const updatedSection = await UserGuideSection.findOneAndUpdate(
+      { moduleKey: normalizedKey },
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updatedSection) {
+      return res.status(404).json({ error: 'User guide module not found.' });
+    }
+
+    return res.status(200).json({ message: 'Global user guide module updated.', section: updatedSection });
+  } catch (err) {
+    console.error('PUT /api/user-guide/:moduleKey error:', err);
+    return res.status(500).json({ error: 'Failed to update user guide module.', message: err.message });
+  }
+});
+
+// DELETE MODULE: DELETE /api/user-guide/:moduleKey
 app.delete('/api/user-guide/:moduleKey', async (req, res) => {
   try {
     const normalizedKey = String(req.params.moduleKey).trim().toLowerCase();
@@ -496,10 +530,10 @@ app.delete('/api/user-guide/:moduleKey', async (req, res) => {
       return res.status(404).json({ error: 'User guide module not found.' });
     }
 
-    res.status(200).json({ message: 'User guide module deleted.', moduleKey: normalizedKey });
+    return res.status(200).json({ message: 'User guide module deleted.', moduleKey: normalizedKey });
   } catch (err) {
     console.error('DELETE /api/user-guide/:moduleKey error:', err);
-    res.status(500).json({ error: 'Failed to delete user guide module.', message: err.message });
+    return res.status(500).json({ error: 'Failed to delete user guide module.', message: err.message });
   }
 });
 
