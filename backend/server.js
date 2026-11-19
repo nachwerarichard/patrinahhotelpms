@@ -333,16 +333,7 @@ const User = mongoose.model('User', userSchema);
 
 
 
-const VALID_ROLES = [
-  'admin',
-  'super-admin',
-  'manager',
-  'front office',
-  'bar',
-  'chef',
-  'housekeeper',
-  'cashier'
-];
+const mongoose = require('mongoose');
 
 const userGuideSectionSchema = new mongoose.Schema(
   {
@@ -358,11 +349,6 @@ const userGuideSectionSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
-    },
-    allowedRoles: {
-      type: [String],
-      enum: VALID_ROLES,
-      default: ['admin', 'super-admin', 'front office', 'bar', 'chef', 'housekeeper']
     },
     content: {
       type: String,
@@ -381,6 +367,144 @@ const userGuideSectionSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+async function upsertGuideModule(item, editorName = 'System') {
+  const normalizedKey = String(item.moduleKey || '').trim().toLowerCase();
+  const title = String(item.title || '').trim();
+  const content = String(item.content || '').trim();
+
+  if (!normalizedKey || !title || !content) {
+    throw new Error('Each module requires moduleKey, title, and content.');
+  }
+
+  return await UserGuideSection.findOneAndUpdate(
+    { moduleKey: normalizedKey },
+    {
+      $set: {
+        moduleKey: normalizedKey,
+        title,
+        content,
+        order: typeof item.order === 'number' ? item.order : Number(item.order) || 0,
+        updatedBy: editorName
+      }
+    },
+    { new: true, upsert: true, runValidators: true }
+  );
+}
+
+// READ: GET /api/user-guide - Fetch all global modules
+app.get('/api/user-guide', async (req, res) => {
+  try {
+    const { moduleKey } = req.query;
+    const query = {};
+
+    if (moduleKey) {
+      query.moduleKey = String(moduleKey).trim().toLowerCase();
+    }
+
+    const sections = await UserGuideSection.find(query).sort({ order: 1, title: 1 }).lean();
+    res.status(200).json({ sections });
+  } catch (err) {
+    console.error('GET /api/user-guide error:', err);
+    res.status(500).json({ error: 'Failed to load user guide modules.', message: err.message });
+  }
+});
+
+// CREATE / UPDATE SINGLE OR BULK: POST /api/user-guide
+app.post('/api/user-guide', async (req, res) => {
+  try {
+    const editorName = req.body.updatedBy || 'User Guide Manager';
+
+    // Support uploading an array directly or { modules: [...] }
+    const batch = Array.isArray(req.body)
+      ? req.body
+      : Array.isArray(req.body.modules)
+        ? req.body.modules
+        : null;
+
+    if (batch) {
+      if (batch.length === 0) {
+        return res.status(400).json({ error: 'Modules array cannot be empty.' });
+      }
+      const savedSections = [];
+      for (let i = 0; i < batch.length; i++) {
+        const mod = { ...batch[i], order: batch[i].order ?? i + 1 };
+        savedSections.push(await upsertGuideModule(mod, editorName));
+      }
+      return res.status(200).json({
+        message: `Uploaded/updated ${savedSections.length} user guide modules.`,
+        count: savedSections.length,
+        sections: savedSections
+      });
+    }
+
+    const { moduleKey, title, content, order } = req.body;
+    if (!moduleKey || !title || !content) {
+      return res.status(400).json({
+        error: 'moduleKey, title, and content are required.'
+      });
+    }
+
+    const section = await upsertGuideModule(
+      { moduleKey, title, content, order },
+      editorName
+    );
+
+    res.status(200).json({
+      message: 'Global user guide module saved.',
+      section
+    });
+  } catch (err) {
+    console.error('POST /api/user-guide error:', err);
+    res.status(400).json({ error: 'Failed to save user guide module.', message: err.message });
+  }
+});
+
+// BULK UPLOAD ALL MODULES AT ONCE: POST /api/user-guide/bulk
+app.post('/api/user-guide/bulk', async (req, res) => {
+  try {
+    const modulesList = Array.isArray(req.body) ? req.body : req.body.modules;
+    if (!Array.isArray(modulesList) || modulesList.length === 0) {
+      return res.status(400).json({
+        error: 'Send a non-empty array of modules or { "modules": [...] }.'
+      });
+    }
+
+    const editorName = req.body.updatedBy || 'Bulk Upload';
+    const savedSections = [];
+
+    for (let i = 0; i < modulesList.length; i++) {
+      const item = { ...modulesList[i], order: modulesList[i].order ?? i + 1 };
+      savedSections.push(await upsertGuideModule(item, editorName));
+    }
+
+    res.status(200).json({
+      message: `Successfully uploaded all ${savedSections.length} modules.`,
+      count: savedSections.length,
+      sections: savedSections
+    });
+  } catch (err) {
+    console.error('POST /api/user-guide/bulk error:', err);
+    res.status(400).json({ error: 'Bulk module upload failed.', message: err.message });
+  }
+});
+
+// DELETE: DELETE /api/user-guide/:moduleKey
+app.delete('/api/user-guide/:moduleKey', async (req, res) => {
+  try {
+    const normalizedKey = String(req.params.moduleKey).trim().toLowerCase();
+    const deleted = await UserGuideSection.findOneAndDelete({ moduleKey: normalizedKey });
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'User guide module not found.' });
+    }
+
+    res.status(200).json({ message: 'User guide module deleted.', moduleKey: normalizedKey });
+  } catch (err) {
+    console.error('DELETE /api/user-guide/:moduleKey error:', err);
+    res.status(500).json({ error: 'Failed to delete user guide module.', message: err.message });
+  }
+});
 
 
 // 🌍 Note: Ensure your Hotel schema/model is imported at the top of this file
@@ -12151,96 +12275,8 @@ app.get('/api/pms/latest.json', (req, res) => {
   });
 });
 
-const isSuperAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'super-admin') {
-    return res.status(403).json({
-      error: 'Forbidden: Only super-admin can modify the global user guide.'
-    });
-  }
-  next();
-};
 
-// GET /api/user-guide - Fetch chapters permitted for the logged-in staff role
-app.get('/', async (req, res) => {
-  try {
-    const role = req.user?.role;
-    const { moduleKey } = req.query;
 
-    if (!role) {
-      return res.status(401).json({ error: 'User role missing from session.' });
-    }
-
-    const query = { allowedRoles: role };
-    if (moduleKey) {
-      query.moduleKey = String(moduleKey).trim().toLowerCase();
-    }
-
-    const sections = await UserGuideSection.find(query).sort({ order: 1, title: 1 });
-    res.status(200).json({ sections });
-  } catch (err) {
-    console.error('GET /api/user-guide error:', err);
-    res.status(500).json({ error: 'Failed to load user guide sections.', message: err.message });
-  }
-});
-
-// POST /api/user-guide - Create or update a global chapter (super-admin only)
-app.post('/', isSuperAdmin, async (req, res) => {
-  try {
-    const { moduleKey, title, allowedRoles, content, order } = req.body;
-
-    if (!moduleKey || !title || !content) {
-      return res.status(400).json({
-        error: 'moduleKey, title, and content are required.'
-      });
-    }
-
-    const normalizedKey = String(moduleKey).trim().toLowerCase();
-    const rolesList =
-      Array.isArray(allowedRoles) && allowedRoles.length > 0
-        ? allowedRoles.map(r => String(r).trim().toLowerCase())
-        : ['admin', 'super-admin', 'front office', 'bar', 'chef', 'housekeeper'];
-
-    const section = await UserGuideSection.findOneAndUpdate(
-      { moduleKey: normalizedKey },
-      {
-        $set: {
-          moduleKey: normalizedKey,
-          title: String(title).trim(),
-          allowedRoles: rolesList,
-          content: String(content).trim(),
-          order: typeof order === 'number' ? order : 0,
-          updatedBy: req.user.username || 'super-admin'
-        }
-      },
-      { new: true, upsert: true, runValidators: true }
-    );
-
-    res.status(200).json({
-      message: 'Global user guide chapter saved.',
-      section
-    });
-  } catch (err) {
-    console.error('POST /api/user-guide error:', err);
-    res.status(500).json({ error: 'Failed to save user guide chapter.', message: err.message });
-  }
-});
-
-// DELETE /api/user-guide/:moduleKey - Delete a global chapter (super-admin only)
-app.delete('/:moduleKey', isSuperAdmin, async (req, res) => {
-  try {
-    const normalizedKey = String(req.params.moduleKey).trim().toLowerCase();
-    const deleted = await UserGuideSection.findOneAndDelete({ moduleKey: normalizedKey });
-
-    if (!deleted) {
-      return res.status(404).json({ error: 'User guide section not found.' });
-    }
-
-    res.status(200).json({ message: 'User guide chapter deleted.', moduleKey: normalizedKey });
-  } catch (err) {
-    console.error('DELETE /api/user-guide/:moduleKey error:', err);
-    res.status(500).json({ error: 'Failed to delete user guide chapter.', message: err.message });
-  }
-});
 
 
 

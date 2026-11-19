@@ -39,29 +39,29 @@
         </div>
       </div>
 
-      <!-- Active User & Role Display -->
+      <!-- Active User Display -->
       <div class="flex items-center gap-4">
         <div class="text-right">
           <div id="display-user-name" class="text-xs font-semibold text-white">Richard Nachwera</div>
-          <div id="display-user-role" class="text-[11px] font-medium text-indigo-300 capitalize">super-admin</div>
+          <div id="display-user-role" class="text-[11px] font-medium text-indigo-300 capitalize">all staff</div>
         </div>
         <button
           type="button"
           onclick="logoutToLogin()"
           class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer"
         >
-          Switch Role
+          Switch User
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Login / Quick Role Switcher Container -->
+  <!-- Login / Quick User Switcher Container -->
   <main id="login-container" class="hidden max-w-md mx-auto mt-14 px-4">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
       <div>
         <h1 class="text-lg font-bold text-slate-900">Sign In to Novus CloudPMS</h1>
-        <p class="text-xs text-slate-500 mt-1">Select a staff role to test workspace and guide access.</p>
+        <p class="text-xs text-slate-500 mt-1">Open access enabled for all user guide modules.</p>
       </div>
 
       <form id="demoLoginForm" class="space-y-4">
@@ -77,7 +77,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Assigned Role</label>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Role Label</label>
           <select
             id="loginRole"
             class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -89,6 +89,7 @@
             <option value="bar">bar</option>
             <option value="chef">chef</option>
             <option value="housekeeper">housekeeper</option>
+            <option value="cashier">cashier</option>
           </select>
         </div>
 
@@ -110,7 +111,11 @@
 
       <button id="nav-guide-crud" type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
-        User Guide CRUD
+        User Guide Modules
+      </button>
+      <button id="nav-bulk-upload" type="button" onclick="switchWorkspaceSection('bulk-upload-panel', 'nav-bulk-upload')"
+              class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
+        Bulk Upload Modules
       </button>
       <button id="nav-dashboard" type="button" onclick="switchWorkspaceSection('dashboard', 'nav-dashboard')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
@@ -139,12 +144,12 @@
       <!-- Metric Cards -->
       <div id="metric-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <p class="text-xs font-medium text-slate-500">Published Chapters</p>
+          <p class="text-xs font-medium text-slate-500">Published Modules</p>
           <p id="metric-chapter-count" class="text-2xl font-bold text-slate-900 mt-1">0</p>
         </div>
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <p class="text-xs font-medium text-slate-500">Scope Mode</p>
-          <p class="text-2xl font-bold text-slate-900 mt-1">Global</p>
+          <p class="text-xs font-medium text-slate-500">Access Policy</p>
+          <p class="text-2xl font-bold text-slate-900 mt-1">Open Guide</p>
         </div>
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <p class="text-xs font-medium text-slate-500">Active Role</p>
@@ -152,33 +157,37 @@
         </div>
       </div>
 
-      <!-- Primary Panel: User Guide CRUD (Create, Read, Update, Delete) -->
+      <!-- Status Banner -->
+      <div id="crudStatusBanner" class="hidden px-4 py-3 rounded-xl text-xs font-medium border border-slate-200"></div>
+
+      <!-- Primary Panel: Module CRUD (Create, Read, Update, Delete) -->
       <div id="guide-crud-panel" class="section-panel bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-base font-bold">Global User Guide CRUD Manager</h2>
-            <p class="text-xs text-slate-300">Create, read, update, and delete shared Novus CloudPMS SOP chapters in MongoDB</p>
+            <h2 class="text-base font-bold">Global User Guide Module CRUD</h2>
+            <p class="text-xs text-slate-300">Create, read, edit, and delete Novus CloudPMS modules in MongoDB</p>
           </div>
           <div class="flex items-center gap-2">
             <button type="button" onclick="loadGuideChapters()"
                     class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
               Refresh List
             </button>
+            <button type="button" onclick="switchWorkspaceSection('bulk-upload-panel', 'nav-bulk-upload')"
+                    class="px-3 py-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition cursor-pointer">
+              Bulk Upload All
+            </button>
             <button type="button" onclick="resetGuideForm()"
                     class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition cursor-pointer">
-              + New Chapter
+              + New Module
             </button>
           </div>
         </div>
 
-        <!-- Status Banner -->
-        <div id="crudStatusBanner" class="hidden px-6 py-2.5 text-xs font-medium border-b border-slate-200"></div>
-
         <div class="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
-          <!-- READ / SELECT / DELETE: Chapters List -->
+          <!-- READ / SELECT / DELETE: Modules List -->
           <div class="lg:col-span-5 p-5 bg-slate-50 space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Stored Chapters</h3>
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Stored Modules</h3>
               <input
                 id="guideSearchFilter"
                 type="text"
@@ -189,16 +198,16 @@
             </div>
 
             <div id="guideChaptersList" class="space-y-2.5 max-h-[540px] overflow-y-auto pr-1 text-xs">
-              <p class="text-slate-400 italic">Loading chapters...</p>
+              <p class="text-slate-400 italic">Loading modules...</p>
             </div>
           </div>
 
-          <!-- CREATE / UPDATE: Chapter Editor Form -->
+          <!-- CREATE / EDIT: Module Editor Form -->
           <form id="guideChapterForm" class="lg:col-span-7 p-6 space-y-4">
             <div class="flex items-center justify-between">
-              <h3 id="formModeTitle" class="text-sm font-bold text-slate-900">Create New Chapter</h3>
+              <h3 id="formModeTitle" class="text-sm font-bold text-slate-900">Create New Module</h3>
               <span id="editingBadge" class="hidden px-2.5 py-0.5 text-[11px] font-semibold bg-amber-100 text-amber-800 rounded-full">
-                Editing Mode
+                Editing Mode (PUT)
               </span>
             </div>
 
@@ -208,25 +217,10 @@
                 <input type="text" id="gmModuleKey" required placeholder="e.g. housekeeping"
                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               </div>
-              <div class="sm:col-span-2">
-                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Title *</label>
-                <input type="text" id="gmTitle" required placeholder="e.g. Housekeeping Operations"
+              <div class="sm:col-span-1">
+                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Title *</label>
+                <input type="text" id="gmTitle" required placeholder="e.g. Housekeeping"
                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div class="sm:col-span-3">
-                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Allowed Roles</label>
-                <div id="gmRolesContainer" class="flex flex-wrap gap-3 pt-1 text-xs text-slate-700">
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="super-admin" checked class="rounded text-indigo-600"> super-admin</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="admin" checked class="rounded text-indigo-600"> admin</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="manager" checked class="rounded text-indigo-600"> manager</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="front office" checked class="rounded text-indigo-600"> front office</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="bar" checked class="rounded text-indigo-600"> bar</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="chef" checked class="rounded text-indigo-600"> chef</label>
-                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="housekeeper" checked class="rounded text-indigo-600"> housekeeper</label>
-                </div>
               </div>
               <div>
                 <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Display Order</label>
@@ -236,7 +230,7 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Content (Markdown) *</label>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Content (Markdown) *</label>
               <textarea id="gmContent" rows="12" required placeholder="Write clear numbered SOP steps, UI button names, and rules..."
                         class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
             </div>
@@ -248,11 +242,49 @@
               </button>
               <button type="submit" id="gmSaveBtn"
                       class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer">
-                Create / Save Chapter
+                Create Module
               </button>
             </div>
           </form>
         </div>
+      </div>
+
+      <!-- Bulk Upload All Modules Panel -->
+      <div id="bulk-upload-panel" class="section-panel hidden bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold">Bulk Upload All Modules</h2>
+            <p class="text-xs text-slate-300">Upload or update all modules at once via POST /api/user-guide/bulk</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="loadSampleBulkModules()"
+                    class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
+              Load Sample Modules
+            </button>
+            <button type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
+                    class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition cursor-pointer">
+              Back to CRUD
+            </button>
+          </div>
+        </div>
+
+        <form id="bulkUploadForm" class="p-6 space-y-4">
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+              JSON Array of Modules (each with moduleKey, title, content, optional order) *
+            </label>
+            <textarea id="bulkModulesJson" rows="14" required
+                      placeholder='[{"moduleKey":"bookings","title":"Bookings Management","order":1,"content":"1. Open Bookings..."}]'
+                      class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="submit" id="bulkUploadBtn"
+                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+              Upload All Modules Now
+            </button>
+          </div>
+        </form>
       </div>
 
       <!-- Secondary Workspace Panels -->
@@ -289,6 +321,7 @@
     let currentUserRole = 'super-admin';
     let cachedGuideChapters = [];
     let isEditingChapter = false;
+    let editingOriginalKey = '';
 
     function showCrudStatus(message, type = 'info') {
       const banner = document.getElementById('crudStatusBanner');
@@ -360,20 +393,29 @@
       });
     }
 
-    // READ: Fetch all user guide chapters from database
+    async function parseResponseSafe(res) {
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { error: `HTTP ${res.status}: Non-JSON response received from server.` };
+      }
+    }
+
+    // READ: Fetch all user guide modules from database
     async function loadGuideChapters() {
       const listEl = document.getElementById('guideChaptersList');
       if (!listEl) return;
 
-      listEl.innerHTML = '<p class="text-slate-400 italic">Loading chapters...</p>';
+      listEl.innerHTML = '<p class="text-slate-400 italic">Loading modules...</p>';
 
       try {
         const res = await apiRequest('/user-guide');
-        const data = await res.json();
+        const data = await parseResponseSafe(res);
 
         if (!res.ok) {
-          showCrudStatus(data.error || 'Failed to fetch user guide chapters.', 'error');
-          listEl.innerHTML = '<p class="text-rose-500">Unable to load chapters.</p>';
+          showCrudStatus(data.error || `Failed to fetch modules (HTTP ${res.status}).`, 'error');
+          listEl.innerHTML = `<p class="text-rose-500">${data.error || 'Unable to load modules.'}</p>`;
           return;
         }
 
@@ -384,8 +426,8 @@
         renderGuideChaptersList();
       } catch (err) {
         console.error('GET /user-guide error:', err);
-        showCrudStatus('Network error while loading user guide chapters.', 'error');
-        listEl.innerHTML = '<p class="text-rose-500">Network error loading chapters.</p>';
+        showCrudStatus('Network error while loading user guide modules.', 'error');
+        listEl.innerHTML = '<p class="text-rose-500">Network error loading modules.</p>';
       }
     }
 
@@ -403,14 +445,13 @@
       });
 
       if (!filtered.length) {
-        listEl.innerHTML = '<p class="text-slate-400 italic">No matching chapters found.</p>';
+        listEl.innerHTML = '<p class="text-slate-400 italic">No matching modules found.</p>';
         return;
       }
 
       listEl.innerHTML = filtered
         .map(sec => {
           const safeKey = String(sec.moduleKey).replace(/'/g, "\\'");
-          const rolesSummary = Array.isArray(sec.allowedRoles) ? sec.allowedRoles.join(', ') : '';
           return `
             <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
               <div class="flex items-start justify-between gap-2">
@@ -430,7 +471,6 @@
                 </div>
               </div>
               <p class="text-[11px] text-slate-500 line-clamp-2">${String(sec.content || '').replace(/\s+/g, ' ')}</p>
-              <p class="text-[10px] text-slate-400 truncate">Roles: ${rolesSummary}</p>
             </div>
           `;
         })
@@ -440,9 +480,10 @@
     // Reset form for CREATE
     function resetGuideForm() {
       isEditingChapter = false;
-      document.getElementById('formModeTitle').textContent = 'Create New Chapter';
+      editingOriginalKey = '';
+      document.getElementById('formModeTitle').textContent = 'Create New Module';
       document.getElementById('editingBadge').classList.add('hidden');
-      document.getElementById('gmSaveBtn').textContent = 'Create Chapter';
+      document.getElementById('gmSaveBtn').textContent = 'Create Module';
 
       const keyInput = document.getElementById('gmModuleKey');
       keyInput.value = '';
@@ -452,21 +493,18 @@
       document.getElementById('gmTitle').value = '';
       document.getElementById('gmOrder').value = String(cachedGuideChapters.length + 1);
       document.getElementById('gmContent').value = '';
-
-      document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
-        cb.checked = true;
-      });
     }
 
-    // UPDATE: Load existing chapter into form
+    // EDIT: Load existing module into form (uses PUT /api/user-guide/:moduleKey on save)
     function editGuideChapter(moduleKey) {
       const chapter = cachedGuideChapters.find(c => c.moduleKey === moduleKey);
       if (!chapter) return;
 
       isEditingChapter = true;
-      document.getElementById('formModeTitle').textContent = `Update Chapter: ${chapter.title}`;
+      editingOriginalKey = chapter.moduleKey;
+      document.getElementById('formModeTitle').textContent = `Edit Module: ${chapter.title}`;
       document.getElementById('editingBadge').classList.remove('hidden');
-      document.getElementById('gmSaveBtn').textContent = 'Update Chapter';
+      document.getElementById('gmSaveBtn').textContent = 'Update Module';
 
       const keyInput = document.getElementById('gmModuleKey');
       keyInput.value = chapter.moduleKey;
@@ -477,32 +515,23 @@
       document.getElementById('gmOrder').value = String(chapter.order ?? 0);
       document.getElementById('gmContent').value = chapter.content || '';
 
-      document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
-        cb.checked = Array.isArray(chapter.allowedRoles) && chapter.allowedRoles.includes(cb.value);
-      });
-
-      showCrudStatus(`Loaded "${chapter.moduleKey}" for editing.`, 'info');
+      switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud');
+      showCrudStatus(`Editing "${chapter.moduleKey}". Click "Update Module" to save changes.`, 'info');
     }
 
-    // CREATE / UPDATE: Submit chapter to POST /api/user-guide
+    // CREATE (POST) or EDIT (PUT)
     async function handleChapterSave(e) {
       e.preventDefault();
       const saveBtn = document.getElementById('gmSaveBtn');
 
-      const allowedRoles = Array.from(
-        document.querySelectorAll('#gmRolesContainer input[type="checkbox"]:checked')
-      ).map(cb => cb.value);
+      const moduleKey = document.getElementById('gmModuleKey').value.trim().toLowerCase();
+      const title = document.getElementById('gmTitle').value.trim();
+      const order = Number(document.getElementById('gmOrder').value) || 0;
+      const content = document.getElementById('gmContent').value.trim();
+      const updatedBy = localStorage.getItem('hotel_username') || document.getElementById('display-user-name')?.textContent.trim() || 'User Guide Manager';
 
-      const payload = {
-        moduleKey: document.getElementById('gmModuleKey').value.trim().toLowerCase(),
-        title: document.getElementById('gmTitle').value.trim(),
-        order: Number(document.getElementById('gmOrder').value) || 0,
-        allowedRoles,
-        content: document.getElementById('gmContent').value.trim()
-      };
-
-      if (!payload.moduleKey || !payload.title || !payload.content) {
-        showCrudStatus('Module Key, Chapter Title, and Content are required.', 'error');
+      if (!moduleKey || !title || !content) {
+        showCrudStatus('Module Key, Module Title, and Content are required.', 'error');
         return;
       }
 
@@ -512,62 +541,153 @@
       }
 
       try {
-        const res = await apiRequest('/user-guide', {
-          method: 'POST',
+        const endpoint = isEditingChapter
+          ? `/user-guide/${encodeURIComponent(editingOriginalKey || moduleKey)}`
+          : '/user-guide';
+        const method = isEditingChapter ? 'PUT' : 'POST';
+        const body = isEditingChapter
+          ? { title, order, content, updatedBy }
+          : { moduleKey, title, order, content, updatedBy };
+
+        const res = await apiRequest(endpoint, {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(body)
         });
 
-        const data = await res.json();
+        const data = await parseResponseSafe(res);
         if (!res.ok) {
-          showCrudStatus(data.error || 'Failed to save chapter.', 'error');
+          showCrudStatus(data.error || 'Failed to save module.', 'error');
           return;
         }
 
         showCrudStatus(
           isEditingChapter
-            ? `Updated chapter "${payload.moduleKey}" in database.`
-            : `Created chapter "${payload.moduleKey}" in database.`,
+            ? `Updated module "${moduleKey}" via PUT.`
+            : `Created module "${moduleKey}" via POST.`,
           'success'
         );
 
         await loadGuideChapters();
         resetGuideForm();
       } catch (err) {
-        console.error('POST /user-guide error:', err);
-        showCrudStatus('Network error while saving chapter.', 'error');
+        console.error('Save module error:', err);
+        showCrudStatus('Network error while saving module.', 'error');
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
-          saveBtn.textContent = isEditingChapter ? 'Update Chapter' : 'Create Chapter';
+          saveBtn.textContent = isEditingChapter ? 'Update Module' : 'Create Module';
         }
       }
     }
 
-    // DELETE: Remove chapter via DELETE /api/user-guide/:moduleKey
+    // BULK UPLOAD ALL MODULES: POST /api/user-guide/bulk
+    async function handleBulkUpload(e) {
+      e.preventDefault();
+      const bulkBtn = document.getElementById('bulkUploadBtn');
+      const rawJson = document.getElementById('bulkModulesJson')?.value.trim() || '';
+
+      let parsed;
+      try {
+        parsed = JSON.parse(rawJson);
+      } catch (_) {
+        showCrudStatus('Invalid JSON format in bulk upload box.', 'error');
+        return;
+      }
+
+      const modulesArray = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.modules) ? parsed.modules : null;
+      if (!modulesArray || modulesArray.length === 0) {
+        showCrudStatus('Provide a non-empty JSON array of modules.', 'error');
+        return;
+      }
+
+      if (bulkBtn) {
+        bulkBtn.disabled = true;
+        bulkBtn.textContent = 'Uploading All...';
+      }
+
+      try {
+        const updatedBy = localStorage.getItem('hotel_username') || document.getElementById('display-user-name')?.textContent.trim() || 'Bulk Upload';
+        const res = await apiRequest('/user-guide/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modules: modulesArray, updatedBy })
+        });
+
+        const data = await parseResponseSafe(res);
+        if (!res.ok) {
+          showCrudStatus(data.error || 'Bulk upload failed.', 'error');
+          return;
+        }
+
+        showCrudStatus(data.message || `Uploaded ${data.count || modulesArray.length} modules.`, 'success');
+        await loadGuideChapters();
+        switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud');
+      } catch (err) {
+        console.error('Bulk upload error:', err);
+        showCrudStatus('Network error during bulk module upload.', 'error');
+      } finally {
+        if (bulkBtn) {
+          bulkBtn.disabled = false;
+          bulkBtn.textContent = 'Upload All Modules Now';
+        }
+      }
+    }
+
+    function loadSampleBulkModules() {
+      const sample = [
+        {
+          moduleKey: 'bookings',
+          title: 'Bookings & Reservations',
+          order: 1,
+          content: '1. Open Bookings Management.\n2. Create reservation, assign room, check guest in, and settle folio balance at check-out.'
+        },
+        {
+          moduleKey: 'sales-pos',
+          title: 'Sales & Folio Billing',
+          order: 2,
+          content: '1. Open Sales & Folio Billing.\n2. Add items to a tab or room folio, complete order, and record payment.'
+        },
+        {
+          moduleKey: 'kds',
+          title: 'Kitchen Display System (KDS)',
+          order: 3,
+          content: '1. Open Kitchen Display (KDS).\n2. Move tickets from Pending to Preparing, Ready, and Served.'
+        },
+        {
+          moduleKey: 'housekeeping',
+          title: 'Housekeeping Operations',
+          order: 4,
+          content: '1. Open Housekeeping.\n2. Update room statuses (clean, dirty, In progress, under-maintenance, blocked) and log remarks.'
+        }
+      ];
+      document.getElementById('bulkModulesJson').value = JSON.stringify(sample, null, 2);
+    }
+
+    // DELETE: Remove module via DELETE /api/user-guide/:moduleKey
     async function deleteGuideChapter(moduleKey) {
-      if (!confirm(`Delete chapter "${moduleKey}" from the global user guide?`)) return;
+      if (!confirm(`Delete module "${moduleKey}" from the global user guide?`)) return;
 
       try {
         const res = await apiRequest(`/user-guide/${encodeURIComponent(moduleKey)}`, {
           method: 'DELETE'
         });
-        const data = await res.json();
+        const data = await parseResponseSafe(res);
 
         if (!res.ok) {
-          showCrudStatus(data.error || 'Failed to delete chapter.', 'error');
+          showCrudStatus(data.error || 'Failed to delete module.', 'error');
           return;
         }
 
-        showCrudStatus(`Deleted chapter "${moduleKey}" from database.`, 'success');
+        showCrudStatus(`Deleted module "${moduleKey}" from database.`, 'success');
         await loadGuideChapters();
 
-        if (document.getElementById('gmModuleKey')?.value === moduleKey) {
+        if (editingOriginalKey === moduleKey || document.getElementById('gmModuleKey')?.value === moduleKey) {
           resetGuideForm();
         }
       } catch (err) {
         console.error('DELETE /user-guide error:', err);
-        showCrudStatus('Network error while deleting chapter.', 'error');
+        showCrudStatus('Network error while deleting module.', 'error');
       }
     }
 
@@ -578,6 +698,7 @@
       loadGuideChapters();
 
       document.getElementById('guideChapterForm')?.addEventListener('submit', handleChapterSave);
+      document.getElementById('bulkUploadForm')?.addEventListener('submit', handleBulkUpload);
       document.getElementById('demoLoginForm')?.addEventListener('submit', (e) => {
         e.preventDefault();
         const u = document.getElementById('loginUsername')?.value.trim() || 'Staff';
