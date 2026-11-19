@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Novus CloudPMS — AI SOP Assistant &amp; User Guide</title>
+  <title>Novus CloudPMS — Global User Guide CRUD Manager</title>
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -23,16 +23,6 @@
       }
     };
   </script>
-
-  <style>
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  </style>
 </head>
 <body class="bg-slate-100 text-slate-900 min-h-screen font-sans antialiased">
 
@@ -45,7 +35,7 @@
         </div>
         <div>
           <span class="font-bold text-base tracking-tight">Novus CloudPMS</span>
-          <span class="hidden sm:inline-block ml-2 text-xs text-slate-400">Multi-Tenant Hospitality Suite</span>
+          <span class="hidden sm:inline-block ml-2 text-xs text-slate-400">Global SOP &amp; User Guide CRUD</span>
         </div>
       </div>
 
@@ -66,12 +56,12 @@
     </div>
   </header>
 
-  <!-- Login / Quick Role Preview Container -->
+  <!-- Login / Quick Role Switcher Container -->
   <main id="login-container" class="hidden max-w-md mx-auto mt-14 px-4">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
       <div>
         <h1 class="text-lg font-bold text-slate-900">Sign In to Novus CloudPMS</h1>
-        <p class="text-xs text-slate-500 mt-1">Select a staff role to preview role-based routing and AI SOP filtering.</p>
+        <p class="text-xs text-slate-500 mt-1">Select a staff role to test workspace and guide access.</p>
       </div>
 
       <form id="demoLoginForm" class="space-y-4">
@@ -94,6 +84,7 @@
           >
             <option value="super-admin" selected>super-admin</option>
             <option value="admin">admin</option>
+            <option value="manager">manager</option>
             <option value="front office">front office</option>
             <option value="bar">bar</option>
             <option value="chef">chef</option>
@@ -117,6 +108,10 @@
     <aside class="w-64 shrink-0 bg-white border-r border-slate-200 hidden md:flex flex-col p-4 space-y-1">
       <p class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Workspace</p>
 
+      <button id="nav-guide-crud" type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
+              class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
+        User Guide CRUD
+      </button>
       <button id="nav-dashboard" type="button" onclick="switchWorkspaceSection('dashboard', 'nav-dashboard')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
         Executive Dashboard
@@ -141,26 +136,129 @@
 
     <!-- Main Section Panels -->
     <section class="flex-1 p-6 space-y-6">
-      <!-- Metric Cards (Hidden for restricted operational roles) -->
+      <!-- Metric Cards -->
       <div id="metric-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <p class="text-xs font-medium text-slate-500">Occupancy Rate</p>
-          <p class="text-2xl font-bold text-slate-900 mt-1">84%</p>
+          <p class="text-xs font-medium text-slate-500">Published Chapters</p>
+          <p id="metric-chapter-count" class="text-2xl font-bold text-slate-900 mt-1">0</p>
         </div>
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <p class="text-xs font-medium text-slate-500">Today's Folio Revenue</p>
-          <p class="text-2xl font-bold text-slate-900 mt-1">UGX 4,850,000</p>
+          <p class="text-xs font-medium text-slate-500">Scope Mode</p>
+          <p class="text-2xl font-bold text-slate-900 mt-1">Global</p>
         </div>
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <p class="text-xs font-medium text-slate-500">Active Check-Ins</p>
-          <p class="text-2xl font-bold text-slate-900 mt-1">19 Guests</p>
+          <p class="text-xs font-medium text-slate-500">Active Role</p>
+          <p id="metric-active-role" class="text-2xl font-bold text-indigo-600 mt-1 capitalize">super-admin</p>
         </div>
       </div>
 
-      <!-- Section Panels -->
-      <div id="dashboard" class="section-panel bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <!-- Primary Panel: User Guide CRUD (Create, Read, Update, Delete) -->
+      <div id="guide-crud-panel" class="section-panel bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold">Global User Guide CRUD Manager</h2>
+            <p class="text-xs text-slate-300">Create, read, update, and delete shared Novus CloudPMS SOP chapters in MongoDB</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="loadGuideChapters()"
+                    class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
+              Refresh List
+            </button>
+            <button type="button" onclick="resetGuideForm()"
+                    class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition cursor-pointer">
+              + New Chapter
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Banner -->
+        <div id="crudStatusBanner" class="hidden px-6 py-2.5 text-xs font-medium border-b border-slate-200"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+          <!-- READ / SELECT / DELETE: Chapters List -->
+          <div class="lg:col-span-5 p-5 bg-slate-50 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Stored Chapters</h3>
+              <input
+                id="guideSearchFilter"
+                type="text"
+                oninput="renderGuideChaptersList()"
+                placeholder="Filter by key or title..."
+                class="px-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div id="guideChaptersList" class="space-y-2.5 max-h-[540px] overflow-y-auto pr-1 text-xs">
+              <p class="text-slate-400 italic">Loading chapters...</p>
+            </div>
+          </div>
+
+          <!-- CREATE / UPDATE: Chapter Editor Form -->
+          <form id="guideChapterForm" class="lg:col-span-7 p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 id="formModeTitle" class="text-sm font-bold text-slate-900">Create New Chapter</h3>
+              <span id="editingBadge" class="hidden px-2.5 py-0.5 text-[11px] font-semibold bg-amber-100 text-amber-800 rounded-full">
+                Editing Mode
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Key *</label>
+                <input type="text" id="gmModuleKey" required placeholder="e.g. housekeeping"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Title *</label>
+                <input type="text" id="gmTitle" required placeholder="e.g. Housekeeping Operations"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div class="sm:col-span-3">
+                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Allowed Roles</label>
+                <div id="gmRolesContainer" class="flex flex-wrap gap-3 pt-1 text-xs text-slate-700">
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="super-admin" checked class="rounded text-indigo-600"> super-admin</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="admin" checked class="rounded text-indigo-600"> admin</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="manager" checked class="rounded text-indigo-600"> manager</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="front office" checked class="rounded text-indigo-600"> front office</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="bar" checked class="rounded text-indigo-600"> bar</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="chef" checked class="rounded text-indigo-600"> chef</label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" value="housekeeper" checked class="rounded text-indigo-600"> housekeeper</label>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Display Order</label>
+                <input type="number" id="gmOrder" value="0"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Content (Markdown) *</label>
+              <textarea id="gmContent" rows="12" required placeholder="Write clear numbered SOP steps, UI button names, and rules..."
+                        class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+              <button type="button" onclick="resetGuideForm()"
+                      class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer">
+                Clear / Reset
+              </button>
+              <button type="submit" id="gmSaveBtn"
+                      class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+                Create / Save Chapter
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Secondary Workspace Panels -->
+      <div id="dashboard" class="section-panel hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 class="text-lg font-bold text-slate-900">Executive Dashboard</h2>
-        <p class="text-sm text-slate-600 mt-1">Overview of property occupancy, revenue, and operations. Click <strong>Help &amp; SOPs</strong> in the bottom-right corner to query the global user guide.</p>
+        <p class="text-sm text-slate-600 mt-1">Overview of property occupancy, revenue, and operations.</p>
       </div>
 
       <div id="booking-management" class="section-panel hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
@@ -185,211 +283,27 @@
     </section>
   </div>
 
-  <!-- Floating AI Help Button -->
-  <button
-    id="guideChatToggleBtn"
-    type="button"
-    onclick="toggleGuideChat()"
-    title="Novus CloudPMS AI Assistant"
-    class="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
-  >
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-    </svg>
-    <span>Help &amp; SOPs</span>
-  </button>
-
-  <!-- Floating AI Chat Drawer -->
-  <div
-    id="guideChatDrawer"
-    class="hidden fixed bottom-20 right-5 z-50 w-[92vw] sm:w-[420px] h-[560px] max-h-[80vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-  >
-    <!-- Header -->
-    <div class="bg-slate-900 text-white px-4 py-3.5 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xs">
-          AI
-        </div>
-        <div>
-          <h3 class="text-sm font-bold leading-tight">Novus SOP Assistant</h3>
-          <p id="guideChatRoleBadge" class="text-[11px] text-slate-300 capitalize">Role: super-admin</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-1.5">
-        <!-- Super-Admin Manage Guide Button (visible only for super-admin) -->
-        <button
-          id="openGuideManagerBtn"
-          type="button"
-          onclick="openGuideManager()"
-          title="Manage User Guide Chapters (Super-Admin)"
-          class="hidden p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-
-        <!-- Clear Chat -->
-        <button
-          type="button"
-          onclick="clearGuideChat()"
-          title="Clear conversation"
-          class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
-
-        <!-- Close Drawer -->
-        <button
-          type="button"
-          onclick="toggleGuideChat(false)"
-          class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Messages Area -->
-    <div id="guideChatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50 text-sm">
-      <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-sm p-3.5 shadow-xs text-slate-700">
-        <p class="font-semibold text-slate-900 mb-1">Welcome to Novus CloudPMS Support</p>
-        <p class="text-xs text-slate-600 leading-relaxed">
-          Ask me step-by-step instructions for your workspace—such as completing orders, checking guests in/out, managing stock, or setting room rates.
-        </p>
-      </div>
-    </div>
-
-    <!-- Quick Suggestion Chips -->
-    <div id="guideQuickChips" class="px-3 py-2 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto no-scrollbar">
-      <button type="button" onclick="sendQuickGuidePrompt('How do I complete and settle a POS order?')" class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 px-2.5 py-1 rounded-full transition cursor-pointer">
-        Settle POS Order
-      </button>
-      <button type="button" onclick="sendQuickGuidePrompt('How do I check out a guest?')" class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 px-2.5 py-1 rounded-full transition cursor-pointer">
-        Guest Check-Out
-      </button>
-      <button type="button" onclick="sendQuickGuidePrompt('How is closing stock calculated?')" class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 px-2.5 py-1 rounded-full transition cursor-pointer">
-        Stock Formula
-      </button>
-    </div>
-
-    <!-- Input Bar -->
-    <form id="guideChatForm" class="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
-      <input
-        id="guideChatInput"
-        type="text"
-        autocomplete="off"
-        placeholder="Ask how to use Novus CloudPMS..."
-        class="flex-1 px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
-      />
-      <button
-        id="guideChatSendBtn"
-        type="submit"
-        class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl transition cursor-pointer"
-      >
-        Send
-      </button>
-    </form>
-  </div>
-
-  <!-- Super-Admin User Guide Chapter Manager Modal -->
-  <div
-    id="guideManagerModal"
-    class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
-  >
-    <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
-      <!-- Modal Header -->
-      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold">Global User Guide Manager</h3>
-          <p class="text-xs text-slate-300">Manage SOP chapters shared across all Novus CloudPMS hotels</p>
-        </div>
-        <button type="button" onclick="closeGuideManager()" class="text-slate-300 hover:text-white p-1.5 rounded-lg cursor-pointer">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div class="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
-        <!-- Left: Existing Chapters List -->
-        <div class="p-4 bg-slate-50 space-y-3">
-          <div class="flex items-center justify-between">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Published Chapters</h4>
-            <button type="button" onclick="resetGuideForm()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer">
-              + New Chapter
-            </button>
-          </div>
-          <div id="guideChaptersList" class="space-y-2 text-xs">
-            <p class="text-slate-400">Loading chapters...</p>
-          </div>
-        </div>
-
-        <!-- Right: Create / Edit Chapter Form -->
-        <form id="guideChapterForm" class="lg:col-span-2 p-5 space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Key *</label>
-              <input type="text" id="gmModuleKey" required placeholder="e.g. housekeeping"
-                     class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-            </div>
-            <div class="sm:col-span-2">
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Title *</label>
-              <input type="text" id="gmTitle" required placeholder="e.g. Housekeeping Operations"
-                     class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div class="sm:col-span-3">
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Allowed Roles</label>
-              <div id="gmRolesContainer" class="flex flex-wrap gap-2 pt-1 text-xs">
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="super-admin" checked> super-admin</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="admin" checked> admin</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="manager" checked> manager</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="front office" checked> front office</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="bar" checked> bar</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="chef" checked> chef</label>
-                <label class="inline-flex items-center gap-1"><input type="checkbox" value="housekeeper" checked> housekeeper</label>
-              </div>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Display Order</label>
-              <input type="number" id="gmOrder" value="0"
-                     class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Chapter Content (Markdown) *</label>
-            <textarea id="gmContent" rows="10" required placeholder="Write clear numbered SOP steps here..."
-                      class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono leading-relaxed"></textarea>
-          </div>
-
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-            <button type="button" onclick="closeGuideManager()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">
-              Cancel
-            </button>
-            <button type="submit" id="gmSaveBtn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer">
-              Save Chapter
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Application & AI SOP Assistant Scripts -->
+  <!-- Application & User Guide CRUD JavaScript -->
   <script>
     const API_BASE_URL = '/api';
     let currentUserRole = 'super-admin';
+    let cachedGuideChapters = [];
+    let isEditingChapter = false;
+
+    function showCrudStatus(message, type = 'info') {
+      const banner = document.getElementById('crudStatusBanner');
+      if (!banner) return;
+
+      banner.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'bg-rose-50', 'text-rose-800', 'bg-indigo-50', 'text-indigo-800');
+      if (type === 'success') {
+        banner.classList.add('bg-emerald-50', 'text-emerald-800');
+      } else if (type === 'error') {
+        banner.classList.add('bg-rose-50', 'text-rose-800');
+      } else {
+        banner.classList.add('bg-indigo-50', 'text-indigo-800');
+      }
+      banner.textContent = message;
+    }
 
     function switchWorkspaceSection(sectionId, navId) {
       document.querySelectorAll('.section-panel').forEach(sec => sec.classList.add('hidden'));
@@ -402,17 +316,8 @@
     }
 
     function applyRoleAccess(role) {
-      const metricCards = document.getElementById('metric-cards');
-      const dashboardNav = document.getElementById('nav-dashboard');
-      const hideDashboardFor = ['housekeeper', 'chef', 'bar', 'front office'];
-
-      if (dashboardNav) {
-        dashboardNav.classList.toggle('hidden', hideDashboardFor.includes(role));
-      }
-      if (metricCards) {
-        const hideMetricsFor = ['chef', 'bar'];
-        metricCards.classList.toggle('hidden', hideMetricsFor.includes(role));
-      }
+      const metricRoleEl = document.getElementById('metric-active-role');
+      if (metricRoleEl) metricRoleEl.textContent = role;
     }
 
     async function showDashboard(username, role) {
@@ -422,360 +327,264 @@
       const displayElement = document.getElementById('display-user-name');
       if (displayElement) displayElement.textContent = username;
 
-      const displayName = document.getElementById('display-user-role');
-      if (displayName) displayName.textContent = currentUserRole;
+      const displayRole = document.getElementById('display-user-role');
+      if (displayRole) displayRole.textContent = currentUserRole;
 
-      const loginContainer = document.getElementById('login-container');
-      const mainContent = document.getElementById('main-content');
-      if (loginContainer) loginContainer.classList.add('hidden');
-      if (mainContent) mainContent.classList.remove('hidden');
+      document.getElementById('login-container')?.classList.add('hidden');
+      document.getElementById('main-content')?.classList.remove('hidden');
 
       applyRoleAccess(role);
-
-      if (typeof window.syncGuideRoleUI === 'function') {
-        window.syncGuideRoleUI();
-      }
-
-      if (role === 'admin' || role === 'super-admin') {
-        switchWorkspaceSection('dashboard', 'nav-dashboard');
-      } else if (role === 'housekeeper') {
-        switchWorkspaceSection('housekeeping', 'nav-housekeeping');
-      } else if (role === 'chef') {
-        switchWorkspaceSection('kds', 'nav-kds');
-      } else if (role === 'bar') {
-        switchWorkspaceSection('sale', 'nav-sales');
-      } else if (role === 'front office') {
-        switchWorkspaceSection('booking-management', 'nav-booking');
-      }
+      switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud');
+      await loadGuideChapters();
     }
 
     function logoutToLogin() {
       document.getElementById('main-content')?.classList.add('hidden');
       document.getElementById('login-container')?.classList.remove('hidden');
-      if (typeof window.toggleGuideChat === 'function') {
-        window.toggleGuideChat(false);
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+      const url = `${API_BASE_URL}${endpoint}`;
+      if (typeof authenticatedFetch === 'function') {
+        return authenticatedFetch(url, options);
+      }
+
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      return fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        }
+      });
+    }
+
+    // READ: Fetch all user guide chapters from database
+    async function loadGuideChapters() {
+      const listEl = document.getElementById('guideChaptersList');
+      if (!listEl) return;
+
+      listEl.innerHTML = '<p class="text-slate-400 italic">Loading chapters...</p>';
+
+      try {
+        const res = await apiRequest('/user-guide');
+        const data = await res.json();
+
+        if (!res.ok) {
+          showCrudStatus(data.error || 'Failed to fetch user guide chapters.', 'error');
+          listEl.innerHTML = '<p class="text-rose-500">Unable to load chapters.</p>';
+          return;
+        }
+
+        cachedGuideChapters = Array.isArray(data.sections) ? data.sections : [];
+        const countEl = document.getElementById('metric-chapter-count');
+        if (countEl) countEl.textContent = String(cachedGuideChapters.length);
+
+        renderGuideChaptersList();
+      } catch (err) {
+        console.error('GET /user-guide error:', err);
+        showCrudStatus('Network error while loading user guide chapters.', 'error');
+        listEl.innerHTML = '<p class="text-rose-500">Network error loading chapters.</p>';
       }
     }
 
-    (() => {
-      let guideChatHistory = [];
-      let cachedGuideChapters = [];
+    function renderGuideChaptersList() {
+      const listEl = document.getElementById('guideChaptersList');
+      if (!listEl) return;
 
-      async function apiRequest(endpoint, options = {}) {
-        const url = `${API_BASE_URL}${endpoint}`;
-        if (typeof authenticatedFetch === 'function') {
-          return authenticatedFetch(url, options);
-        }
+      const filterText = (document.getElementById('guideSearchFilter')?.value || '').trim().toLowerCase();
+      const filtered = cachedGuideChapters.filter(sec => {
+        if (!filterText) return true;
+        return (
+          String(sec.moduleKey || '').toLowerCase().includes(filterText) ||
+          String(sec.title || '').toLowerCase().includes(filterText)
+        );
+      });
 
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-        return fetch(url, {
-          ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(options.headers || {})
-          }
-        });
+      if (!filtered.length) {
+        listEl.innerHTML = '<p class="text-slate-400 italic">No matching chapters found.</p>';
+        return;
       }
 
-      function getActiveRole() {
-        if (typeof currentUserRole !== 'undefined' && currentUserRole) return currentUserRole;
-        const roleEl = document.getElementById('display-user-role');
-        return roleEl ? roleEl.textContent.trim().toLowerCase() : 'staff';
-      }
-
-      window.syncGuideRoleUI = function () {
-        const role = getActiveRole();
-        const badge = document.getElementById('guideChatRoleBadge');
-        const manageBtn = document.getElementById('openGuideManagerBtn');
-
-        if (badge) badge.textContent = `Role: ${role}`;
-        if (manageBtn) {
-          manageBtn.classList.toggle('hidden', role !== 'super-admin');
-        }
-      };
-
-      function formatGuideMarkdown(rawText) {
-        const escaped = String(rawText)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-
-        return escaped
-          .replace(/^### (.*$)/gim, '<h4 class="font-bold text-slate-900 mt-2 mb-1 text-xs uppercase">$1</h4>')
-          .replace(/^## (.*$)/gim, '<h3 class="font-bold text-slate-900 mt-2 mb-1 text-sm">$1</h3>')
-          .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
-          .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-slate-100 text-indigo-700 rounded text-[11px] font-mono">$1</code>')
-          .replace(/^\d+\.\s+(.*$)/gim, '<li class="ml-4 list-decimal">$1</li>')
-          .replace(/^[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc">$1</li>')
-          .replace(/\n/g, '<br>');
-      }
-
-      function appendChatBubble(sender, text, isTyping = false) {
-        const container = document.getElementById('guideChatMessages');
-        if (!container) return null;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = sender === 'user' ? 'flex justify-end' : 'flex justify-start';
-
-        const bubble = document.createElement('div');
-        if (sender === 'user') {
-          bubble.className =
-            'max-w-[85%] bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-xs leading-relaxed shadow-xs';
-          bubble.textContent = text;
-        } else {
-          bubble.className =
-            'max-w-[90%] bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs leading-relaxed shadow-xs';
-          bubble.innerHTML = isTyping
-            ? '<span class="inline-flex items-center gap-1 text-slate-400 italic">Checking Novus User Guide...</span>'
-            : formatGuideMarkdown(text);
-        }
-
-        wrapper.appendChild(bubble);
-        container.appendChild(wrapper);
-        container.scrollTop = container.scrollHeight;
-        return wrapper;
-      }
-
-      window.toggleGuideChat = function (forceState) {
-        const drawer = document.getElementById('guideChatDrawer');
-        if (!drawer) return;
-        window.syncGuideRoleUI();
-
-        const shouldOpen = typeof forceState === 'boolean' ? forceState : drawer.classList.contains('hidden');
-        drawer.classList.toggle('hidden', !shouldOpen);
-
-        if (shouldOpen) {
-          document.getElementById('guideChatInput')?.focus();
-        }
-      };
-
-      window.clearGuideChat = function () {
-        guideChatHistory = [];
-        const container = document.getElementById('guideChatMessages');
-        if (container) {
-          container.innerHTML = `
-            <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-sm p-3.5 shadow-xs text-slate-700">
-              <p class="font-semibold text-slate-900 mb-1">Conversation Cleared</p>
-              <p class="text-xs text-slate-600">Ask another question about Novus CloudPMS workflows.</p>
-            </div>
-          `;
-        }
-      };
-
-      window.sendQuickGuidePrompt = function (promptText) {
-        const input = document.getElementById('guideChatInput');
-        if (!input) return;
-        input.value = promptText;
-        document.getElementById('guideChatForm')?.dispatchEvent(new Event('submit', { cancelable: true }));
-      };
-
-      async function handleChatSubmit(e) {
-        e.preventDefault();
-        const input = document.getElementById('guideChatInput');
-        const sendBtn = document.getElementById('guideChatSendBtn');
-        const message = input?.value.trim();
-        if (!message) return;
-
-        input.value = '';
-        input.disabled = true;
-        if (sendBtn) sendBtn.disabled = true;
-
-        appendChatBubble('user', message);
-        const loadingEl = appendChatBubble('model', '', true);
-
-        try {
-          const res = await apiRequest('/user-guide/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message,
-              history: guideChatHistory.slice(-10)
-            })
-          });
-
-          const data = await res.json();
-          if (loadingEl) loadingEl.remove();
-
-          if (!res.ok) {
-            appendChatBubble('model', data.error || 'Unable to get an answer right now.');
-            return;
-          }
-
-          const reply = data.reply || 'No response returned.';
-          appendChatBubble('model', reply);
-
-          guideChatHistory.push({ role: 'user', text: message });
-          guideChatHistory.push({ role: 'model', text: reply });
-        } catch (err) {
-          if (loadingEl) loadingEl.remove();
-          appendChatBubble('model', 'Network error while contacting the Novus AI Assistant.');
-          console.error('Guide Chat Error:', err);
-        } finally {
-          input.disabled = false;
-          if (sendBtn) sendBtn.disabled = false;
-          input.focus();
-        }
-      }
-
-      window.openGuideManager = async function () {
-        const modal = document.getElementById('guideManagerModal');
-        if (!modal) return;
-        modal.classList.remove('hidden');
-        await loadGuideChapters();
-      };
-
-      window.closeGuideManager = function () {
-        document.getElementById('guideManagerModal')?.classList.add('hidden');
-      };
-
-      window.resetGuideForm = function () {
-        document.getElementById('gmModuleKey').value = '';
-        document.getElementById('gmModuleKey').readOnly = false;
-        document.getElementById('gmTitle').value = '';
-        document.getElementById('gmOrder').value = '0';
-        document.getElementById('gmContent').value = '';
-        document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
-          cb.checked = true;
-        });
-      };
-
-      window.editGuideChapter = function (moduleKey) {
-        const chapter = cachedGuideChapters.find(c => c.moduleKey === moduleKey);
-        if (!chapter) return;
-
-        document.getElementById('gmModuleKey').value = chapter.moduleKey;
-        document.getElementById('gmModuleKey').readOnly = true;
-        document.getElementById('gmTitle').value = chapter.title;
-        document.getElementById('gmOrder').value = chapter.order ?? 0;
-        document.getElementById('gmContent').value = chapter.content;
-
-        document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
-          cb.checked = Array.isArray(chapter.allowedRoles) && chapter.allowedRoles.includes(cb.value);
-        });
-      };
-
-      window.deleteGuideChapter = async function (moduleKey) {
-        if (!confirm(`Delete the "${moduleKey}" chapter from the global user guide?`)) return;
-
-        try {
-          const res = await apiRequest(`/user-guide/${encodeURIComponent(moduleKey)}`, {
-            method: 'DELETE'
-          });
-          if (res.ok) {
-            await loadGuideChapters();
-            resetGuideForm();
-          } else {
-            const err = await res.json();
-            alert(err.error || 'Failed to delete chapter.');
-          }
-        } catch (err) {
-          console.error('Delete chapter error:', err);
-        }
-      };
-
-      async function loadGuideChapters() {
-        const listEl = document.getElementById('guideChaptersList');
-        if (!listEl) return;
-
-        try {
-          const res = await apiRequest('/user-guide');
-          const data = await res.json();
-          cachedGuideChapters = data.sections || [];
-
-          if (!cachedGuideChapters.length) {
-            listEl.innerHTML = '<p class="text-slate-400 italic">No chapters uploaded yet.</p>';
-            return;
-          }
-
-          listEl.innerHTML = cachedGuideChapters
-            .map(
-              sec => `
-              <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-start justify-between gap-2">
+      listEl.innerHTML = filtered
+        .map(sec => {
+          const safeKey = String(sec.moduleKey).replace(/'/g, "\\'");
+          const rolesSummary = Array.isArray(sec.allowedRoles) ? sec.allowedRoles.join(', ') : '';
+          return `
+            <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+              <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                  <p class="font-bold text-slate-800 truncate">${sec.title}</p>
-                  <p class="text-[10px] font-mono text-indigo-600">${sec.moduleKey}</p>
+                  <p class="font-bold text-slate-900 truncate">${sec.title}</p>
+                  <p class="text-[11px] font-mono text-indigo-600">${sec.moduleKey} • Order: ${sec.order ?? 0}</p>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                  <button type="button" onclick="editGuideChapter('${sec.moduleKey}')"
-                          class="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">
+                  <button type="button" onclick="editGuideChapter('${safeKey}')"
+                          class="px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition cursor-pointer">
                     Edit
                   </button>
-                  <button type="button" onclick="deleteGuideChapter('${sec.moduleKey}')"
-                          class="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer">
-                    Del
+                  <button type="button" onclick="deleteGuideChapter('${safeKey}')"
+                          class="px-2.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg transition cursor-pointer">
+                    Delete
                   </button>
                 </div>
               </div>
-            `
-            )
-            .join('');
-        } catch (err) {
-          listEl.innerHTML = '<p class="text-rose-500">Failed to load chapters.</p>';
-          console.error('Load chapters error:', err);
-        }
-      }
+              <p class="text-[11px] text-slate-500 line-clamp-2">${String(sec.content || '').replace(/\s+/g, ' ')}</p>
+              <p class="text-[10px] text-slate-400 truncate">Roles: ${rolesSummary}</p>
+            </div>
+          `;
+        })
+        .join('');
+    }
 
-      async function handleChapterSave(e) {
-        e.preventDefault();
-        const saveBtn = document.getElementById('gmSaveBtn');
-        const allowedRoles = Array.from(
-          document.querySelectorAll('#gmRolesContainer input[type="checkbox"]:checked')
-        ).map(cb => cb.value);
+    // Reset form for CREATE
+    function resetGuideForm() {
+      isEditingChapter = false;
+      document.getElementById('formModeTitle').textContent = 'Create New Chapter';
+      document.getElementById('editingBadge').classList.add('hidden');
+      document.getElementById('gmSaveBtn').textContent = 'Create Chapter';
 
-        const payload = {
-          moduleKey: document.getElementById('gmModuleKey').value.trim(),
-          title: document.getElementById('gmTitle').value.trim(),
-          order: Number(document.getElementById('gmOrder').value) || 0,
-          allowedRoles,
-          content: document.getElementById('gmContent').value.trim()
-        };
+      const keyInput = document.getElementById('gmModuleKey');
+      keyInput.value = '';
+      keyInput.readOnly = false;
+      keyInput.classList.remove('bg-slate-100');
 
-        if (saveBtn) {
-          saveBtn.disabled = true;
-          saveBtn.textContent = 'Saving...';
-        }
+      document.getElementById('gmTitle').value = '';
+      document.getElementById('gmOrder').value = String(cachedGuideChapters.length + 1);
+      document.getElementById('gmContent').value = '';
 
-        try {
-          const res = await apiRequest('/user-guide', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            alert(data.error || 'Failed to save chapter.');
-            return;
-          }
-
-          await loadGuideChapters();
-          resetGuideForm();
-        } catch (err) {
-          alert('Network error while saving chapter.');
-          console.error('Save chapter error:', err);
-        } finally {
-          if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Chapter';
-          }
-        }
-      }
-
-      document.addEventListener('DOMContentLoaded', () => {
-        window.syncGuideRoleUI();
-        switchWorkspaceSection('dashboard', 'nav-dashboard');
-
-        document.getElementById('guideChatForm')?.addEventListener('submit', handleChatSubmit);
-        document.getElementById('guideChapterForm')?.addEventListener('submit', handleChapterSave);
-        document.getElementById('demoLoginForm')?.addEventListener('submit', (e) => {
-          e.preventDefault();
-          const u = document.getElementById('loginUsername')?.value.trim() || 'Staff';
-          const r = document.getElementById('loginRole')?.value || 'front office';
-          showDashboard(u, r);
-        });
+      document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
       });
-    })();
+    }
+
+    // UPDATE: Load existing chapter into form
+    function editGuideChapter(moduleKey) {
+      const chapter = cachedGuideChapters.find(c => c.moduleKey === moduleKey);
+      if (!chapter) return;
+
+      isEditingChapter = true;
+      document.getElementById('formModeTitle').textContent = `Update Chapter: ${chapter.title}`;
+      document.getElementById('editingBadge').classList.remove('hidden');
+      document.getElementById('gmSaveBtn').textContent = 'Update Chapter';
+
+      const keyInput = document.getElementById('gmModuleKey');
+      keyInput.value = chapter.moduleKey;
+      keyInput.readOnly = true;
+      keyInput.classList.add('bg-slate-100');
+
+      document.getElementById('gmTitle').value = chapter.title || '';
+      document.getElementById('gmOrder').value = String(chapter.order ?? 0);
+      document.getElementById('gmContent').value = chapter.content || '';
+
+      document.querySelectorAll('#gmRolesContainer input[type="checkbox"]').forEach(cb => {
+        cb.checked = Array.isArray(chapter.allowedRoles) && chapter.allowedRoles.includes(cb.value);
+      });
+
+      showCrudStatus(`Loaded "${chapter.moduleKey}" for editing.`, 'info');
+    }
+
+    // CREATE / UPDATE: Submit chapter to POST /api/user-guide
+    async function handleChapterSave(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('gmSaveBtn');
+
+      const allowedRoles = Array.from(
+        document.querySelectorAll('#gmRolesContainer input[type="checkbox"]:checked')
+      ).map(cb => cb.value);
+
+      const payload = {
+        moduleKey: document.getElementById('gmModuleKey').value.trim().toLowerCase(),
+        title: document.getElementById('gmTitle').value.trim(),
+        order: Number(document.getElementById('gmOrder').value) || 0,
+        allowedRoles,
+        content: document.getElementById('gmContent').value.trim()
+      };
+
+      if (!payload.moduleKey || !payload.title || !payload.content) {
+        showCrudStatus('Module Key, Chapter Title, and Content are required.', 'error');
+        return;
+      }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = isEditingChapter ? 'Updating...' : 'Creating...';
+      }
+
+      try {
+        const res = await apiRequest('/user-guide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          showCrudStatus(data.error || 'Failed to save chapter.', 'error');
+          return;
+        }
+
+        showCrudStatus(
+          isEditingChapter
+            ? `Updated chapter "${payload.moduleKey}" in database.`
+            : `Created chapter "${payload.moduleKey}" in database.`,
+          'success'
+        );
+
+        await loadGuideChapters();
+        resetGuideForm();
+      } catch (err) {
+        console.error('POST /user-guide error:', err);
+        showCrudStatus('Network error while saving chapter.', 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = isEditingChapter ? 'Update Chapter' : 'Create Chapter';
+        }
+      }
+    }
+
+    // DELETE: Remove chapter via DELETE /api/user-guide/:moduleKey
+    async function deleteGuideChapter(moduleKey) {
+      if (!confirm(`Delete chapter "${moduleKey}" from the global user guide?`)) return;
+
+      try {
+        const res = await apiRequest(`/user-guide/${encodeURIComponent(moduleKey)}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showCrudStatus(data.error || 'Failed to delete chapter.', 'error');
+          return;
+        }
+
+        showCrudStatus(`Deleted chapter "${moduleKey}" from database.`, 'success');
+        await loadGuideChapters();
+
+        if (document.getElementById('gmModuleKey')?.value === moduleKey) {
+          resetGuideForm();
+        }
+      } catch (err) {
+        console.error('DELETE /user-guide error:', err);
+        showCrudStatus('Network error while deleting chapter.', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud');
+      applyRoleAccess(currentUserRole);
+      resetGuideForm();
+      loadGuideChapters();
+
+      document.getElementById('guideChapterForm')?.addEventListener('submit', handleChapterSave);
+      document.getElementById('demoLoginForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const u = document.getElementById('loginUsername')?.value.trim() || 'Staff';
+        const r = document.getElementById('loginRole')?.value || 'super-admin';
+        showDashboard(u, r);
+      });
+    });
   </script>
 </body>
 </html>

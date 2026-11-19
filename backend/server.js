@@ -10469,15 +10469,18 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 app.post('/api/ai/manager-chat', auth, async (req, res) => {
     try {
-        const hotelId = req.user.hotelId;
+        const hotelId = req.user?.hotelId;
         if (!hotelId || hotelId === 'global') {
             return res.status(400).json({ message: "Hotel context missing or unauthorized." });
         }
 
         const { message, history } = req.body;
-        if (!message) {
+        if (!message || !String(message).trim()) {
             return res.status(400).json({ message: "Message query is required." });
         }
+
+        const userRole = req.user?.role || 'staff';
+        const username = req.user?.username || 'Staff';
 
         // 🏨 FETCH HOTEL PROFILE ONCE FOR BASE CONTEXT
         const hotelProfile = await Hotel.findById(hotelId).lean();
@@ -10485,8 +10488,18 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const hotelLocation = hotelProfile?.location || "Unknown Location";
         const hotelContact = hotelProfile?.phoneNumber || "N/A";
 
+        // 📖 FETCH ALL GLOBAL USER GUIDE SECTIONS (SHARED ACROSS ALL HOTELS & ROLES)
+        const guideSections = await UserGuideSection.find({})
+            .sort({ order: 1, title: 1 })
+            .lean();
+        const userGuideText = guideSections.length
+            ? guideSections
+                  .map(sec => `### ${sec.title} (${sec.moduleKey})\n${sec.content}`)
+                  .join('\n\n---\n\n')
+            : "No SOP user guide sections have been uploaded yet.";
+
         // =========================================================================
-        // 1. DEFINE READ-ONLY TENANT-ISOLATED DATA TOOLS
+        // 1. DEFINE READ-ONLY TENANT-ISOLATED DATA TOOLS + GLOBAL USER GUIDE TOOL
         // =========================================================================
         const searchBookingsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
@@ -10498,17 +10511,14 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await Room.find(filter).populate('roomTypeId').lean();
         };
 
-        // ✨ 1. ADDED: StatusReport Tool Definition
         const searchStatusReportsTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
             return await StatusReport.find(filter)
-                .populate('roomId') // Populates room details if the AI needs numbers or info
+                .populate('roomId')
                 .sort({ dateTime: -1 })
                 .limit(50)
                 .lean();
         };
-
-        
 
         const searchCashJournalTool = async (queryFilter) => {
             const filter = { ...queryFilter, hotelId };
@@ -10582,12 +10592,18 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
-    
+        const searchUserGuideTool = async ({ moduleKey } = {}) => {
+            const filter = {};
+            if (moduleKey) {
+                filter.moduleKey = String(moduleKey).trim().toLowerCase();
+            }
+            return await UserGuideSection.find(filter).sort({ order: 1, title: 1 }).lean();
+        };
 
         const internalFunctions = {
             searchBookings: searchBookingsTool,
             searchRooms: searchRoomsTool,
-            searchStatusReports: searchStatusReportsTool, // ✨ 2. ADDED: Map internal handle
+            searchStatusReports: searchStatusReportsTool,
             searchCashJournal: searchCashJournalTool,
             searchInventory: searchInventoryTool,
             searchSales: searchSalesTool,
@@ -10600,44 +10616,79 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchGateways: searchGatewaysTool,
             searchPaymentTransactions: searchPaymentTransactionsTool,
             searchIncidentalCharges: searchIncidentalChargesTool,
-            searchClientAccounts: searchClientAccountsTool
+            searchClientAccounts: searchClientAccountsTool,
+            searchUserGuide: searchUserGuideTool
         };
 
         // =========================================================================
-        // 2. CONSTRUCT DYNAMIC, LOCATION-AWARE SYSTEM INSTRUCTIONS
+        // 2. CONSTRUCT DYNAMIC, LOCATION-AWARE + SOP-GROUNDED SYSTEM INSTRUCTIONS
         // =========================================================================
         const localTimeISO = new Date().toISOString();
         const localDateStr = localTimeISO.split('T')[0];
 
         const systemInstruction = `
-            You are "Novus Copilot", the elite administrative AI assistant for ${hotelName}.
-            
-            CURRENT PROPERTY PROFILE CONTEXT:
-            - Property Name: ${hotelName}
-            - Location/Address: ${hotelLocation}
-            - Support/Contact Phone: ${hotelContact}
-            
-            CRITICAL TEMPORAL AWARENESS:
-            - Today's date is strictly: ${localDateStr} (ISO Timestamp: ${localTimeISO})
-            - If a user asks for metrics, summaries, bookings, sales, or data for "today", you must strictly target dates matching ${localDateStr}. Do not fall back to old records or history unless specifically asked for trends or historical periods.
-            
-            MULTI-SOURCE DATA AGGREGATION & REPORTING PROTOCOLS:
-            - You have access to distinct analytical tools across multiple databases. You are highly expected to think cross-functionally.
-            - If a prompt asks for a complex picture (e.g., "Show me everything happening today"), you can call multiple functions sequentially or parallelly in your execution loop.
-            - Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, and active kitchen orders to provide a holistic operational landscape overview.
-            - Provide descriptive, deeply itemized, and granular analytical answers rather than short generalized summaries when supervisors request deep insights.
-            - You can track room history changes, room maintenance remarks, or room blocking reasons via the searchStatusReports tool.
-            
-            SECURITY AND PRIVACY PROTOCOLS:
-            - You only pull records matching the current isolated hotel properties context.
-            - Never expose sensitive keys or credentials. 
-            - Do not guess metrics or invent operational records. If tools return empty structures, answer the supervisor accurately.
-        `;
+You are "Novus Copilot", the administrative and operational AI assistant for ${hotelName}.
+Current User: ${username} | Role: ${userRole}
+
+CURRENT PROPERTY PROFILE CONTEXT:
+- Property Name: ${hotelName}
+- Location/Address: ${hotelLocation}
+- Support/Contact Phone: ${hotelContact}
+
+CRITICAL TEMPORAL AWARENESS:
+- Today's date is strictly: ${localDateStr} (ISO Timestamp: ${localTimeISO})
+- If a user asks for metrics, summaries, bookings, sales, or data for "today", you must strictly target dates matching ${localDateStr}. Do not fall back to old records or history unless specifically asked for trends or historical periods.
+
+USER GUIDE & HOW-TO / SOP GROUNDING PROTOCOLS:
+- You have access to the complete global Novus CloudPMS User Guide below, available to all users regardless of role.
+- When any user asks how to perform a workflow, navigate the UI, settle bills, check guests in/out, manage stock, configure room rates/yield rules, or administer staff, answer clearly and helpfully using ONLY the procedures, button names, and rules documented in the User Guide below.
+- Do not invent UI buttons, routes, or workflows not present in the User Guide.
+- If a topic is not covered in the guide, state that clearly and direct them to an Administrator.
+
+MULTI-SOURCE DATA AGGREGATION & REPORTING PROTOCOLS:
+- You have access to distinct analytical tools across multiple databases. You are highly expected to think cross-functionally.
+- If a prompt asks for a complex picture (e.g., "Show me everything happening today"), you can call multiple functions sequentially or parallelly in your execution loop.
+- Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, and active kitchen orders to provide a holistic operational landscape overview.
+- Provide descriptive, deeply itemized, and granular analytical answers rather than short generalized summaries when supervisors request deep insights.
+- You can track room history changes, room maintenance remarks, or room blocking reasons via the searchStatusReports tool.
+
+SECURITY AND PRIVACY PROTOCOLS:
+- You only pull operational records matching the current isolated hotelId (${hotelId}).
+- The User Guide is shared globally across all properties and accessible to any staff role.
+- Never expose sensitive keys or credentials.
+- Do not guess metrics or invent operational records. If tools return empty structures, answer accurately.
+
+=== NOVUS CLOUDPMS USER GUIDE ===
+${userGuideText}
+        `.trim();
 
         const toolsConfig = [
             {
                 functionDeclarations: [
-                    
+                    {
+                        name: "searchUserGuide",
+                        description: "Retrieves global Novus CloudPMS user guide SOP sections available to all users.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                moduleKey: {
+                                    type: "STRING",
+                                    description: "Optional module key such as 'login-access', 'inventory', 'sales', 'rooms', 'bookings', or 'staff'"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchBookings",
+                        description: "Queries hotel reservations and guest stay records for the current property.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: { type: "STRING", description: "Booking or guest status filter" },
+                                room: { type: "STRING", description: "Room number or identifier" }
+                            }
+                        }
+                    },
                     {
                         name: "searchStatusReports",
                         description: "Queries historical logs for housekeeping status updates, room remarks, maintenance flags, or blocked room justifications.",
@@ -10812,7 +10863,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
         let responseText = "";
         let loops = 0;
-        const maxLoops = 5; 
+        const maxLoops = 5;
 
         while (loops < maxLoops) {
             const aiResponse = await ai.models.generateContent({
@@ -10830,11 +10881,11 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
                 for (const call of aiResponse.functionCalls) {
                     const toolName = call.name;
-                    const toolArgs = call.args;
+                    const toolArgs = call.args || {};
 
                     if (internalFunctions[toolName]) {
                         const toolResultData = await internalFunctions[toolName](toolArgs);
-                        
+
                         formattedContents.push({
                             role: "user",
                             parts: [{
@@ -10858,9 +10909,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
     } catch (error) {
         console.error("💥 AI Copilot Tool Resolution Fault:", error);
 
-        const isRateLimit = 
-            error.status === 429 || 
-            error.code === 429 || 
+        const isRateLimit =
+            error.status === 429 ||
+            error.code === 429 ||
             (error.message && error.message.includes("429")) ||
             (error.message && error.message.includes("RESOURCE_EXHAUSTED"));
 
@@ -10872,10 +10923,10 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             });
         }
 
-        res.status(500).json({ 
+        res.status(500).json({
             status: 500,
-            message: "Server error during operations dataset inquiry", 
-            error: error.message 
+            message: "Server error during operations dataset inquiry",
+            error: error.message
         });
     }
 });
