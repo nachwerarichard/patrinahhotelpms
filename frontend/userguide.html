@@ -43,7 +43,7 @@
       <div class="flex items-center gap-4">
         <div class="text-right">
           <div id="display-user-name" class="text-xs font-semibold text-white">Richard Nachwera</div>
-          <div id="display-user-role" class="text-[11px] font-medium text-indigo-300 capitalize">all staff</div>
+          <div id="display-user-role" class="text-[11px] font-medium text-indigo-300 capitalize">super-admin</div>
         </div>
         <button
           type="button"
@@ -105,18 +105,21 @@
 
   <!-- Main Workspace Shell -->
   <div id="main-content" class="flex max-w-7xl mx-auto min-h-[calc(100vh-4rem)]">
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar Navigation (Necessary Novus CloudPMS Modules Only) -->
     <aside class="w-64 shrink-0 bg-white border-r border-slate-200 hidden md:flex flex-col p-4 space-y-1">
-      <p class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Workspace</p>
+      <p class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">User Guide</p>
 
       <button id="nav-guide-crud" type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
-        User Guide Modules
+        Guide Modules CRUD
       </button>
       <button id="nav-bulk-upload" type="button" onclick="switchWorkspaceSection('bulk-upload-panel', 'nav-bulk-upload')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
         Bulk Upload Modules
       </button>
+
+      <p class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Core Modules</p>
+
       <button id="nav-dashboard" type="button" onclick="switchWorkspaceSection('dashboard', 'nav-dashboard')"
               class="nav-item w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition cursor-pointer">
         Executive Dashboard
@@ -165,7 +168,7 @@
         <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-bold">Global User Guide Module CRUD</h2>
-            <p class="text-xs text-slate-300">Copy &amp; paste content for a single module, or edit, read, and delete stored modules</p>
+            <p class="text-xs text-slate-300">Paste content for a single module, or edit, read, and delete stored modules</p>
           </div>
           <div class="flex items-center gap-2">
             <button type="button" onclick="loadGuideChapters()"
@@ -202,7 +205,7 @@
             </div>
           </div>
 
-          <!-- CREATE / EDIT: Module Editor Form (Plain Copy/Paste Content) -->
+          <!-- CREATE / EDIT: Module Editor Form -->
           <form id="guideChapterForm" class="lg:col-span-7 p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 id="formModeTitle" class="text-sm font-bold text-slate-900">Create New Module</h3>
@@ -217,7 +220,7 @@
                 <input type="text" id="gmModuleKey" required placeholder="e.g. housekeeping"
                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               </div>
-              <div class="sm:col-span-1">
+              <div>
                 <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Module Title *</label>
                 <input type="text" id="gmTitle" required placeholder="e.g. Housekeeping"
                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -249,12 +252,12 @@
         </div>
       </div>
 
-      <!-- Bulk Upload All Modules Panel (Supports JSON Array OR Paste Blocks) -->
+      <!-- Bulk Upload All Modules Panel (Paste Plain Text Directly, Headings, or JSON) -->
       <div id="bulk-upload-panel" class="section-panel hidden bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div class="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-bold">Bulk Upload All Modules</h2>
-            <p class="text-xs text-slate-300">Paste a JSON array or plain text blocks separated by <code class="text-emerald-300">--- MODULE: key | Title ---</code></p>
+            <p class="text-xs text-slate-300">Paste plain text directly, use headings (## Title), or paste a JSON array</p>
           </div>
           <div class="flex items-center gap-2">
             <label class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
@@ -263,11 +266,7 @@
             </label>
             <button type="button" onclick="loadSampleBulkModules()"
                     class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
-              Load JSON Sample
-            </button>
-            <button type="button" onclick="loadSamplePasteBlocks()"
-                    class="px-3 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition cursor-pointer">
-              Load Paste Sample
+              Load Core Modules Sample
             </button>
             <button type="button" onclick="switchWorkspaceSection('guide-crud-panel', 'nav-guide-crud')"
                     class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition cursor-pointer">
@@ -277,12 +276,37 @@
         </div>
 
         <form id="bulkUploadForm" class="p-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                Default Title (used if pasting plain text without headings)
+              </label>
+              <input
+                type="text"
+                id="bulkDefaultTitle"
+                placeholder="e.g. Bookings & Reservations"
+                class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">
+                Default Module Key (optional, auto-generated from title)
+              </label>
+              <input
+                type="text"
+                id="bulkDefaultKey"
+                placeholder="e.g. bookings"
+                class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
           <div>
             <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">
-              All Modules (JSON Array [...] OR Copy/Paste Blocks with --- MODULE: key | Title ---) *
+              Paste Module Content Directly *
             </label>
             <textarea id="bulkModulesJson" rows="14" required
-                      placeholder='[{"moduleKey":"bookings","title":"Bookings Management","order":1,"content":"1. Open Bookings..."}]'
+                      placeholder="Paste your module text directly here..."
                       class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
           </div>
 
@@ -295,7 +319,7 @@
         </form>
       </div>
 
-      <!-- Secondary Workspace Panels -->
+      <!-- Core Novus CloudPMS Module Panels -->
       <div id="dashboard" class="section-panel hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <h2 class="text-lg font-bold text-slate-900">Executive Dashboard</h2>
         <p class="text-sm text-slate-600 mt-1">Overview of property occupancy, revenue, and operations.</p>
@@ -589,38 +613,71 @@
       }
     }
 
-    // Parse either JSON array OR plain text blocks starting with "--- MODULE: key | Title ---"
+    function slugifyModuleKey(text, fallbackIndex = 1) {
+      const cleaned = String(text || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return cleaned || `module-${fallbackIndex}`;
+    }
+
+    // Parse plain text directly, headings (## Title), --- MODULE: key | Title ---, or JSON
     function parseBulkInput(rawText) {
-      const trimmed = rawText.trim();
+      const trimmed = String(rawText || '').trim();
       if (!trimmed) return [];
 
-      // Try JSON first
       if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
         const parsed = JSON.parse(trimmed);
         return Array.isArray(parsed) ? parsed : Array.isArray(parsed?.modules) ? parsed.modules : [];
       }
 
-      // Otherwise parse plain copy-pasted blocks
-      const headerRegex = /^---\s*MODULE:\s*([^|\n]+?)\s*\|\s*([^\n]+?)\s*---$/gim;
-      const matches = [...trimmed.matchAll(headerRegex)];
-      if (matches.length === 0) {
-        throw new Error('Enter a JSON array or use "--- MODULE: key | Title ---" headers to separate pasted modules.');
-      }
-
-      const modules = [];
-      for (let i = 0; i < matches.length; i++) {
-        const m = matches[i];
-        const start = m.index + m[0].length;
-        const end = i + 1 < matches.length ? matches[i + 1].index : trimmed.length;
-        const content = trimmed.slice(start, end).trim();
-        modules.push({
-          moduleKey: m[1].trim().toLowerCase(),
-          title: m[2].trim(),
-          order: i + 1,
-          content
+      const customHeaderRegex = /^---\s*MODULE:\s*([^|\n]+?)\s*\|\s*([^\n]+?)\s*---$/gim;
+      const customMatches = [...trimmed.matchAll(customHeaderRegex)];
+      if (customMatches.length > 0) {
+        return customMatches.map((m, i) => {
+          const start = m.index + m[0].length;
+          const end = i + 1 < customMatches.length ? customMatches[i + 1].index : trimmed.length;
+          return {
+            moduleKey: m[1].trim().toLowerCase(),
+            title: m[2].trim(),
+            order: i + 1,
+            content: trimmed.slice(start, end).trim()
+          };
         });
       }
-      return modules;
+
+      const headingRegex = /^(?:#{1,3}\s+|(?:module|chapter)\s*[:\-]\s*)(.+)$/gim;
+      const headingMatches = [...trimmed.matchAll(headingRegex)];
+      if (headingMatches.length > 0) {
+        const modules = [];
+        for (let i = 0; i < headingMatches.length; i++) {
+          const match = headingMatches[i];
+          const title = match[1].trim();
+          const start = match.index + match[0].length;
+          const end = i + 1 < headingMatches.length ? headingMatches[i + 1].index : trimmed.length;
+          const content = trimmed.slice(start, end).trim();
+          if (content) {
+            modules.push({
+              moduleKey: slugifyModuleKey(title, i + 1),
+              title,
+              order: i + 1,
+              content
+            });
+          }
+        }
+        if (modules.length > 0) return modules;
+      }
+
+      const defaultTitle = (document.getElementById('bulkDefaultTitle')?.value || '').trim() || 'User Guide Module';
+      const rawKey = (document.getElementById('bulkDefaultKey')?.value || '').trim();
+      return [
+        {
+          moduleKey: slugifyModuleKey(rawKey || defaultTitle, 1),
+          title: defaultTitle,
+          order: 1,
+          content: trimmed
+        }
+      ];
     }
 
     // BULK UPLOAD ALL MODULES: POST /api/user-guide/bulk
@@ -689,45 +746,37 @@
     function loadSampleBulkModules() {
       const sample = [
         {
-          moduleKey: 'bookings',
-          title: 'Bookings & Reservations',
+          moduleKey: 'dashboard',
+          title: 'Executive Dashboard',
           order: 1,
-          content: '1. Open Bookings Management.\n2. Create reservation, assign room, check guest in, and settle folio balance at check-out.'
+          content: '1. Open Executive Dashboard.\n2. Review live occupancy, revenue, and operational summaries.'
         },
         {
-          moduleKey: 'sales-pos',
-          title: 'Sales & Folio Billing',
+          moduleKey: 'bookings',
+          title: 'Bookings Management',
           order: 2,
-          content: '1. Open Sales & Folio Billing.\n2. Add items to a tab or room folio, complete order, and record payment.'
+          content: '1. Open Bookings Management.\n2. Create reservations, assign rooms, check guests in, and settle balances at check-out.'
+        },
+        {
+          moduleKey: 'sales-folio',
+          title: 'Sales & Folio Billing',
+          order: 3,
+          content: '1. Open Sales & Folio Billing.\n2. Add draft items to tabs or folios, complete orders, and settle bills.'
         },
         {
           moduleKey: 'kds',
           title: 'Kitchen Display System (KDS)',
-          order: 3,
-          content: '1. Open Kitchen Display (KDS).\n2. Move tickets from Pending to Preparing, Ready, and Served.'
+          order: 4,
+          content: '1. Open Kitchen Display (KDS).\n2. Track and update incoming kitchen preparation tickets.'
         },
         {
           moduleKey: 'housekeeping',
           title: 'Housekeeping Operations',
-          order: 4,
-          content: '1. Open Housekeeping.\n2. Update room statuses (clean, dirty, In progress, under-maintenance, blocked) and log remarks.'
+          order: 5,
+          content: '1. Open Housekeeping.\n2. Monitor room cleaning statuses and turnarounds.'
         }
       ];
       document.getElementById('bulkModulesJson').value = JSON.stringify(sample, null, 2);
-    }
-
-    function loadSamplePasteBlocks() {
-      document.getElementById('bulkModulesJson').value = `--- MODULE: bookings | Bookings & Reservations ---
-1. Open Bookings Management.
-2. Create reservation, assign room, check guest in, and settle folio balance at check-out.
-
---- MODULE: sales-pos | Sales & Folio Billing ---
-1. Open Sales & Folio Billing.
-2. Add items to a tab or room folio, complete order, and record payment.
-
---- MODULE: housekeeping | Housekeeping Operations ---
-1. Open Housekeeping.
-2. Update room statuses and log room notes.`;
     }
 
     // DELETE: Remove module via DELETE /api/user-guide/:moduleKey
