@@ -10637,6 +10637,12 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const userRole = req.user?.role || 'staff';
         const username = req.user?.username || 'Staff';
 
+        // Ensure BanquetEvent is registered if not already in your models
+        const BanquetEventModel =
+            typeof BanquetEvent !== 'undefined'
+                ? BanquetEvent
+                : mongoose.models.BanquetEvent || mongoose.model('BanquetEvent', banquetEventSchema);
+
         // 🏨 FETCH HOTEL PROFILE ONCE FOR BASE CONTEXT
         const hotelProfile = await Hotel.findById(hotelId).lean();
         const hotelName = hotelProfile?.name || "this property";
@@ -10747,6 +10753,133 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             return await ClientAccount.find(filter).sort({ updatedAt: -1 }).lean();
         };
 
+        // --- NEW CENTRAL STORES, DEPARTMENT STOCK & STOCK TRANSFERS ---
+        const searchCentralStoreTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.sku) filter.sku = { $regex: filter.sku, $options: 'i' };
+            if (filter.itemName) filter.itemName = { $regex: filter.itemName, $options: 'i' };
+            return await CentralStore.find(filter).sort({ itemName: 1 }).limit(100).lean();
+        };
+
+        const searchDepartmentStockTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            return await DepartmentStock.find(filter)
+                .populate('itemId')
+                .sort({ department: 1 })
+                .limit(100)
+                .lean();
+        };
+
+        const searchStockTransfersTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.requisitionNumber) {
+                filter.requisitionNumber = { $regex: filter.requisitionNumber, $options: 'i' };
+            }
+            if (filter.requestedBy) {
+                filter.requestedBy = { $regex: filter.requestedBy, $options: 'i' };
+            }
+            return await StockTransfer.find(filter)
+                .populate('itemId')
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean();
+        };
+
+        // --- NEW FUNCTION SPACES & BANQUET EVENTS (BEO) ---
+        const searchFunctionSpacesTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.spaceName) filter.spaceName = { $regex: filter.spaceName, $options: 'i' };
+            if (filter.code) filter.code = { $regex: filter.code, $options: 'i' };
+            return await FunctionSpace.find(filter).sort({ spaceName: 1 }).lean();
+        };
+
+        const searchBanquetEventsTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.beoNumber) filter.beoNumber = { $regex: filter.beoNumber, $options: 'i' };
+            if (filter.clientName) filter.clientName = { $regex: filter.clientName, $options: 'i' };
+            if (filter.companyName) filter.companyName = { $regex: filter.companyName, $options: 'i' };
+            if (filter.eventTitle) filter.eventTitle = { $regex: filter.eventTitle, $options: 'i' };
+            return await BanquetEventModel.find(filter)
+                .populate('functionSpaceId')
+                .sort({ eventDate: 1 })
+                .limit(50)
+                .lean();
+        };
+
+        // --- NEW HR EMPLOYEES & ATTENDANCE ---
+        const searchEmployeesTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.employeeId) filter.employeeId = { $regex: filter.employeeId, $options: 'i' };
+            if (filter.name) {
+                filter.$or = [
+                    { firstName: { $regex: filter.name, $options: 'i' } },
+                    { lastName: { $regex: filter.name, $options: 'i' } }
+                ];
+                delete filter.name;
+            }
+            return await Employee.find(filter)
+                .select('-baseSalary -emergencyContact')
+                .sort({ department: 1, firstName: 1 })
+                .limit(100)
+                .lean();
+        };
+
+        const searchAttendanceTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.workDate) {
+                const start = new Date(`${filter.workDate}T00:00:00.000Z`);
+                const end = new Date(`${filter.workDate}T23:59:59.999Z`);
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    filter.workDate = { $gte: start, $lte: end };
+                } else {
+                    delete filter.workDate;
+                }
+            }
+            return await Attendance.find(filter)
+                .populate('employeeId', 'employeeId firstName lastName department position')
+                .sort({ workDate: -1, createdAt: -1 })
+                .limit(100)
+                .lean();
+        };
+
+        // --- NEW ENGINEERING ASSETS & MAINTENANCE WORK ORDERS ---
+        const searchHotelAssetsTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.assetCode) filter.assetCode = { $regex: filter.assetCode, $options: 'i' };
+            if (filter.assetName) filter.assetName = { $regex: filter.assetName, $options: 'i' };
+            if (filter.location) filter.location = { $regex: filter.location, $options: 'i' };
+            return await HotelAsset.find(filter).sort({ assetName: 1 }).limit(100).lean();
+        };
+
+        const searchWorkOrdersTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.workOrderNumber) {
+                filter.workOrderNumber = { $regex: filter.workOrderNumber, $options: 'i' };
+            }
+            if (filter.locationRoom) {
+                filter.locationRoom = { $regex: filter.locationRoom, $options: 'i' };
+            }
+            if (filter.assignedTo) {
+                filter.assignedTo = { $regex: filter.assignedTo, $options: 'i' };
+            }
+            return await WorkOrder.find(filter)
+                .populate('assetId')
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean();
+        };
+
+        // --- NEW GUEST FEEDBACK ---
+        const searchGuestFeedbackTool = async (queryFilter = {}) => {
+            const filter = { ...queryFilter, hotelId };
+            if (filter.guestName) filter.guestName = { $regex: filter.guestName, $options: 'i' };
+            if (filter.roomNumber) filter.roomNumber = String(filter.roomNumber);
+            if (filter.bookingCustomId) {
+                filter.bookingCustomId = { $regex: filter.bookingCustomId, $options: 'i' };
+            }
+            return await GuestFeedback.find(filter).sort({ createdAt: -1 }).limit(50).lean();
+        };
+
         const searchUserGuideTool = async ({ moduleKey } = {}) => {
             const filter = {};
             if (moduleKey) {
@@ -10772,6 +10905,16 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             searchPaymentTransactions: searchPaymentTransactionsTool,
             searchIncidentalCharges: searchIncidentalChargesTool,
             searchClientAccounts: searchClientAccountsTool,
+            searchCentralStore: searchCentralStoreTool,
+            searchDepartmentStock: searchDepartmentStockTool,
+            searchStockTransfers: searchStockTransfersTool,
+            searchFunctionSpaces: searchFunctionSpacesTool,
+            searchBanquetEvents: searchBanquetEventsTool,
+            searchEmployees: searchEmployeesTool,
+            searchAttendance: searchAttendanceTool,
+            searchHotelAssets: searchHotelAssetsTool,
+            searchWorkOrders: searchWorkOrdersTool,
+            searchGuestFeedback: searchGuestFeedbackTool,
             searchUserGuide: searchUserGuideTool
         };
 
@@ -10801,16 +10944,16 @@ USER GUIDE & HOW-TO / SOP GROUNDING PROTOCOLS:
 - If a topic is not covered in the guide, state that clearly and direct them to an Administrator.
 
 MULTI-SOURCE DATA AGGREGATION & REPORTING PROTOCOLS:
-- You have access to distinct analytical tools across multiple databases. You are highly expected to think cross-functionally.
+- You have access to distinct analytical tools across multiple databases covering reservations, rooms, POS/sales, expenses, cash journal, central stores, departmental stock, stock transfers, banquets/BEOs, HR/staff/attendance, engineering assets, maintenance work orders, and guest feedback. You are highly expected to think cross-functionally.
 - If a prompt asks for a complex picture (e.g., "Show me everything happening today"), you can call multiple functions sequentially or parallelly in your execution loop.
-- Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, and active kitchen orders to provide a holistic operational landscape overview.
+- Combine data cleanly into unified, exhaustive responses. For instance, combine metrics from sales, cash balance updates, active kitchen orders, maintenance work orders, and banquet events to provide a holistic operational landscape overview.
 - Provide descriptive, deeply itemized, and granular analytical answers rather than short generalized summaries when supervisors request deep insights.
-- You can track room history changes, room maintenance remarks, or room blocking reasons via the searchStatusReports tool.
+- You can track room history changes, room maintenance remarks, or room blocking reasons via searchStatusReports, and equipment/room repair tickets via searchWorkOrders and searchHotelAssets.
 
 SECURITY AND PRIVACY PROTOCOLS:
 - You only pull operational records matching the current isolated hotelId (${hotelId}).
 - The User Guide is shared globally across all properties and accessible to any staff role.
-- Never expose sensitive keys or credentials.
+- Never expose sensitive keys, credentials, or personal salary/emergency contact records.
 - Do not guess metrics or invent operational records. If tools return empty structures, answer accurately.
 
 === NOVUS CLOUDPMS USER GUIDE ===
@@ -11008,6 +11151,154 @@ ${userGuideText}
                                 isClosed: { type: "BOOLEAN", description: "Filters by active vs archived balances" }
                             }
                         }
+                    },
+                    {
+                        name: "searchCentralStore",
+                        description: "Queries the master central store catalog for stock quantities, unit costs, SKUs, and minimum reorder thresholds.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                sku: { type: "STRING", description: "SKU code filter (e.g., 'STORES-HS-001')" },
+                                itemName: { type: "STRING", description: "Item name text match filter" },
+                                category: {
+                                    type: "STRING",
+                                    description: "Values: Housekeeping, Food & Beverage, Maintenance, Front Office, Spa, Administrative"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchDepartmentStock",
+                        description: "Queries stock quantities currently held by specific hotel departments.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                department: {
+                                    type: "STRING",
+                                    description: "Values: Housekeeping, Food & Beverage, Maintenance, Front Office, Spa, Administrative"
+                                },
+                                itemId: { type: "STRING", description: "MongoDB ObjectId of the CentralStore item" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchStockTransfers",
+                        description: "Queries stock transfer and requisition audit logs for issuing, returning, or consuming store items.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                requisitionNumber: { type: "STRING", description: "Requisition identifier" },
+                                department: { type: "STRING", description: "Target department name" },
+                                actionType: {
+                                    type: "STRING",
+                                    description: "Values: issue_to_dept, return_to_store, direct_consumption"
+                                },
+                                status: {
+                                    type: "STRING",
+                                    description: "Values: Pending, Approved, Rejected, Completed"
+                                },
+                                requestedBy: { type: "STRING", description: "Staff member who requested the transfer" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchFunctionSpaces",
+                        description: "Queries banquet and conference venues, capacities, setup styles, and half/full-day rental rates.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                spaceName: { type: "STRING", description: "Venue name filter (e.g., 'Grand Ballroom')" },
+                                code: { type: "STRING", description: "Venue code filter (e.g., 'GB-01')" },
+                                status: { type: "STRING", description: "Values: Active, Maintenance, Inactive" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchBanquetEvents",
+                        description: "Queries Banquet Event Orders (BEOs), event schedules, guest counts, catering packages, and estimated event revenue.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                beoNumber: { type: "STRING", description: "BEO number filter (e.g., 'BEO-2026-001')" },
+                                clientName: { type: "STRING", description: "Client name text filter" },
+                                companyName: { type: "STRING", description: "Company or organization name filter" },
+                                eventTitle: { type: "STRING", description: "Event title text filter" },
+                                functionSpaceId: { type: "STRING", description: "MongoDB ObjectId of the FunctionSpace" },
+                                status: { type: "STRING", description: "Values: Tentative, Confirmed, Executed, Cancelled" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchEmployees",
+                        description: "Queries HR employee profiles, departments, positions, employment types, and certifications (excluding salary and emergency contacts).",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                employeeId: { type: "STRING", description: "Employee ID code (e.g., 'EMP-HK-001')" },
+                                name: { type: "STRING", description: "First or last name text match filter" },
+                                department: { type: "STRING", description: "Department filter (e.g., 'Housekeeping', 'Food & Beverage', 'Engineering')" },
+                                position: { type: "STRING", description: "Job title or position" },
+                                employmentType: { type: "STRING", description: "Values: Full-Time, Part-Time, Contractor, Intern" },
+                                status: { type: "STRING", description: "Values: Active, On Leave, Suspended, Terminated" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchAttendance",
+                        description: "Queries staff attendance records, work dates, shifts, clock-in/out times, and punctuality status.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                employeeId: { type: "STRING", description: "MongoDB ObjectId of the Employee" },
+                                workDate: { type: "STRING", description: "Target date in YYYY-MM-DD format" },
+                                shift: { type: "STRING", description: "Values: Morning, Evening, Night Audit, Off" },
+                                status: { type: "STRING", description: "Values: Present, Absent, Late, On Leave" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchHotelAssets",
+                        description: "Queries property equipment and engineering assets, locations, serial numbers, and operational status.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                assetCode: { type: "STRING", description: "Asset code filter (e.g., 'AST-ENG-001')" },
+                                assetName: { type: "STRING", description: "Asset name text filter" },
+                                category: { type: "STRING", description: "Category such as HVAC, Plumbing, Electrical, Elevator, IT" },
+                                location: { type: "STRING", description: "Location or building area filter" },
+                                status: { type: "STRING", description: "Values: Operational, Under Maintenance, Decommissioned" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchWorkOrders",
+                        description: "Queries maintenance work orders, repair priorities, assigned technicians, resolution notes, and completion status.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                workOrderNumber: { type: "STRING", description: "Work order number (e.g., 'WO-2026-001')" },
+                                assetId: { type: "STRING", description: "MongoDB ObjectId of the HotelAsset" },
+                                locationRoom: { type: "STRING", description: "Room number or property location (e.g., 'Room 402', 'Lobby')" },
+                                priority: { type: "STRING", description: "Values: Low, Medium, High, Emergency" },
+                                maintenanceType: { type: "STRING", description: "Values: Corrective, Preventative" },
+                                assignedTo: { type: "STRING", description: "Assigned technician name" },
+                                status: { type: "STRING", description: "Values: Open, In Progress, Resolved, Cancelled" }
+                            }
+                        }
+                    },
+                    {
+                        name: "searchGuestFeedback",
+                        description: "Queries guest satisfaction ratings, comments, service recovery flags, and resolution notes.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: { type: "STRING", description: "Guest name text filter" },
+                                roomNumber: { type: "STRING", description: "Room number string" },
+                                bookingCustomId: { type: "STRING", description: "Booking custom ID filter" },
+                                overallRating: { type: "NUMBER", description: "Exact star rating from 1 to 5" },
+                                isResolved: { type: "BOOLEAN", description: "Whether service recovery has been resolved" }
+                            }
+                        }
                     }
                 ]
             }
@@ -11057,6 +11348,10 @@ ${userGuideText}
                 responseText = aiResponse.text;
                 break;
             }
+        }
+
+        if (!responseText) {
+            responseText = "I gathered the operational records, but could not generate a complete summary within the allotted query steps. Please narrow your request and try again.";
         }
 
         res.json({ reply: responseText });
