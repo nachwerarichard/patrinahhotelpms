@@ -16196,66 +16196,76 @@ document.addEventListener("click", (e) => {
         });
 
         // Bubble Builders & Markdown Style Injectors
-        function appendMessageBubble(text, sender) {
-            const cleanText = text ? String(text) : "";
-            const bubbleContainer = document.createElement("div");
-            bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
-            const bubble = document.createElement("div");
-            bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " +
-                (sender === "user"
-                    ? "bg-indigo-600 text-white rounded-tr-none"
-                    : sender === "error"
-                        ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200"
-                        : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
+        function sanitizeCopilotMarkdown(rawText) {
+    // Remove leading # heading markers (e.g., "### Title" -> "Title")
+    return rawText.replace(/^[ \t]*#{1,6}[ \t]+(.+)$/gm, "**$1**");
+}
 
-            if (sender === "user") {
-                bubble.textContent = cleanText;
-                bubble.style.whiteSpace = "pre-line";
-            } else if (sender === "error") {
-                bubble.textContent = cleanText;
-            } else {
-                if (typeof marked !== 'undefined') {
-                    bubble.innerHTML = marked.parse(cleanText);
-                    injectTableStyles(bubble);
-                } else {
-                    let formattedText = cleanText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                    formattedText = formattedText.replace(/^\*\s+/gm, '• ');
-                    bubble.innerHTML = formattedText;
-                    bubble.style.whiteSpace = "pre-line";
-                }
-            }
+function appendMessageBubble(text, sender) {
+    const cleanText = text ? String(text) : "";
+    const bubbleContainer = document.createElement("div");
+    bubbleContainer.className = "flex items-start my-2.5 " + (sender === "user" ? "justify-end" : "justify-start");
 
-            bubbleContainer.appendChild(bubble);
-            chatMessages.appendChild(bubbleContainer);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+    const bubble = document.createElement("div");
+    bubble.className = "text-sm p-3 rounded-lg max-w-[92%] shadow-sm overflow-x-auto " +
+        (sender === "user"
+            ? "bg-indigo-600 text-white rounded-tr-none"
+            : sender === "error"
+                ? "bg-red-100 text-red-800 rounded-tl-none border border-red-200"
+                : "bg-indigo-50 text-indigo-950 rounded-tl-none border border-indigo-100");
+
+    if (sender === "user") {
+        bubble.textContent = cleanText;
+        bubble.style.whiteSpace = "pre-line";
+    } else if (sender === "error") {
+        bubble.textContent = cleanText;
+    } else {
+        const preparedText = sanitizeCopilotMarkdown(cleanText);
+        if (typeof marked !== "undefined") {
+            bubble.innerHTML = marked.parse(preparedText);
+            injectTableStyles(bubble);
+        } else {
+            let formattedText = preparedText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            formattedText = formattedText.replace(/^\*\s+/gm, "• ");
+            bubble.innerHTML = formattedText;
+            bubble.style.whiteSpace = "pre-line";
         }
+    }
 
-        function injectTableStyles(container) {
-            container.querySelectorAll("table").forEach(table => {
-                table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
-                table.querySelectorAll("th").forEach(th => {
-                    th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider white-space-nowrap";
-                });
-                table.querySelectorAll("td").forEach(td => {
-                    td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
-                });
-                table.querySelectorAll("tr").forEach((tr, index) => {
-                    if (index > 0 && index % 2 === 0) tr.classList.add("bg-gray-50/50");
-                });
-            });
+    bubbleContainer.appendChild(bubble);
+    chatMessages.appendChild(bubbleContainer);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-            container.querySelectorAll("blockquote").forEach(bq => {
-                bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
-            });
-            container.querySelectorAll("ul").forEach(ul => {
-                ul.className = "list-disc pl-5 my-2 space-y-1";
-            });
-            container.querySelectorAll("ol").forEach(ol => {
-                ol.className = "list-decimal pl-5 my-2 space-y-1";
-            });
-        }
+function injectTableStyles(container) {
+    container.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(heading => {
+        heading.className = "font-semibold text-sm text-indigo-950 mt-2 mb-1";
+    });
 
+    container.querySelectorAll("table").forEach(table => {
+        table.className = "w-full my-3 border-collapse text-xs text-left bg-white rounded border border-gray-200 shadow-xs block sm:table overflow-x-auto";
+        table.querySelectorAll("th").forEach(th => {
+            th.className = "p-2 bg-indigo-100 text-indigo-900 font-semibold border-b border-gray-200 uppercase tracking-wider whitespace-nowrap";
+        });
+        table.querySelectorAll("td").forEach(td => {
+            td.className = "p-2 border-b border-gray-100 text-gray-700 font-normal";
+        });
+        table.querySelectorAll("tr").forEach((tr, index) => {
+            if (index > 0 && index % 2 === 0) tr.classList.add("bg-gray-50/50");
+        });
+    });
+
+    container.querySelectorAll("blockquote").forEach(bq => {
+        bq.className = "my-2 pl-3 border-l-4 border-indigo-500 italic text-gray-600 bg-indigo-50/40 py-1 rounded-r";
+    });
+    container.querySelectorAll("ul").forEach(ul => {
+        ul.className = "list-disc pl-5 my-2 space-y-1";
+    });
+    container.querySelectorAll("ol").forEach(ol => {
+        ol.className = "list-decimal pl-5 my-2 space-y-1";
+    });
+}
         function appendLoadingBubble() {
             const id = "loading-" + Date.now();
             const bubbleContainer = document.createElement("div");
