@@ -1301,7 +1301,15 @@ async function renderBookings(page = 1, searchTerm = '') {
             currentBookings.forEach(booking => {
                 const isCancelled = booking.gueststatus === 'cancelled';
                 const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
-
+const groupBadgeHtml = isGroup ? `
+    <button type="button"
+        onclick="openGroupModal('${booking.groupId}')"
+        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+        title="View Group ${booking.groupId}">
+        <i class="fa-solid fa-users text-[10px]"></i>
+        <span>${formatStatusText(booking.groupName || booking.groupId)} (${booking.groupId})</span>
+    </button>
+` : '';
                 let actionButtonsHtml = '';
                 if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                     if (isCancelled) {
@@ -1318,6 +1326,30 @@ async function renderBookings(page = 1, searchTerm = '') {
                                     <i class="fa-solid fa-circle-check mr-1"></i> Confirm
                                 </button>
                             ` : ''}
+                            const isGroup = Boolean(booking.isGroupBooking && booking.groupId);
+
+${isGroup ? `
+    <div class="border-t border-slate-200 my-2"></div>
+    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block px-1 mb-1">Group Actions</span>
+    <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
+        <i class="fa-solid fa-layer-group mr-1"></i> View Group
+    </button>
+    ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+        <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
+            <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
+        </button>
+    ` : ''}
+    ${booking.balance > 0 ? `
+        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="openGroupPaymentModal('${booking.groupId}')">
+            <i class="fa-solid fa-coins mr-1"></i> Group Payment
+        </button>
+    ` : ''}
+    ${booking.gueststatus === 'checkedin' ? `
+        <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="bulkGroupCheckOut('${booking.groupId}')">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Group Check-Out
+        </button>
+    ` : ''}
+` : ''}
 
                             ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
