@@ -19868,36 +19868,67 @@ const singleRoomSelect = document.getElementById('room');
 async function loadGroupBookingRooms() {
     if (!groupRoomsChecklist) return;
 
-    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Loading rooms...</p>`;
+    const checkIn = document.getElementById('checkIn')?.value || '';
+    const checkOut = document.getElementById('checkOut')?.value || '';
 
-    try {
-        // Adjust '/rooms' if your endpoint is '/api/rooms' or similar
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms`);
-        if (res && res.ok) {
-            const data = await res.json();
-            const roomsList = Array.isArray(data) ? data : (data.rooms || []);
-
-            const normalized = roomsList.map((room) => ({
-                number: room.number,
-                // Adjust depending on whether rate is on room or populated roomTypeId
-                rate: room.rate ?? room.amtPerNight ?? room.roomTypeId?.rate ?? room.roomTypeId?.price ?? null
-            }));
-
-            renderGroupRoomOptions(normalized);
-            return;
-        }
-    } catch (err) {
-        console.warn('Could not fetch /rooms directly, falling back to #room options:', err);
+    if (checkIn && checkOut && checkOut <= checkIn) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">Check-out date must be after check-in date.</p>`;
+        updateSelectedRoomsBadge();
+        return;
     }
 
-    // Fallback: read rooms already rendered into the #room <select>
-    const fallbackRooms = Array.from(singleRoomSelect?.options || [])
-        .map((opt) => opt.value.trim())
-        .filter(Boolean)
-        .map((number) => ({ number }));
+    // Preserve any rooms already checked before refreshing
+    const previouslyChecked = new Set(getSelectedGroupRoomNumbers());
 
-    renderGroupRoomOptions(fallbackRooms);
+    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Checking available rooms...</p>`;
+
+    try {
+        const params = new URLSearchParams();
+        if (checkIn) params.set('checkIn', checkIn);
+        if (checkOut) params.set('checkOut', checkOut);
+
+        const queryString = params.toString();
+        const url = `${API_BASE_URL}/rooms/available${queryString ? `?${queryString}` : ''}`;
+
+        const res = await authenticatedFetch(url);
+        if (!res || !res.ok) {
+            const errData = res ? await res.json().catch(() => ({})) : {};
+            throw new Error(errData.message || 'Failed to load available rooms');
+        }
+
+        const data = await res.json();
+        const roomsList = Array.isArray(data) ? data : (data.rooms || []);
+
+        const normalized = roomsList.map((room) => ({
+            number: room.number,
+            rate: room.rate ?? room.amtPerNight ?? room.roomTypeId?.rate ?? room.roomTypeId?.price ?? null
+        }));
+
+        renderGroupRoomOptions(normalized);
+
+        // Re-check any rooms that are still available for the new dates
+        groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+            if (previouslyChecked.has(cb.value.trim())) {
+                cb.checked = true;
+            }
+        });
+        updateSelectedRoomsBadge();
+    } catch (error) {
+        console.error('Error loading available group rooms:', error);
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">${error.message}</p>`;
+        updateSelectedRoomsBadge();
+    }
 }
+
+// Re-filter available rooms automatically when check-in or check-out dates change
+document.getElementById('checkIn')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
+document.getElementById('checkOut')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
 
 function updateSelectedRoomsBadge() {
     const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;

@@ -2162,6 +2162,55 @@ app.get('/api/rooms', auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+app.get('/api/rooms/available', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { checkIn, checkOut } = req.query;
+
+        // 1. Fetch rooms in this hotel (exclude rooms out of service)
+        const allRooms = await Room.find({
+            hotelId,
+            status: { $nin: ['under-maintenance'] }
+        })
+            .populate('roomTypeId')
+            .sort({ number: 1 });
+
+        // 2. If dates are provided, exclude rooms with overlapping non-cancelled bookings
+        let occupiedRoomSet = new Set();
+
+        if (checkIn && checkOut) {
+            if (checkOut <= checkIn) {
+                return res.status(400).json({ message: 'Check-out date must be after check-in date.' });
+            }
+
+            const overlappingBookings = await Booking.find({
+                hotelId,
+                gueststatus: { $nin: ['cancelled', 'void', 'checkedout'] },
+                checkIn: { $lt: checkOut },
+                checkOut: { $gt: checkIn }
+            }).select('room');
+
+            occupiedRoomSet = new Set(overlappingBookings.map((b) => String(b.room).trim()));
+        } else {
+            // Fallback when dates aren't picked yet: exclude currently blocked/occupied rooms
+            occupiedRoomSet = new Set(
+                allRooms
+                    .filter((r) => ['blocked', 'occupied'].includes(r.status))
+                    .map((r) => String(r.number).trim())
+            );
+        }
+
+        const availableRooms = allRooms.filter(
+            (room) => !occupiedRoomSet.has(String(room.number).trim())
+        );
+
+        res.json({ rooms: availableRooms });
+    } catch (error) {
+        console.error('Error fetching available rooms:', error);
+        res.status(500).json({ message: 'Error fetching available rooms', error: error.message });
+    }
+});
 // GET all rooms
 
 // DELETE a room (Secure)
