@@ -12788,6 +12788,218 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
 });
 
 
+// Get group summary + all room bookings in the group
+app.get('/api/bookings/group/:groupId', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { groupId } = req.params;
+
+        const bookings = await Booking.find({ hotelId, groupId }).sort({ room: 1 });
+        if (!bookings.length) {
+            return res.status(404).json({ message: 'Group booking not found.' });
+        }
+
+        const summary = bookings.reduce((acc, b) => {
+            if (b.gueststatus !== 'cancelled' && b.gueststatus !== 'void') {
+                acc.activeRooms += 1;
+                acc.totalDue += Number(b.totalDue) || 0;
+                acc.amountPaid += Number(b.amountPaid) || 0;
+                acc.balance += Number(b.balance) || 0;
+                acc.totalPeople += Number(b.people) || 0;
+            }
+            return acc;
+        }, {
+            groupId,
+            groupName: bookings[0].groupName || `${bookings[0].name} Group`,
+            leadGuest: bookings.find(b => b.isGroupLead)?.name || bookings[0].name,
+            checkIn: bookings[0].checkIn,
+            checkOut: bookings[0].checkOut,
+            totalRooms: bookings.length,
+            activeRooms: 0,
+            totalPeople: 0,
+            totalDue: 0,
+            amountPaid: 0,
+            balance: 0
+        });
+
+        res.json({ summary, bookings });
+    } catch (error) {
+        console.error('Error fetching group booking:', error);
+        res.status(500).json({ message: 'Error fetching group booking', error: error.message });
+    }
+});
+
+// Bulk Check-In all reserved/confirmed bookings in a group
+app.post('/api/bookings/group/:groupId/checkin', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { groupId } = req.params;
+        const actingUser = req.user?.username || req.body?.username || 'System';
+
+        const eligibleBookings = await Booking.find({
+            hotelId,
+            groupId,
+            gueststatus: { $in: ['reserved', 'confirmed'] }
+        });
+
+        if (!eligibleBookings.length) {
+            return res.status(400).json({ message: 'No reserved or confirmed rooms eligible for check-in in this group.' });
+        }
+
+        const roomNumbers = eligibleBookings.map(b => b.room);
+
+        await Booking.updateMany(
+            { _id: { $in: eligibleBookings.map(b => b._id) } },
+            {
+                $set: {
+                    gueststatus: 'checkedin',
+                    checkedIn: true,
+                    updatedBy: actingUser
+                }
+            }
+        );
+
+        // Update physical room statuses if 'occupied' is in your roomSchema enum; otherwise use 'blocked'
+        await Room.updateMany(
+            { hotelId, number: { $in: roomNumbers } },
+            { $set: { status: 'blocked' } }
+        );
+
+        await addAuditLog('Group Bulk Check-In', actingUser, hotelId, {
+            groupId,
+            rooms: roomNumbers,
+            count: eligibleBookings.length
+        });
+
+        res.json({
+            message: `Checked in ${eligibleBookings.length} room(s) for group ${groupId}.`,
+            rooms: roomNumbers
+        });
+    } catch (error) {
+        console.error('Error in bulk group check-in:', error);
+        res.status(500).json({ message: 'Bulk check-in failed', error: error.message });
+    }
+});
+
+// Bulk Check-Out all checked-in bookings in a group
+app.post('/api/bookings/group/:groupId/checkout', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { groupId } = req.params;
+        const { allowUnpaidBalance = false } = req.body || {};
+        const actingUser = req.user?.username || req.body?.username || 'System';
+
+        const activeCheckedIn = await Booking.find({
+            hotelId,
+            groupId,
+            gueststatus: 'checkedin'
+        });
+
+        if (!activeCheckedIn.length) {
+            return res.status(400).json({ message: 'No checked-in rooms found for this group.' });
+        }
+
+        const unpaidRooms = activeCheckedIn.filter(b => (Number(b.balance) || 0) > 0);
+        if (unpaidRooms.length > 0 && !allowUnpaidBalance) {
+            return res.status(400).json({
+                message: `Cannot check out: balance remaining on room(s) ${unpaidRooms.map(b => b.room).join(', ')}.`
+            });
+        }
+
+        const roomNumbers = activeCheckedIn.map(b => b.room);
+
+        await Booking.updateMany(
+            { _id: { $in: activeCheckedIn.map(b => b._id) } },
+            {
+                $set: {
+                    gueststatus: 'checkedout',
+                    checkedIn: false,
+                    updatedBy: actingUser
+                }
+            }
+        );
+
+        // Standard hotel turnover: checked-out rooms go to housekeeping as 'dirty'
+        await Room.updateMany(
+            { hotelId, number: { $in: roomNumbers } },
+            { $set: { status: 'dirty' } }
+        );
+
+        await addAuditLog('Group Bulk Check-Out', actingUser, hotelId, {
+            groupId,
+            rooms: roomNumbers,
+            count: activeCheckedIn.length
+        });
+
+        res.json({
+            message: `Checked out ${activeCheckedIn.length} room(s) for group ${groupId}. Rooms marked dirty for housekeeping.`,
+            rooms: roomNumbers
+        });
+    } catch (error) {
+        console.error('Error in bulk group check-out:', error);
+        res.status(500).json({ message: 'Bulk check-out failed', error: error.message });
+    }
+});
+
+// Record a group payment and distribute across open room balances
+app.post('/api/bookings/group/:groupId/payment', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { groupId } = req.params;
+        const { amount, paymentMethod = 'Cash', transactionid = '' } = req.body;
+        const actingUser = req.user?.username || req.body?.username || 'System';
+
+        let paymentLeft = Number(amount);
+        if (!paymentLeft || paymentLeft <= 0) {
+            return res.status(400).json({ message: 'Please enter a valid payment amount greater than zero.' });
+        }
+
+        const groupBookings = await Booking.find({
+            hotelId,
+            groupId,
+            gueststatus: { $nin: ['cancelled', 'void'] }
+        }).sort({ room: 1 });
+
+        if (!groupBookings.length) {
+            return res.status(404).json({ message: 'Active group bookings not found.' });
+        }
+
+        for (const b of groupBookings) {
+            if (paymentLeft <= 0) break;
+            const currentBalance = Math.max(0, Number(b.balance) || 0);
+            if (currentBalance <= 0) continue;
+
+            const applied = Number(Math.min(currentBalance, paymentLeft).toFixed(2));
+            b.amountPaid = Number(((Number(b.amountPaid) || 0) + applied).toFixed(2));
+            b.balance = Math.max(0, Number(((Number(b.totalDue) || 0) - b.amountPaid).toFixed(2)));
+            b.paymentMethod = paymentMethod;
+            if (transactionid) b.transactionid = transactionid;
+            b.paymentStatus = b.balance === 0 ? 'Paid' : 'Partially Paid';
+            b.updatedBy = actingUser;
+
+            await b.save();
+            paymentLeft = Number((paymentLeft - applied).toFixed(2));
+        }
+
+        await addAuditLog('Group Payment Recorded', actingUser, hotelId, {
+            groupId,
+            amountPaid: Number(amount),
+            unallocatedRemainder: paymentLeft,
+            paymentMethod,
+            transactionid
+        });
+
+        res.json({
+            message: 'Group payment recorded successfully.',
+            unallocatedRemainder: paymentLeft
+        });
+    } catch (error) {
+        console.error('Error recording group payment:', error);
+        res.status(500).json({ message: 'Error recording group payment', error: error.message });
+    }
+});
+
+
 // Express endpoint on Render
 app.get('/api/pms/latest.json', (req, res) => {
   res.json({

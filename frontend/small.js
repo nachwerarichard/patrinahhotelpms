@@ -19995,3 +19995,42 @@ clearGroupRoomsBtn?.addEventListener('click', () => {
     });
     updateSelectedRoomsBadge();
 });
+
+async function refreshBookingViews() {
+    if (typeof renderBookings === 'function') await renderBookings(currentPage, currentSearchTerm);
+    if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
+    if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof renderAuditLogs === 'function') renderAuditLogs();
+}
+
+async function bulkGroupCheckIn(groupId) {
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkin`, {
+            method: 'POST'
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-in failed');
+
+        showMessage('Success', data.message || 'Group checked in!');
+        await refreshBookingViews();
+    } catch (err) {
+        showMessage('Error', err.message, true);
+    }
+}
+
+async function bulkGroupCheckOut(groupId) {
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkout`, {
+            method: 'POST',
+            body: JSON.stringify({ allowUnpaidBalance: false })
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-out failed');
+
+        showMessage('Success', data.message || 'Group checked out!');
+        await refreshBookingViews();
+    } catch (err) {
+        showMessage('Error', err.message, true);
+    }
+}
