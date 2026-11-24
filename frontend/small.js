@@ -19855,3 +19855,112 @@ function closeQrPrintModal() {
 // Bind globally
 window.openQrPrintModal = openQrPrintModal;
 window.closeQrPrintModal = closeQrPrintModal;
+
+
+const groupRoomsChecklist = document.getElementById('groupRoomsChecklist');
+const selectedRoomsCount = document.getElementById('selectedRoomsCount');
+const clearGroupRoomsBtn = document.getElementById('clearGroupRoomsBtn');
+const isGroupBookingCheckbox = document.getElementById('isGroupBooking');
+const groupBookingPanel = document.getElementById('groupBookingPanel');
+const singleRoomWrapper = document.getElementById('singleRoomWrapper');
+const singleRoomSelect = document.getElementById('room');
+
+async function loadGroupBookingRooms() {
+    if (!groupRoomsChecklist) return;
+
+    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Loading rooms...</p>`;
+
+    try {
+        // Adjust '/rooms' if your endpoint is '/api/rooms' or similar
+        const res = await authenticatedFetch(`${API_BASE_URL}/rooms`);
+        if (res && res.ok) {
+            const data = await res.json();
+            const roomsList = Array.isArray(data) ? data : (data.rooms || []);
+
+            const normalized = roomsList.map((room) => ({
+                number: room.number,
+                // Adjust depending on whether rate is on room or populated roomTypeId
+                rate: room.rate ?? room.amtPerNight ?? room.roomTypeId?.rate ?? room.roomTypeId?.price ?? null
+            }));
+
+            renderGroupRoomOptions(normalized);
+            return;
+        }
+    } catch (err) {
+        console.warn('Could not fetch /rooms directly, falling back to #room options:', err);
+    }
+
+    // Fallback: read rooms already rendered into the #room <select>
+    const fallbackRooms = Array.from(singleRoomSelect?.options || [])
+        .map((opt) => opt.value.trim())
+        .filter(Boolean)
+        .map((number) => ({ number }));
+
+    renderGroupRoomOptions(fallbackRooms);
+}
+
+function updateSelectedRoomsBadge() {
+    const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
+    if (selectedRoomsCount) {
+        selectedRoomsCount.textContent = `(${count} selected)`;
+    }
+}
+
+function renderGroupRoomOptions(rooms = []) {
+    if (!groupRoomsChecklist) return;
+
+    if (!rooms.length) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">No rooms available.</p>`;
+        updateSelectedRoomsBadge();
+        return;
+    }
+
+    groupRoomsChecklist.innerHTML = rooms.map((r) => {
+        const roomNum = typeof r === 'string' ? r : r.number;
+        const rateText = typeof r === 'object' && r.rate ? ` · ${Number(r.rate).toLocaleString()}` : '';
+
+        return `
+            <label class="group-room-item flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 hover:border-indigo-400 cursor-pointer text-xs font-semibold text-slate-700 transition select-none has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:text-indigo-800">
+                <input type="checkbox" value="${roomNum}" class="group-room-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="truncate">Room ${roomNum}${rateText}</span>
+            </label>
+        `;
+    }).join('');
+
+    groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+        cb.addEventListener('change', updateSelectedRoomsBadge);
+    });
+
+    updateSelectedRoomsBadge();
+}
+
+// Helper to get selected room numbers when submitting the form
+function getSelectedGroupRoomNumbers() {
+    if (!groupRoomsChecklist) return [];
+    return Array.from(groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((cb) => cb.value.trim())
+        .filter(Boolean);
+}
+
+// Toggle Group Booking panel & single room dropdown
+isGroupBookingCheckbox?.addEventListener('change', async (e) => {
+    const isGroup = e.target.checked;
+    groupBookingPanel?.classList.toggle('hidden', !isGroup);
+    singleRoomWrapper?.classList.toggle('hidden', isGroup);
+
+    if (singleRoomSelect) {
+        singleRoomSelect.required = !isGroup;
+        if (isGroup) singleRoomSelect.value = '';
+    }
+
+    if (isGroup) {
+        await loadGroupBookingRooms();
+    }
+});
+
+clearGroupRoomsBtn?.addEventListener('click', () => {
+    groupRoomsChecklist?.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = false;
+    });
+    updateSelectedRoomsBadge();
+});
