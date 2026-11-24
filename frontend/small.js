@@ -730,7 +730,7 @@ cancelDeletionBtn.addEventListener('click', () => {
  * Calculates the number of nights between check-in and check-out dates.
  * Updates the nights input field.
  */
-function calculateNights() {
+function groupBookingcalculateNights() {
     const checkInDate = new Date(checkInInput.value);
     const checkOutDate = new Date(checkOutInput.value);
 
@@ -20066,3 +20066,98 @@ async function bulkGroupCheckOut(groupId) {
         showMessage('Error', err.message, true);
     }
 }
+
+let manualRateOverride = false;
+
+function calculateNights(checkInStr, checkOutStr) {
+    if (!checkInStr || !checkOutStr) return 0;
+    const start = new Date(`${checkInStr}T00:00:00`);
+    const end = new Date(`${checkOutStr}T00:00:00`);
+    const diffMs = end - start;
+    if (Number.isNaN(diffMs) || diffMs <= 0) return 0;
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function getSelectedRoomsWithRates() {
+    const checkInStr = document.getElementById('checkIn')?.value || '';
+    const checkedBoxes = Array.from(
+        document.querySelectorAll('#groupRoomsChecklist input[type="checkbox"]:checked')
+    );
+
+    return checkedBoxes.map((cb) => {
+        const roomNum = cb.value.trim();
+        const roomObj = roomCatalogByNumber.get(roomNum);
+        const rate = resolveNightlyRate(roomObj, checkInStr);
+        return { room: roomNum, rate };
+    });
+}
+
+function recalculateFolioTotals() {
+    const checkInStr = document.getElementById('checkIn')?.value || '';
+    const checkOutStr = document.getElementById('checkOut')?.value || '';
+    const nightsInput = document.getElementById('nights');
+    const rateInput = document.getElementById('amtPerNight');
+    const totalDueInput = document.getElementById('totalDue');
+    const amountPaidInput = document.getElementById('amountPaid');
+    const balanceInput = document.getElementById('balance');
+    const paymentStatusSelect = document.getElementById('paymentStatus');
+
+    const nights = calculateNights(checkInStr, checkOutStr);
+    if (nightsInput) nightsInput.value = nights || '';
+
+    const isGroup = Boolean(document.getElementById('isGroupBooking')?.checked);
+    let totalDue = 0;
+
+    if (isGroup) {
+        const selectedRooms = getSelectedRoomsWithRates();
+
+        if (!manualRateOverride) {
+            const sumNightlyRates = selectedRooms.reduce((sum, r) => sum + r.rate, 0);
+            if (rateInput) {
+                rateInput.value = selectedRooms.length > 0 ? sumNightlyRates.toFixed(2) : '';
+            }
+            totalDue = Number((sumNightlyRates * nights).toFixed(2));
+        } else {
+            const customRate = parseFloat(rateInput?.value) || 0;
+            totalDue = Number((customRate * nights).toFixed(2));
+        }
+    } else {
+        const singleRate = parseFloat(rateInput?.value) || 0;
+        totalDue = Number((singleRate * nights).toFixed(2));
+    }
+
+    const amountPaid = parseFloat(amountPaidInput?.value) || 0;
+    const balance = Math.max(0, Number((totalDue - amountPaid).toFixed(2)));
+
+    if (totalDueInput) totalDueInput.value = totalDue.toFixed(2);
+    if (balanceInput) balanceInput.value = balance.toFixed(2);
+
+    if (paymentStatusSelect && totalDue > 0) {
+        if (amountPaid >= totalDue) {
+            paymentStatusSelect.value = 'Paid';
+        } else if (amountPaid > 0) {
+            paymentStatusSelect.value = 'Partially Paid';
+        } else {
+            paymentStatusSelect.value = 'Pending';
+        }
+    }
+}
+
+// Reset manual rate override when dates or group toggle change
+['checkIn', 'checkOut', 'isGroupBooking'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', () => {
+        manualRateOverride = false;
+        recalculateFolioTotals();
+    });
+});
+
+document.getElementById('amtPerNight')?.addEventListener('input', () => {
+    manualRateOverride = true;
+    recalculateFolioTotals();
+});
+
+document.getElementById('amountPaid')?.addEventListener('input', recalculateFolioTotals);
+document.getElementById('groupRoomsChecklist')?.addEventListener('change', () => {
+    manualRateOverride = false;
+    recalculateFolioTotals();
+});
