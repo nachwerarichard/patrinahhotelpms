@@ -2296,6 +2296,11 @@ updatedBy: { type: String, default: null },               // Username/ID who las
     fiscalVerificationCode: { type: String, default: null },
     fiscalQrCodeUrl: { type: String, default: null },
     fiscalizedAt: { type: Date, default: null },
+    // Add inside bookingSchema
+isGroupBooking: { type: Boolean, default: false, index: true },
+groupId: { type: String, default: null, index: true }, // e.g., 'GRP48291'
+groupName: { type: String, default: null }, // e.g., 'Ministry Workshop' or 'Kampala Delegation'
+isGroupLead: { type: Boolean, default: false },
     invoiceNo: { type: String, default: null }
 }, { timestamps: true });
 
@@ -2632,6 +2637,153 @@ app.get('/api/rooms/available', auth, async (req, res) => {
     } catch (error) {
         console.error("AVAILABLE ROOMS ERROR:", error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.post('/api/bookings/group', auth, async (req, res) => {
+    const {
+        username,
+        groupName,
+        rooms, // Array of { room, amtPerNight, people, occupantName, extraPerson }
+        ...sharedBookingData
+    } = req.body;
+
+    try {
+        const actingUser = req.user?.username || username || 'System';
+        const hotelId = req.user.hotelId;
+
+        if (!Array.isArray(rooms) || rooms.length === 0) {
+            return res.status(400).json({ message: 'Please select at least one room for a group booking.' });
+        }
+
+        if (!sharedBookingData.checkIn || !sharedBookingData.checkOut) {
+            return res.status(400).json({ message: 'Check-in and check-out dates are required.' });
+        }
+
+        if (sharedBookingData.checkOut <= sharedBookingData.checkIn) {
+            return res.status(400).json({ message: 'Check-out date must be after check-in date.' });
+        }
+
+        // Deduplicate room numbers in the request
+        const uniqueRoomNumbers = [...new Set(rooms.map(r => String(r.room || '').trim()).filter(Boolean))];
+        if (uniqueRoomNumbers.length !== rooms.length) {
+            return res.status(400).json({ message: 'Duplicate room numbers selected in the same group booking.' });
+        }
+
+        // 1. Verify all rooms exist in this hotel
+        const foundRooms = await Room.find({
+            number: { $in: uniqueRoomNumbers },
+            hotelId
+        });
+
+        if (foundRooms.length !== uniqueRoomNumbers.length) {
+            const foundSet = new Set(foundRooms.map(r => r.number));
+            const missing = uniqueRoomNumbers.filter(num => !foundSet.has(num));
+            return res.status(404).json({ message: `Room(s) not found in your hotel: ${missing.join(', ')}` });
+        }
+
+        const roomDocMap = new Map(foundRooms.map(r => [r.number, r]));
+
+        // 2. Check date conflicts across ALL requested rooms before writing anything
+        const conflicts = await Booking.find({
+            hotelId,
+            room: { $in: uniqueRoomNumbers },
+            gueststatus: { $nin: ['cancelled', 'void'] },
+            checkIn: { $lt: sharedBookingData.checkOut },
+            checkOut: { $gt: sharedBookingData.checkIn }
+        }).select('room id name checkIn checkOut');
+
+        if (conflicts.length > 0) {
+            const conflictSummary = conflicts.map(c => `Room ${c.room} (${c.id})`).join(', ');
+            return res.status(409).json({
+                message: `Date conflict on ${conflictSummary} for the selected stay period.`
+            });
+        }
+
+        const groupId = `GRP${Math.floor(Math.random() * 90000) + 10000}`;
+        const nights = Number(sharedBookingData.nights) || 1;
+        const createdBookings = [];
+
+        // Distribute payment across rooms if a lump sum is entered at group level, or keep per-room
+        const totalGroupAdvance = Number(sharedBookingData.amountPaid) || 0;
+        let remainingAdvance = totalGroupAdvance;
+
+        for (let i = 0; i < rooms.length; i++) {
+            const item = rooms[i];
+            const rate = Number(item.amtPerNight ?? sharedBookingData.amtPerNight) || 0;
+            const roomTotalDue = Number((rate * nights).toFixed(2));
+
+            const roomPaid = i === rooms.length - 1
+                ? Number(remainingAdvance.toFixed(2))
+                : Number(Math.min(remainingAdvance, roomTotalDue).toFixed(2));
+            remainingAdvance = Math.max(0, remainingAdvance - roomPaid);
+
+            const roomBalance = Math.max(0, Number((roomTotalDue - roomPaid).toFixed(2)));
+            const roomPaymentStatus = roomBalance === 0 && roomTotalDue > 0
+                ? 'Paid'
+                : roomPaid > 0
+                    ? 'Partially Paid'
+                    : (sharedBookingData.paymentStatus || 'Pending');
+
+            const bookingDoc = new Booking({
+                ...sharedBookingData,
+                hotelId,
+                id: `BKG${Math.floor(Math.random() * 900000) + 100000}`,
+                room: item.room,
+                name: item.occupantName?.trim() || sharedBookingData.name,
+                people: Number(item.people) || 1,
+                extraperson: item.extraPerson ?? sharedBookingData.extraperson,
+                amtPerNight: rate,
+                nights,
+                totalDue: roomTotalDue,
+                amountPaid: roomPaid,
+                balance: roomBalance,
+                paymentStatus: roomPaymentStatus,
+                isGroupBooking: true,
+                groupId,
+                groupName: groupName?.trim() || `${sharedBookingData.name} Group`,
+                isGroupLead: i === 0,
+                recordedBy: actingUser
+            });
+
+            await bookingDoc.save();
+            createdBookings.push(bookingDoc);
+
+            // Update room status if checked in or occupying immediately
+            const targetRoom = roomDocMap.get(item.room);
+            if (targetRoom && ['checkedin'].includes(bookingDoc.gueststatus)) {
+                targetRoom.status = 'occupied';
+                await targetRoom.save();
+            } else if (targetRoom && ['confirmed', 'reserved'].includes(bookingDoc.gueststatus)) {
+                targetRoom.status = 'blocked';
+                await targetRoom.save();
+            }
+        }
+
+        await addAuditLog(
+            'Group Booking Created',
+            actingUser,
+            hotelId,
+            {
+                groupId,
+                groupName: groupName?.trim() || `${sharedBookingData.name} Group`,
+                leadGuest: sharedBookingData.name,
+                rooms: uniqueRoomNumbers,
+                bookingIds: createdBookings.map(b => b.id),
+                checkIn: sharedBookingData.checkIn,
+                checkOut: sharedBookingData.checkOut,
+                recordedBy: actingUser
+            }
+        );
+
+        res.status(201).json({
+            message: `Group booking ${groupId} created across ${createdBookings.length} rooms!`,
+            groupId,
+            bookings: createdBookings
+        });
+    } catch (error) {
+        console.error('Error creating group booking:', error);
+        res.status(500).json({ message: 'Error creating group booking', error: error.message });
     }
 });
 

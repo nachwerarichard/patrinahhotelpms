@@ -2674,8 +2674,9 @@ bookingForm.addEventListener('submit', async function(event) {
     const getInt = (id) => parseInt(document.getElementById(id)?.value, 10) || 1;
 
     const id = getValue('bookingId');
-    
-    // 2. Build Payload
+    const isGroupBooking = !id && Boolean(document.getElementById('isGroupBooking')?.checked);
+
+    // 2. Build base payload first so both single and group branches can use it
     const bookingData = {
         name: getValue('name'),
         room: getValue('room'),
@@ -2707,14 +2708,31 @@ bookingForm.addEventListener('submit', async function(event) {
         declarations: getValue('declarations'),
         transactionid: getValue('transactionid'),
         extraperson: getValue('extraperson'),
-        
+
         // Pass user identifier in body as explicit fallback
         recordedBy: currentUsername,
         updatedBy: id ? currentUsername : undefined
     };
 
+    let selectedRooms = [];
+    if (isGroupBooking) {
+        const selectedOptions = Array.from(document.getElementById('groupRoomsSelect')?.selectedOptions || []);
+        selectedRooms = selectedOptions
+            .map(opt => ({
+                room: opt.value.trim(),
+                amtPerNight: bookingData.amtPerNight,
+                people: bookingData.people
+            }))
+            .filter(item => item.room);
+
+        if (selectedRooms.length === 0) {
+            showMessage('Error', 'Please select at least one room for the group booking.', true);
+            return;
+        }
+    }
+
     const saveBtn = document.getElementById('saveBookingBtn');
-    const originalBtnText = id ? 'Update Booking' : 'Add Booking';
+    const originalBtnText = id ? 'Update Booking' : (isGroupBooking ? 'Create Group Booking' : 'Add Booking');
 
     try {
         if (saveBtn) {
@@ -2730,15 +2748,28 @@ bookingForm.addEventListener('submit', async function(event) {
             `;
         }
 
-        const endpoint = id 
-            ? `${API_BASE_URL}/bookings/${id}` 
-            : `${API_BASE_URL}/bookings`;
-            
-        const method = id ? 'PUT' : 'POST';
+        let endpoint;
+        let method;
+        let payload;
+
+        if (isGroupBooking) {
+            const { room, updatedBy, ...sharedGroupData } = bookingData;
+            endpoint = `${API_BASE_URL}/bookings/group`;
+            method = 'POST';
+            payload = {
+                ...sharedGroupData,
+                groupName: getValue('groupName'),
+                rooms: selectedRooms
+            };
+        } else {
+            endpoint = id ? `${API_BASE_URL}/bookings/${id}` : `${API_BASE_URL}/bookings`;
+            method = id ? 'PUT' : 'POST';
+            payload = bookingData;
+        }
 
         const response = await authenticatedFetch(endpoint, {
-            method: method,
-            body: JSON.stringify(bookingData)
+            method,
+            body: JSON.stringify(payload)
         });
 
         if (!response || !response.ok) {
@@ -2746,10 +2777,16 @@ bookingForm.addEventListener('submit', async function(event) {
             throw new Error(errorData.message || `HTTP error status: ${response?.status || 'Network error'}`);
         }
 
-        showMessage('Success', id ? 'Booking updated successfully!' : 'New booking added successfully!');
-        
+        const successMessage = isGroupBooking
+            ? 'Group booking created successfully!'
+            : (id ? 'Booking updated successfully!' : 'New booking added successfully!');
+
+        showMessage('Success', successMessage);
+
         if (!id && typeof bookingForm.reset === 'function') {
             bookingForm.reset();
+            const groupPanel = document.getElementById('groupBookingPanel');
+            if (groupPanel) groupPanel.classList.add('hidden');
         }
 
         // Refresh UI components
