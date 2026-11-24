@@ -1300,16 +1300,19 @@ async function renderBookings(page = 1, searchTerm = '') {
 
             currentBookings.forEach(booking => {
                 const isCancelled = booking.gueststatus === 'cancelled';
+                const isGroup = Boolean(booking.isGroupBooking && booking.groupId);
                 const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
-const groupBadgeHtml = isGroup ? `
-    <button type="button"
-        onclick="openGroupModal('${booking.groupId}')"
-        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
-        title="View Group ${booking.groupId}">
-        <i class="fa-solid fa-users text-[10px]"></i>
-        <span>${formatStatusText(booking.groupName || booking.groupId)} (${booking.groupId})</span>
-    </button>
-` : '';
+
+                const groupBadgeHtml = isGroup ? `
+                    <button type="button"
+                        onclick="openGroupModal('${booking.groupId}')"
+                        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+                        title="View Group ${booking.groupId}">
+                        <i class="fa-solid fa-users text-[10px]"></i>
+                        <span>${formatStatusText(booking.groupName || booking.groupId)} (${booking.groupId})</span>
+                    </button>
+                ` : '';
+
                 let actionButtonsHtml = '';
                 if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                     if (isCancelled) {
@@ -1326,30 +1329,29 @@ const groupBadgeHtml = isGroup ? `
                                     <i class="fa-solid fa-circle-check mr-1"></i> Confirm
                                 </button>
                             ` : ''}
-                            const isGroup = Boolean(booking.isGroupBooking && booking.groupId);
 
-${isGroup ? `
-    <div class="border-t border-slate-200 my-2"></div>
-    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block px-1 mb-1">Group Actions</span>
-    <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
-        <i class="fa-solid fa-layer-group mr-1"></i> View Group
-    </button>
-    ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-        <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
-            <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
-        </button>
-    ` : ''}
-    ${booking.balance > 0 ? `
-        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="openGroupPaymentModal('${booking.groupId}')">
-            <i class="fa-solid fa-coins mr-1"></i> Group Payment
-        </button>
-    ` : ''}
-    ${booking.gueststatus === 'checkedin' ? `
-        <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="bulkGroupCheckOut('${booking.groupId}')">
-            <i class="fa-solid fa-right-from-bracket mr-1"></i> Group Check-Out
-        </button>
-    ` : ''}
-` : ''}
+                            ${isGroup ? `
+                                <div class="border-t border-slate-200 my-2"></div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block px-1 mb-1">Group Actions</span>
+                                <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
+                                    <i class="fa-solid fa-layer-group mr-1"></i> View Group
+                                </button>
+                                ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+                                    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
+                                        <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
+                                    </button>
+                                ` : ''}
+                                ${booking.balance > 0 ? `
+                                    <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="openGroupPaymentModal('${booking.groupId}')">
+                                        <i class="fa-solid fa-coins mr-1"></i> Group Payment
+                                    </button>
+                                ` : ''}
+                                ${booking.gueststatus === 'checkedin' ? `
+                                    <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="bulkGroupCheckOut('${booking.groupId}')">
+                                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Group Check-Out
+                                    </button>
+                                ` : ''}
+                            ` : ''}
 
                             ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
@@ -1377,10 +1379,10 @@ ${isGroup ? `
                             ` : ''}
 
                             ${booking.amountPaid > 0 ? `
-    <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
-        <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
-    </button>
-` : ''}
+                                <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
+                                    <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
+                                </button>
+                            ` : ''}
 
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-indigo-700 hover:bg-indigo-800" onclick="viewCharges('${booking.id}')">
@@ -1398,17 +1400,17 @@ ${isGroup ? `
                                 </button>
                             ` : ''}
 
-${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
-    ${booking.isFiscalized ? `
-        <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
-            <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt
-        </button>
-    ` : `
-        <button class="${baseBtn} bg-blue-600 hover:bg-blue-700" onclick="fiscalizeBooking('${booking.id}')">
-            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Fiscalise Invoice
-        </button>
-    `}
-` : ''}
+                            ${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
+                                ${booking.isFiscalized ? `
+                                    <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
+                                        <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt
+                                    </button>
+                                ` : `
+                                    <button class="${baseBtn} bg-blue-600 hover:bg-blue-700" onclick="fiscalizeBooking('${booking.id}')">
+                                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Fiscalise Invoice
+                                    </button>
+                                `}
+                            ` : ''}
 
                             <button class="${baseBtn} bg-slate-700 hover:bg-slate-800" onclick="viewBooking('${booking.id}')">
                                 <i class="fa-solid fa-eye mr-1"></i> View
@@ -1456,7 +1458,10 @@ ${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
                     tr.dataset.id = booking.id;
                     tr.className = isCancelled ? "bg-rose-50/50 hover:bg-rose-100/60 transition-colors" : "hover:bg-slate-50 transition-colors";
                     tr.innerHTML = `
-                        <td class="py-2.5 px-3 font-medium text-slate-900 capitalize">${formatStatusText(booking.name)}</td>
+                        <td class="py-2.5 px-3 font-medium text-slate-900 capitalize">
+                            <div>${formatStatusText(booking.name)}</div>
+                            ${groupBadgeHtml}
+                        </td>
                         <td class="py-2.5 px-3 text-slate-700 font-semibold">${booking.room}</td>
                         <td class="py-2.5 px-3 text-slate-600">${booking.checkIn}</td>
                         <td class="py-2.5 px-3 text-slate-600">${booking.checkOut}</td>
@@ -1485,7 +1490,8 @@ ${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900 capitalize">${formatStatusText(booking.name)}</h4>
-                                <p class="text-xs text-slate-500 font-medium mt-0.5">Room: <span class="text-indigo-600 font-bold">${booking.room}</span> | Source: <span class="capitalize">${formatStatusText(booking.guestsource)}</span></p>
+                                ${groupBadgeHtml}
+                                <p class="text-xs text-slate-500 font-medium mt-1">Room: <span class="text-indigo-600 font-bold">${booking.room}</span> | Source: <span class="capitalize">${formatStatusText(booking.guestsource)}</span></p>
                             </div>
                             <div class="relative">
                                 <button class="p-1.5 bg-slate-50 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100" onclick="toggleActionButtons(event, this)">
