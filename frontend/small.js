@@ -20274,7 +20274,9 @@ async function openGroupModal(groupId) {
             .filter(b => !['cancelled', 'void'].includes(b.gueststatus))
             .reduce((sum, b) => sum + (Number(b.people) || 1), 0);
 
-        await populateAddGroupRoomDropdown(summary.checkIn, summary.checkOut);
+        setAddGroupNights(computeGroupStayNights(summary, roomBookings));
+await populateAddGroupRoomDropdown(summary.checkIn, summary.checkOut);
+updateAddGroupStayTotal();
 
         document.getElementById('groupModalTitle').textContent = safeText(summary.groupName, groupId);
         document.getElementById('groupModalIdBadge').textContent = groupId;
@@ -21103,3 +21105,56 @@ function resolveGroupRoomRate(roomDoc, checkInStr) {
 
     return rate;
 }
+
+let currentAddGroupNights = 1;
+
+function computeGroupStayNights(summary, roomBookings = []) {
+    const fromBookings = roomBookings.find(b => Number(b.nights) > 0)?.nights;
+    if (fromBookings) return Math.max(1, Number(fromBookings));
+
+    if (summary?.nights && Number(summary.nights) > 0) {
+        return Math.max(1, Number(summary.nights));
+    }
+
+    if (summary?.checkIn && summary?.checkOut) {
+        const start = new Date(`${summary.checkIn}T00:00:00`);
+        const end = new Date(`${summary.checkOut}T00:00:00`);
+        const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+        if (!Number.isNaN(diffDays) && diffDays > 0) return diffDays;
+    }
+
+    return 1;
+}
+
+function formatGroupStayMoney(amount) {
+    const num = Number(amount) || 0;
+    if (typeof formatGroupMoney === 'function') return formatGroupMoney(num);
+    return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function updateAddGroupStayTotal() {
+    const rateInput = document.getElementById('addGroupRatePerNight');
+    const totalEl = document.getElementById('addGroupStayTotal');
+    const nightsLabelEl = document.getElementById('addGroupNightsLabel');
+
+    const nights = Math.max(1, Number(currentAddGroupNights) || 1);
+    const rate = Math.max(0, parseFloat(rateInput?.value) || 0);
+    const stayTotal = Number((rate * nights).toFixed(2));
+
+    if (nightsLabelEl) nightsLabelEl.textContent = String(nights);
+    if (totalEl) totalEl.textContent = formatGroupStayMoney(stayTotal);
+}
+
+function setAddGroupNights(nights) {
+    currentAddGroupNights = Math.max(1, Number(nights) || 1);
+    updateAddGroupStayTotal();
+}
+
+// Recalculate whenever the user edits the nightly rate or selects a different room
+document.getElementById('addGroupRatePerNight')?.addEventListener('input', updateAddGroupStayTotal);
+document.getElementById('addGroupRoomSelect')?.addEventListener('change', () => {
+    if (typeof applySelectedRoomPriceToInput === 'function') {
+        applySelectedRoomPriceToInput();
+    }
+    updateAddGroupStayTotal();
+});
