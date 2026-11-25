@@ -445,7 +445,7 @@
                 </button>
                 <ul id="admin-menu" class="hidden pl-12 space-y-1 overflow-hidden transition-all duration-300">
                     <li id="nav-staff"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Users</a></li>
-                    <li id="nav-feedback"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Feedback</a></li>
+                    <li id="nav-feedback"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Reputation Management</a></li>
                     <li id="nav-integrations"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Third-party Integrations</a></li>
                     <li id="nav-audit-logs"><a href="#" class="block p-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-lg transition-colors">Audit & Activity Logs</a></li>
                 </ul>
@@ -3214,521 +3214,1770 @@
 
 <!-- ================= Integrations SECTION ================= -->
 <section id="integrations" class="section bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-    <!-- Header -->
+
+    <!-- =========================================================
+         HEADER
+    ========================================================== -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4 gap-2">
+
         <div>
-            <h2 class="text-lg font-bold text-slate-900 leading-tight">Integrations</h2>
-            <p class="text-sm text-gray-500">Sync your financials and invoices with external accounting platforms</p>
+            <h2 class="text-lg font-bold text-slate-900 leading-tight">
+                Integrations
+            </h2>
+
+            <p class="text-sm text-gray-500">
+                Sync your financials and invoices with external accounting platforms
+            </p>
         </div>
-        <button id="btn-sync-all" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
+
+        
+
+    </div>
+
+
+    <!-- =========================================================
+         HORIZONTAL INTEGRATION TABS
+    ========================================================== -->
+
+    <div class="border-b border-gray-200 mb-8">
+
+        <nav
+            class="flex items-center gap-8 overflow-x-auto"
+            aria-label="Integration sections">
+
+            <!-- ACCOUNTING TAB -->
+            <button
+                type="button"
+                class="integration-tab active whitespace-nowrap px-1 pb-3 text-sm font-semibold text-blue-600 border-b-2 border-blue-600"
+                data-tab="accounting">
+
+                Accounting
+
+            </button>
+
+
+            <!-- PAYMENT GATEWAYS TAB -->
+            <button
+                type="button"
+                class="integration-tab whitespace-nowrap px-1 pb-3 text-sm font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent"
+                data-tab="payments">
+
+                Payment Gateways
+
+            </button>
+
+
+            <!-- EFRIS TAB -->
+            <button
+                type="button"
+                id ="efris-tab"
+                class="integration-tab whitespace-nowrap px-1 pb-3 text-sm font-semibold text-gray-500 hover:text-gray-800 border-b-2 border-transparent"
+                data-tab="efris">
+
+                URA EFRIS
+
+            </button>
+
+        </nav>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         TAB 1 — ACCOUNTING
+    ========================================================== -->
+
+    <div
+        id="tab-accounting"
+        class="integration-tab-content">
+
+        <!-- Accounting Platforms -->
+        <div class="mb-10 pb-8 border-b">
+<button
+            id="btn-sync-all"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center">
+
             <span id="sync-spinner" class="hidden mr-2 animate-spin">🔄</span>
+
             Sync Financials Now
         </button>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+
+                <!-- =================================================
+                     QUICKBOOKS ONLINE
+                ================================================== -->
+
+                <div
+                    class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50"
+                    data-provider="quickbooks">
+
+                    <div>
+
+                        <div class="flex items-center justify-between mb-4">
+
+                            <div class="flex items-center gap-3">
+
+                                <span
+                                    class="w-10 h-10 bg-green-600 text-white flex items-center justify-center font-bold text-lg rounded-lg">
+                                    Qb
+                                </span>
+
+                                <div>
+
+                                    <h3 class="font-bold text-gray-800">
+                                        QuickBooks Online
+                                    </h3>
+
+                                    <span
+                                        class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                                        Cloud ERP
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <span
+                                class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">
+                                Disconnected
+                            </span>
+
+                        </div>
+
+
+                        <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                            Automatically sync guest folios, invoices, payments, and restaurant sales into your QuickBooks ledger.
+                        </p>
+
+
+                        <!-- Configuration -->
+                        <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+
+                            <div>
+
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                    Default Deposit Account
+                                </label>
+
+                                <select
+                                    class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+
+                                    <option value="">
+                                        Loading accounts...
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="flex items-center justify-between py-1">
+
+                                <span class="text-xs text-gray-700 font-medium">
+                                    Real-time sync on checkout
+                                </span>
+
+                                <label class="relative inline-flex items-center cursor-pointer">
+
+                                    <input
+                                        type="checkbox"
+                                        class="sync-toggle sr-only peer">
+
+                                    <div
+                                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                                    </div>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mt-6 border-t pt-4 flex gap-2">
+
+                        <button
+                            class="connect-btn w-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-md transition">
+
+                            Connect QuickBooks
+
+                        </button>
+
+
+                        <button
+                            class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">
+
+                            Disconnect
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- =================================================
+                     XERO
+                ================================================== -->
+
+                <div
+                    class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50"
+                    data-provider="xero">
+
+                    <div>
+
+                        <div class="flex items-center justify-between mb-4">
+
+                            <div class="flex items-center gap-3">
+
+                                <span
+                                    class="w-10 h-10 bg-blue-400 text-white flex items-center justify-center font-bold text-lg rounded-lg">
+                                    Xe
+                                </span>
+
+                                <div>
+
+                                    <h3 class="font-bold text-gray-800">
+                                        Xero Accounting
+                                    </h3>
+
+                                    <span
+                                        class="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                                        Modern Books
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <span
+                                class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">
+                                Disconnected
+                            </span>
+
+                        </div>
+
+
+                        <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                            Map room rates and tax codes directly to Xero accounts to keep your general ledger updated daily.
+                        </p>
+
+
+                        <!-- Configuration -->
+                        <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+
+                            <div>
+
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                    Sales Revenue Account
+                                </label>
+
+                                <select
+                                    class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+
+                                    <option value="">
+                                        Loading accounts...
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="flex items-center justify-between py-1">
+
+                                <span class="text-xs text-gray-700 font-medium">
+                                    Auto-generate tracking categories
+                                </span>
+
+                                <label class="relative inline-flex items-center cursor-pointer">
+
+                                    <input
+                                        type="checkbox"
+                                        class="sync-toggle sr-only peer">
+
+                                    <div
+                                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                                    </div>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mt-6 border-t pt-4 flex gap-2">
+
+                        <button
+                            class="connect-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-2 rounded-md transition">
+
+                            Connect Xero
+
+                        </button>
+
+
+                        <button
+                            class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">
+
+                            Disconnect
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- =================================================
+                     ZOHO BOOKS
+                ================================================== -->
+
+                <div
+                    class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50"
+                    data-provider="zoho">
+
+                    <div>
+
+                        <div class="flex items-center justify-between mb-4">
+
+                            <div class="flex items-center gap-3">
+
+                                <span
+                                    class="w-10 h-10 bg-red-500 text-white flex items-center justify-center font-bold text-lg rounded-lg">
+                                    Zb
+                                </span>
+
+                                <div>
+
+                                    <h3 class="font-bold text-gray-800">
+                                        Zoho Books
+                                    </h3>
+
+                                    <span
+                                        class="text-xs text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                                        Global Suite
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <span
+                                class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">
+                                Disconnected
+                            </span>
+
+                        </div>
+
+
+                        <p class="text-xs text-gray-600 mb-4 leading-relaxed">
+                            Export structured transaction data to Zoho Books to track inventory, departmental taxes, and operational overhead.
+                        </p>
+
+
+                        <!-- Configuration -->
+                        <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
+
+                            <div>
+
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                    Receivables Ledger Account
+                                </label>
+
+                                <select
+                                    class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+
+                                    <option value="">
+                                        Loading accounts...
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="flex items-center justify-between py-1">
+
+                                <span class="text-xs text-gray-700 font-medium">
+                                    Sync inventory adjustments
+                                </span>
+
+                                <label class="relative inline-flex items-center cursor-pointer">
+
+                                    <input
+                                        type="checkbox"
+                                        class="sync-toggle sr-only peer">
+
+                                    <div
+                                        class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                                    </div>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="mt-6 border-t pt-4 flex gap-2">
+
+                        <button
+                            class="connect-btn w-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 rounded-md transition">
+
+                            Connect Zoho Books
+
+                        </button>
+
+
+                        <button
+                            class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">
+
+                            Disconnect
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
-    <!-- Integration Cards Grid (Accounting Platforms) -->
-    <div class="mb-10 pb-8 border-b">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <!-- QuickBooks Online Card -->
-            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="quickbooks">
+
+
+    <!-- =========================================================
+         TAB 2 — PAYMENT GATEWAYS
+    ========================================================== -->
+
+    <div
+        id="tab-payments"
+        class="integration-tab-content hidden">
+
+        <div class="mb-10 pb-8 border-b">
+
+            <div class="flex justify-between items-center mb-6">
+
                 <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 bg-green-600 text-white flex items-center justify-center font-bold text-lg rounded-lg">Qb</span>
-                            <div>
-                                <h3 class="font-bold text-gray-800">QuickBooks Online</h3>
-                                <span class="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full border border-green-200">Cloud ERP</span>
-                            </div>
-                        </div>
-                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
-                    </div>
-                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
-                        Automatically sync guest folios, invoices, payments, and restaurant sales into your QuickBooks ledger.
+
+                    <h3 class="text-lg font-bold text-slate-900 leading-tight">
+                        Payment Gateways
+                    </h3>
+
+                    <p class="text-gray-500 text-sm mt-1">
+                        Manage payment providers used for guest payments.
                     </p>
-                    
-                    <!-- Configurations Form (Hidden if disconnected) -->
-                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Default Deposit Account</label>
-                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="">Loading accounts...</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center justify-between py-1">
-                            <span class="text-xs text-gray-700 font-medium">Real-time sync on checkout</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sync-toggle sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                    </div>
+
                 </div>
-                
-                <div class="mt-6 border-t pt-4 flex gap-2">
-                    <button class="connect-btn w-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 rounded-md transition">Connect QuickBooks</button>
-                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
-                </div>
+
             </div>
 
-            <!-- Xero Card -->
-            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="xero">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 bg-blue-400 text-white flex items-center justify-center font-bold text-lg rounded-lg">Xe</span>
-                            <div>
-                                <h3 class="font-bold text-gray-800">Xero Accounting</h3>
-                                <span class="text-xs text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">Modern Books</span>
-                            </div>
-                        </div>
-                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
-                    </div>
-                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
-                        Map room rates and tax codes directly to Xero accounts to keep your general ledger updated daily.
-                    </p>
-                    
-                    <!-- Configurations Form (Hidden if disconnected) -->
-                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Sales Revenue Account</label>
-                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="">Loading accounts...</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center justify-between py-1">
-                            <span class="text-xs text-gray-700 font-medium">Auto-generate tracking categories</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sync-toggle sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-6 border-t pt-4 flex gap-2">
-                    <button class="connect-btn w-full bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-2 rounded-md transition">Connect Xero</button>
-                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
-                </div>
+
+            <!-- Desktop Table -->
+            <div class="overflow-x-auto hidden md:block">
+
+                <table
+                    class="w-full border border-gray-200 rounded-lg overflow-hidden"
+                    id="gatewayTable">
+
+                    <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
+
+                        <tr>
+
+                            <th class="text-left px-4 py-3">
+                                Gateway
+                            </th>
+
+                            <th class="text-left px-4 py-3">
+                                Status
+                            </th>
+
+                            <th class="text-left px-4 py-3">
+                                Environment
+                            </th>
+
+                            <th class="text-left px-4 py-3">
+                                Default Status
+                            </th>
+
+                            <th class="text-left px-4 py-3 text-right pr-6">
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody
+                        id="gatewayRowContainer"
+                        class="divide-y divide-gray-200 text-sm text-gray-700">
+                    </tbody>
+
+                </table>
+
             </div>
 
-            <!-- Zoho Books Card -->
-            <div class="border rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between bg-gray-50" data-provider="zoho">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 bg-red-500 text-white flex items-center justify-center font-bold text-lg rounded-lg">Zb</span>
-                            <div>
-                                <h3 class="font-bold text-gray-800">Zoho Books</h3>
-                                <span class="text-xs text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">Global Suite</span>
-                            </div>
-                        </div>
-                        <span class="status-badge px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-300">Disconnected</span>
-                    </div>
-                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">
-                        Export structured transaction data to Zoho Books to track inventory, departmental taxes, and operational overhead.
-                    </p>
-                    
-                    <!-- Configurations Form (Hidden if disconnected) -->
-                    <div class="config-pane hidden border-t pt-4 mt-2 space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">Receivables Ledger Account</label>
-                            <select class="account-select w-full text-xs p-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                                <option value="">Loading accounts...</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center justify-between py-1">
-                            <span class="text-xs text-gray-700 font-medium">Sync inventory adjustments</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sync-toggle sr-only peer">
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="mt-6 border-t pt-4 flex gap-2">
-                    <button class="connect-btn w-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-2 rounded-md transition">Connect Zoho Books</button>
-                    <button class="disconnect-btn w-full hidden bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2 rounded-md border border-red-200 transition">Disconnect</button>
-                </div>
+
+            <!-- Mobile Gateway Cards -->
+            <div
+                id="gatewayMobileContainer"
+                class="block md:hidden space-y-4">
             </div>
 
         </div>
+
     </div>
 
-    <!-- Payment Gateways Sub-Section -->
-    <div class="mb-10 pb-8 border-b">
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h3 class="text-lg font-bold text-slate-900 leading-tight">Payment Gateways</h3>
-                <p class="text-gray-500 text-sm mt-1">Manage payment providers used for guest payments.</p>
-            </div>
-        </div>
 
-        <div class="overflow-x-auto hidden md:block">
-            <table class="w-full border border-gray-200 rounded-lg overflow-hidden" id="gatewayTable">
-                <thead class="bg-gray-100 text-gray-700 font-medium text-sm">
-                    <tr>
-                        <th class="text-left px-4 py-3">Gateway</th>
-                        <th class="text-left px-4 py-3">Status</th>
-                        <th class="text-left px-4 py-3">Environment</th>
-                        <th class="text-left px-4 py-3">Default Status</th>
-                        <th class="text-left px-4 py-3 text-right pr-6">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="gatewayRowContainer" class="divide-y divide-gray-200 text-sm text-gray-700">
-                </tbody>
-            </table>
-        </div>
 
-        <div id="gatewayMobileContainer" class="block md:hidden space-y-4">
-        </div>
-    </div>
+    <!-- =========================================================
+         TAB 3 — URA EFRIS
+    ========================================================== -->
 
-    <!-- URA EFRIS Integration Sub-Section -->
-    <div>
-        <!-- Header & Quick Toggle -->
+    <div
+        id="tab-efris"
+        class="integration-tab-content hidden">
+
+
+        <!-- EFRIS HEADER -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4 gap-4">
+
             <div>
-                <h3 class="text-xl font-bold text-slate-900 leading-tight">URA EFRIS Integration</h3>
-                <p class="text-sm text-gray-500">Configure Electronic Fiscal Receipting & Invoicing System parameters for Uganda</p>
+
+                <h3 class="text-xl font-bold text-slate-900 leading-tight">
+                    URA EFRIS Integration
+                </h3>
+
+                <p class="text-sm text-gray-500">
+                    Configure Electronic Fiscal Receipting & Invoicing System parameters for Uganda
+                </p>
+
             </div>
+
+
+            <!-- EFRIS Toggle -->
             <div class="flex items-center gap-3 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
-                <span class="text-xs font-semibold text-slate-600 px-2">EFRIS Module Status:</span>
+
+                <span class="text-xs font-semibold text-slate-600 px-2">
+                    EFRIS Module Status:
+                </span>
+
+
                 <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="efris-toggle-enable" class="sr-only peer">
-                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+
+                    <input
+                        type="checkbox"
+                        id="efris-toggle-enable"
+                        class="sr-only peer">
+
+                    <div
+                        class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600">
+                    </div>
+
                 </label>
+
             </div>
+
         </div>
 
-        <!-- Main Configuration Panel -->
-        <div id="efris-config-wrapper" class="space-y-8">
-            
-            <!-- Environment Selector (Sandbox vs Live) -->
+
+
+        <!-- =====================================================
+             EFRIS CONFIGURATION
+        ====================================================== -->
+
+        <div
+            id="efris-config-wrapper"
+            class="space-y-8">
+
+
+            <!-- =================================================
+                 1. ENVIRONMENT
+            ================================================== -->
+
             <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <label class="block text-sm font-bold text-slate-800 mb-2">Target Environment</label>
+
+                <label class="block text-sm font-bold text-slate-800 mb-2">
+                    Target Environment
+                </label>
+
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <label class="relative flex items-center p-3 rounded-md border border-slate-300 bg-white cursor-pointer hover:border-amber-500 transition-colors">
-                        <input type="radio" name="efris_environment" value="SANDBOX" class="h-4 w-4 text-amber-600 focus:ring-amber-500" checked>
+
+                    <!-- Sandbox -->
+
+                    <label
+                        class="relative flex items-center p-3 rounded-md border border-slate-300 bg-white cursor-pointer hover:border-amber-500 transition-colors">
+
+                        <input
+                            type="radio"
+                            name="efris_environment"
+                            value="SANDBOX"
+                            class="h-4 w-4 text-amber-600 focus:ring-amber-500"
+                            checked>
+
                         <div class="ml-3">
-                            <span class="block text-sm font-semibold text-slate-900">Test / Sandbox Environment</span>
-                            <span class="block text-xs text-slate-500">Uses URA Test Server endpoints & sandbox TIN credentials</span>
+
+                            <span class="block text-sm font-semibold text-slate-900">
+                                Test / Sandbox Environment
+                            </span>
+
+                            <span class="block text-xs text-slate-500">
+                                Uses URA Test Server endpoints & sandbox TIN credentials
+                            </span>
+
                         </div>
+
                     </label>
-                    <label class="relative flex items-center p-3 rounded-md border border-slate-300 bg-white cursor-pointer hover:border-emerald-500 transition-colors">
-                        <input type="radio" name="efris_environment" value="PRODUCTION" class="h-4 w-4 text-emerald-600 focus:ring-emerald-500">
+
+
+                    <!-- Production -->
+
+                    <label
+                        class="relative flex items-center p-3 rounded-md border border-slate-300 bg-white cursor-pointer hover:border-emerald-500 transition-colors">
+
+                        <input
+                            type="radio"
+                            name="efris_environment"
+                            value="PRODUCTION"
+                            class="h-4 w-4 text-emerald-600 focus:ring-emerald-500">
+
                         <div class="ml-3">
-                            <span class="block text-sm font-semibold text-slate-900">Live / Production Environment</span>
-                            <span class="block text-xs text-slate-500">Submits legally binding fiscal invoices directly to URA</span>
+
+                            <span class="block text-sm font-semibold text-slate-900">
+                                Live / Production Environment
+                            </span>
+
+                            <span class="block text-xs text-slate-500">
+                                Submits legally binding fiscal invoices directly to URA
+                            </span>
+
                         </div>
+
                     </label>
+
                 </div>
+
             </div>
 
-            <!-- Credentials, Certificate & Encryption Upload -->
+
+
+            <!-- =================================================
+                 2. CREDENTIALS + CERTIFICATE
+            ================================================== -->
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                <!-- Left: Client Identification & Device Details -->
+
+
+                <!-- LEFT -->
                 <div class="space-y-4">
-                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b pb-2">1. Client & Hardware Credentials</h4>
-                    
-                    <div>
-                        <label for="efris-tin" class="block text-xs font-semibold text-slate-700 mb-1">Taxpayer Identification Number (TIN) <span class="text-red-500">*</span></label>
-                        <input type="text" id="efris-tin" placeholder="e.g. 1000123456" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label for="efris-device-no" class="block text-xs font-semibold text-slate-700 mb-1">EFRIS Device No / System ID <span class="text-red-500">*</span></label>
-                            <input type="text" id="efris-device-no" placeholder="Provided by URA" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="efris-fad-serial" class="block text-xs font-semibold text-slate-700 mb-1">Fiscal Device Serial (FAD / FD)</label>
-                            <input type="text" id="efris-fad-serial" placeholder="Physical or Virtual ESD Serial" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
+                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b pb-2">
+                        1. Client & Hardware Credentials
+                    </h4>
+
 
                     <div>
-                        <label for="efris-app-id" class="block text-xs font-semibold text-slate-700 mb-1">App ID / Client Key <span class="text-red-500">*</span></label>
-                        <input type="text" id="efris-app-id" placeholder="System ID registered with URA system-to-system" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        <label
+                            for="efris-tin"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Taxpayer Identification Number (TIN)
+                            <span class="text-red-500">*</span>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            id="efris-tin"
+                            placeholder="e.g. 1000123456"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                     </div>
+
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label for="efris-app-secret" class="block text-xs font-semibold text-slate-700 mb-1">App Secret <span class="text-red-500">*</span></label>
-                            <input type="password" id="efris-app-secret" placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="efris-device-mac" class="block text-xs font-semibold text-slate-700 mb-1">Device MAC Address</label>
-                            <input type="text" id="efris-device-mac" value="FFFFFFFFFFFF" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
 
-                    <!-- API Gateway & Taxpayer Type Inputs -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                         <div>
-                            <label for="efris-api-url" class="block text-xs font-semibold text-slate-700 mb-1">EFRIS API Gateway Base URL <span class="text-red-500">*</span></label>
-                            <input type="url" id="efris-api-url" placeholder="https://efris.ura.go.ug/efris/ws/efrisws" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="efris-taxpayer-type" class="block text-xs font-semibold text-slate-700 mb-1">Taxpayer Type Code</label>
-                            <select id="efris-taxpayer-type" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                <option value="1" selected>1 - VAT Registered Taxpayer</option>
-                                <option value="2">2 - Non-VAT Registered / Turnover Tax</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Right: PKI Certificate & Symmetric AES Encryption -->
-                <div class="space-y-4">
-                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b pb-2">2. Digital Certificate & AES Encryption</h4>
-                    
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Upload Digital Certificate File (.pfx / .p12) <span class="text-red-500">*</span></label>
-                        <input type="file" id="efris-pfx-file" accept=".pfx,.p12" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
-                        <p class="text-[11px] text-slate-500 mt-1">Issued by URA accredited Certificate Authority for request signing.</p>
-                        
-                        <!-- Certificate Live Status Info -->
-                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-md flex justify-between items-center text-xs text-amber-900 mt-2">
-                            <span><strong>Certificate Status:</strong> <span id="cert-status">Not Loaded</span></span>
-                            <span><strong>Expires On:</strong> <span id="cert-expiry">N/A</span></span>
-                        </div>
-                    </div>
+                            <label
+                                for="efris-device-no"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label for="efris-pfx-password" class="block text-xs font-semibold text-slate-700 mb-1">Certificate Private Key Pass <span class="text-red-500">*</span></label>
-                            <input type="password" id="efris-pfx-password" placeholder="••••••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="efris-tax-payer-name" class="block text-xs font-semibold text-slate-700 mb-1">Registered Legal Name</label>
-                            <input type="text" id="efris-tax-payer-name" placeholder="As registered on URA portal" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
+                                EFRIS Device No / System ID
+                                <span class="text-red-500">*</span>
 
-                    <!-- AES Symmetric Encryption Inputs -->
-                    <div class="p-3 bg-slate-50 rounded-md border border-slate-200 space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-slate-800 uppercase tracking-wide">AES Data Payload Encryption</span>
-                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" id="efris-auto-aes" class="h-3.5 w-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" checked>
-                                <span class="text-[11px] font-semibold text-slate-600">Auto-derive Key/IV</span>
                             </label>
+
+                            <input
+                                type="text"
+                                id="efris-device-no"
+                                placeholder="Provided by URA"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label for="efris-aes-key" class="block text-[11px] font-semibold text-slate-700 mb-1">AES Symmetric Key</label>
-                                <input type="text" id="efris-aes-key" placeholder="16/32 Byte AES Key" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
-                            <div>
-                                <label for="efris-aes-iv" class="block text-[11px] font-semibold text-slate-700 mb-1">AES Initialization Vector (IV)</label>
-                                <input type="text" id="efris-aes-iv" placeholder="16 Byte AES IV" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            </div>
+
+
+                        <div>
+
+                            <label
+                                for="efris-fad-serial"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Fiscal Device Serial (FAD / FD)
+
+                            </label>
+
+                            <input
+                                type="text"
+                                id="efris-fad-serial"
+                                placeholder="Physical or Virtual ESD Serial"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Automated Fallback & Stock Rules -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">3. PMS Automation Settings</h4>
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="efris-auto-stockin" class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" checked>
-                        <span class="text-sm text-slate-700"><strong>Auto Stock-In Fallback (Method A):</strong> Automatically execute a background <code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">T131</code> stock intake if item balance reaches zero during checkout.</span>
-                    </label>
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="efris-auto-usd-convert" class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" checked>
-                        <span class="text-sm text-slate-700"><strong>Auto Currency Conversion:</strong> Automatically fetch URA official exchange rates (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">T121</code>) for foreign currency folios before fiscalizing in UGX.</span>
-                    </label>
-                </div>
-            </div>
+                    </div>
 
-            <!-- System & Hospitality Default Mappings -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">4. System Default Mappings</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
                     <div>
-                        <label for="efris-branch-code" class="block text-xs font-semibold text-slate-700 mb-1">EFRIS Branch Code (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">placeCode</code>) <span class="text-red-500">*</span></label>
-                        <input type="text" id="efris-branch-code" value="00" placeholder="00 for Head Office / Main Property" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        <label
+                            for="efris-app-id"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            App ID / Client Key
+                            <span class="text-red-500">*</span>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            id="efris-app-id"
+                            placeholder="System ID registered with URA system-to-system"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                     </div>
-                    <div>
-                        <label for="efris-operator-code" class="block text-xs font-semibold text-slate-700 mb-1">Default Operator ID (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">operatorCode</code>)</label>
-                        <input type="text" id="efris-operator-code" value="SYSTEM" placeholder="e.g. ADMIN / CASHIER01" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                        <div>
+
+                            <label
+                                for="efris-app-secret"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                App Secret
+                                <span class="text-red-500">*</span>
+
+                            </label>
+
+                            <input
+                                type="password"
+                                id="efris-app-secret"
+                                placeholder="••••••••"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+
+                        <div>
+
+                            <label
+                                for="efris-device-mac"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Device MAC Address
+
+                            </label>
+
+                            <input
+                                type="text"
+                                id="efris-device-mac"
+                                value="FFFFFFFFFFFF"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
                     </div>
-                    <div>
-                        <label for="efris-default-tax" class="block text-xs font-semibold text-slate-700 mb-1">Default Fallback Tax Rate</label>
-                        <select id="efris-default-tax" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="101" selected>Standard Rate (18% VAT)</option>
-                            <option value="102">Zero Rated (0%)</option>
-                            <option value="103">Exempt</option>
-                        </select>
+
+
+                    <!-- API + TAXPAYER -->
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+
+                        <div>
+
+                            <label
+                                for="efris-api-url"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                EFRIS API Gateway Base URL
+                                <span class="text-red-500">*</span>
+
+                            </label>
+
+                            <input
+                                type="url"
+                                id="efris-api-url"
+                                placeholder="https://efris.ura.go.ug/efris/ws/efrisws"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+
+                        <div>
+
+                            <label
+                                for="efris-taxpayer-type"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Taxpayer Type Code
+
+                            </label>
+
+                            <select
+                                id="efris-taxpayer-type"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                                <option value="1" selected>
+                                    1 - VAT Registered Taxpayer
+                                </option>
+
+                                <option value="2">
+                                    2 - Non-VAT Registered / Turnover Tax
+                                </option>
+
+                            </select>
+
+                        </div>
+
                     </div>
+
                 </div>
 
-                <!-- Hotel Specific Levies -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                    <div>
-                        <label for="efris-lht-tax-code" class="block text-xs font-semibold text-slate-700 mb-1">Local Hotel Tax Mapping</label>
-                        <select id="efris-lht-tax-code" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="103" selected>103 - Exempt / Statutory Levy</option>
-                            <option value="102">102 - Zero Rated</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="efris-service-charge-tax" class="block text-xs font-semibold text-slate-700 mb-1">Service Charge / Catering Levy Tax Code</label>
-                        <select id="efris-service-charge-tax" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="101" selected>101 - Standard Rate (18% VAT)</option>
-                            <option value="103">103 - Exempt</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Guest Identity Mappings & Credit Notes -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">5. Guest Identity & Credit/Debit Note Defaults</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="efris-default-buyer-type" class="block text-xs font-semibold text-slate-700 mb-1">Default Guest Tax Identity Fallback</label>
-                        <select id="efris-default-buyer-type" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="1" selected>1 - Business / Local TIN (B2B)</option>
-                            <option value="0">0 - Individual Resident without TIN (B2C)</option>
-                            <option value="2">2 - Foreign Tourist / Non-Resident (Passport)</option>
-                        </select>
-                        <p class="text-[11px] text-slate-500 mt-1">Applied during folio checkout if no specific TIN/Passport is provided.</p>
-                    </div>
-                    <div>
-                        <label for="efris-default-credit-reason" class="block text-xs font-semibold text-slate-700 mb-1">Default Credit Note Cancellation Reason</label>
-                        <select id="efris-default-credit-reason" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            <option value="101" selected>101 - Invoice Data Entry Error / Wrong Invoice</option>
-                            <option value="102">102 - Room Cancellation / Reservation Voided</option>
-                            <option value="103">103 - Overcharging / Price Discount Adjustment</option>
-                            <option value="104">104 - Service Defect / Guest Refund</option>
-                        </select>
-                        <p class="text-[11px] text-slate-500 mt-1">Mandatory URA classification code when processing refunds/voids.</p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Offline Queue & Server Recovery -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">6. Resilience & Offline Mode</h4>
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="efris-enable-offline-queue" class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" checked>
-                        <span class="text-sm text-slate-700"><strong>Queue Unsigned Invoices:</strong> If URA server fails to respond, queue invoices locally and auto-retry sync upon server recovery.</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Revenue, UNSPSC & Payment Mappings -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">7. Revenue, UNSPSC & Payment Method Mappings</h4>
-                
+                <!-- RIGHT -->
                 <div class="space-y-4">
-                    <!-- UNSPSC Commodity Codes -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label for="efris-unspsc-room" class="block text-xs font-semibold text-slate-700 mb-1">Default Room UNSPSC Code</label>
-                            <input type="text" id="efris-unspsc-room" value="90111501" placeholder="e.g. 90111501 (Hotels and motels)" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label for="efris-unspsc-fb" class="block text-xs font-semibold text-slate-700 mb-1">Default F&B UNSPSC Code</label>
-                            <input type="text" id="efris-unspsc-fb" value="90101501" placeholder="e.g. 90101501 (Restaurants)" class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
 
-                    <!-- EFRIS Payment Method Code Mappings -->
-                    <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
-                        <span class="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">PMS to URA Payment Method Mappings (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">paymentTypeCode</code>)</span>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label for="efris-pay-cash" class="block text-xs font-semibold text-slate-600 mb-1">Cash Payment</label>
-                                <select id="efris-pay-cash" class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                    <option value="101" selected>101 - Cash</option>
-                                    <option value="102">102 - Cheque</option>
-                                    <option value="103">103 - Credit / Debit Card</option>
-                                    <option value="104">104 - Mobile Money / E-Wallet</option>
-                                    <option value="105">105 - Bank Transfer</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="efris-pay-card" class="block text-xs font-semibold text-slate-600 mb-1">Card Payment (Visa/MC)</label>
-                                <select id="efris-pay-card" class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                    <option value="101">101 - Cash</option>
-                                    <option value="102">102 - Cheque</option>
-                                    <option value="103" selected>103 - Credit / Debit Card</option>
-                                    <option value="104">104 - Mobile Money / E-Wallet</option>
-                                    <option value="105">105 - Bank Transfer</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="efris-pay-momo" class="block text-xs font-semibold text-slate-600 mb-1">Mobile Money (MTN/Airtel)</label>
-                                <select id="efris-pay-momo" class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                    <option value="101">101 - Cash</option>
-                                    <option value="102">102 - Cheque</option>
-                                    <option value="103">103 - Credit / Debit Card</option>
-                                    <option value="104" selected>104 - Mobile Money / E-Wallet</option>
-                                    <option value="105">105 - Bank Transfer</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider border-b pb-2">
+                        2. Digital Certificate & AES Encryption
+                    </h4>
 
-            <!-- Receipt & Folio Customization -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">8. Receipt & Folio Customization</h4>
-                <div class="space-y-3">
-                    <label class="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" id="efris-print-qr" class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" checked>
-                        <span class="text-sm text-slate-700"><strong>Render EFRIS QR Code:</strong> Automatically embed URA verification QR code and FDN on printed guest folios and thermal POS receipts.</span>
-                    </label>
-                </div>
-            </div>
 
-            <!-- Manual URA Sync Actions -->
-            <div class="border-t pt-4">
-                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">9. Manual URA Sync Actions</h4>
-                <div class="flex flex-wrap gap-3">
-                    <button type="button" id="btn-efris-sync-goods" class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
-                        Sync Goods/Services Catalogue (T126)
-                    </button>
-                    <button type="button" id="btn-efris-sync-rates" class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
-                        Fetch Exchange Rates (T121)
-                    </button>
-                    <button type="button" id="btn-efris-sync-stock" class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
-                        Query Current Stock Balances (T125)
-                    </button>
-                </div>
-            </div>
+                    <!-- Certificate -->
 
-            <!-- Connection Test & Status Dashboard -->
-            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <div id="efris-status-indicator" class="w-3 h-3 rounded-full bg-slate-400"></div>
                     <div>
-                        <span id="efris-status-text" class="text-sm font-semibold text-slate-800">Status: Unconfigured</span>
-                        <span id="efris-last-ping" class="block text-xs text-slate-500">Last Ping: Never</span>
+
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Upload Digital Certificate File (.pfx / .p12)
+                            <span class="text-red-500">*</span>
+
+                        </label>
+
+                        <input
+                            type="file"
+                            id="efris-pfx-file"
+                            accept=".pfx,.p12"
+                            class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer">
+
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            Issued by URA accredited Certificate Authority for request signing.
+                        </p>
+
+
+                        <div
+                            class="p-3 bg-amber-50 border border-amber-200 rounded-md flex justify-between items-center text-xs text-amber-900 mt-2">
+
+                            <span>
+                                <strong>Certificate Status:</strong>
+                                <span id="cert-status">
+                                    Not Loaded
+                                </span>
+                            </span>
+
+                            <span>
+                                <strong>Expires On:</strong>
+                                <span id="cert-expiry">
+                                    N/A
+                                </span>
+                            </span>
+
+                        </div>
+
                     </div>
+
+
+                    <!-- Password + Legal Name -->
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                        <div>
+
+                            <label
+                                for="efris-pfx-password"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Certificate Private Key Pass
+                                <span class="text-red-500">*</span>
+
+                            </label>
+
+                            <input
+                                type="password"
+                                id="efris-pfx-password"
+                                placeholder="••••••••••••"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+
+                        <div>
+
+                            <label
+                                for="efris-tax-payer-name"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Registered Legal Name
+
+                            </label>
+
+                            <input
+                                type="text"
+                                id="efris-tax-payer-name"
+                                placeholder="As registered on URA portal"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- AES -->
+
+                    <div class="p-3 bg-slate-50 rounded-md border border-slate-200 space-y-3">
+
+                        <div class="flex justify-between items-center">
+
+                            <span class="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                                AES Data Payload Encryption
+                            </span>
+
+
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+
+                                <input
+                                    type="checkbox"
+                                    id="efris-auto-aes"
+                                    class="h-3.5 w-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                    checked>
+
+                                <span class="text-[11px] font-semibold text-slate-600">
+                                    Auto-derive Key/IV
+                                </span>
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                            <div>
+
+                                <label
+                                    for="efris-aes-key"
+                                    class="block text-[11px] font-semibold text-slate-700 mb-1">
+
+                                    AES Symmetric Key
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="efris-aes-key"
+                                    placeholder="16/32 Byte AES Key"
+                                    class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                            </div>
+
+
+                            <div>
+
+                                <label
+                                    for="efris-aes-iv"
+                                    class="block text-[11px] font-semibold text-slate-700 mb-1">
+
+                                    AES Initialization Vector (IV)
+
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="efris-aes-iv"
+                                    placeholder="16 Byte AES IV"
+                                    class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
                 </div>
-                <div class="flex items-center gap-3 w-full sm:w-auto">
-                    <button type="button" id="btn-efris-ping" class="w-full sm:w-auto px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-sm rounded-md hover:bg-slate-100 transition-colors">
-                        Test URA Ping (T101)
-                    </button>
-                    <button type="button" id="btn-efris-save" class="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-md transition-colors shadow-sm">
-                        Save EFRIS Settings
-                    </button>
-                </div>
+
             </div>
+
+
+
+            <!-- =================================================
+                 3. PMS AUTOMATION SETTINGS
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    3. PMS Automation Settings
+                </h4>
+
+
+                <div class="space-y-3">
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+
+                        <input
+                            type="checkbox"
+                            id="efris-auto-stockin"
+                            class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                            checked>
+
+                        <span class="text-sm text-slate-700">
+
+                            <strong>Auto Stock-In Fallback (Method A):</strong>
+
+                            Automatically execute a background
+                            <code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">
+                                T131
+                            </code>
+                            stock intake if item balance reaches zero during checkout.
+
+                        </span>
+
+                    </label>
+
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+
+                        <input
+                            type="checkbox"
+                            id="efris-auto-usd-convert"
+                            class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                            checked>
+
+                        <span class="text-sm text-slate-700">
+
+                            <strong>Auto Currency Conversion:</strong>
+
+                            Automatically fetch URA official exchange rates
+                            <code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">
+                                T121
+                            </code>
+                            for foreign currency folios before fiscalizing in UGX.
+
+                        </span>
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 4. SYSTEM DEFAULT MAPPINGS
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    4. System Default Mappings
+                </h4>
+
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                    <div>
+
+                        <label
+                            for="efris-branch-code"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            EFRIS Branch Code
+                            (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">
+                                placeCode
+                            </code>)
+                            <span class="text-red-500">*</span>
+
+                        </label>
+
+                        <input
+                            type="text"
+                            id="efris-branch-code"
+                            value="00"
+                            placeholder="00 for Head Office / Main Property"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                    </div>
+
+
+                    <div>
+
+                        <label
+                            for="efris-operator-code"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Default Operator ID
+                            (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">
+                                operatorCode
+                            </code>)
+
+                        </label>
+
+                        <input
+                            type="text"
+                            id="efris-operator-code"
+                            value="SYSTEM"
+                            placeholder="e.g. ADMIN / CASHIER01"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                    </div>
+
+
+                    <div>
+
+                        <label
+                            for="efris-default-tax"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Default Fallback Tax Rate
+
+                        </label>
+
+                        <select
+                            id="efris-default-tax"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                            <option value="101" selected>
+                                Standard Rate (18% VAT)
+                            </option>
+
+                            <option value="102">
+                                Zero Rated (0%)
+                            </option>
+
+                            <option value="103">
+                                Exempt
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Hotel Levies -->
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+
+                    <div>
+
+                        <label
+                            for="efris-lht-tax-code"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Local Hotel Tax Mapping
+
+                        </label>
+
+                        <select
+                            id="efris-lht-tax-code"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                            <option value="103" selected>
+                                103 - Exempt / Statutory Levy
+                            </option>
+
+                            <option value="102">
+                                102 - Zero Rated
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div>
+
+                        <label
+                            for="efris-service-charge-tax"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Service Charge / Catering Levy Tax Code
+
+                        </label>
+
+                        <select
+                            id="efris-service-charge-tax"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                            <option value="101" selected>
+                                101 - Standard Rate (18% VAT)
+                            </option>
+
+                            <option value="103">
+                                103 - Exempt
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 5. GUEST IDENTITY + CREDIT NOTES
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    5. Guest Identity & Credit/Debit Note Defaults
+                </h4>
+
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                    <div>
+
+                        <label
+                            for="efris-default-buyer-type"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Default Guest Tax Identity Fallback
+
+                        </label>
+
+                        <select
+                            id="efris-default-buyer-type"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                            <option value="1" selected>
+                                1 - Business / Local TIN (B2B)
+                            </option>
+
+                            <option value="0">
+                                0 - Individual Resident without TIN (B2C)
+                            </option>
+
+                            <option value="2">
+                                2 - Foreign Tourist / Non-Resident (Passport)
+                            </option>
+
+                        </select>
+
+
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            Applied during folio checkout if no specific TIN/Passport is provided.
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <label
+                            for="efris-default-credit-reason"
+                            class="block text-xs font-semibold text-slate-700 mb-1">
+
+                            Default Credit Note Cancellation Reason
+
+                        </label>
+
+                        <select
+                            id="efris-default-credit-reason"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                            <option value="101" selected>
+                                101 - Invoice Data Entry Error / Wrong Invoice
+                            </option>
+
+                            <option value="102">
+                                102 - Room Cancellation / Reservation Voided
+                            </option>
+
+                            <option value="103">
+                                103 - Overcharging / Price Discount Adjustment
+                            </option>
+
+                            <option value="104">
+                                104 - Service Defect / Guest Refund
+                            </option>
+
+                        </select>
+
+
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            Mandatory URA classification code when processing refunds/voids.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 6. RESILIENCE + OFFLINE
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    6. Resilience & Offline Mode
+                </h4>
+
+
+                <div class="space-y-3">
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+
+                        <input
+                            type="checkbox"
+                            id="efris-enable-offline-queue"
+                            class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                            checked>
+
+                        <span class="text-sm text-slate-700">
+
+                            <strong>Queue Unsigned Invoices:</strong>
+
+                            If URA server fails to respond, queue invoices locally and auto-retry sync upon server recovery.
+
+                        </span>
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 7. REVENUE + PAYMENT MAPPINGS
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    7. Revenue, UNSPSC & Payment Method Mappings
+                </h4>
+
+
+                <div class="space-y-4">
+
+                    <!-- UNSPSC -->
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        <div>
+
+                            <label
+                                for="efris-unspsc-room"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Default Room UNSPSC Code
+
+                            </label>
+
+                            <input
+                                type="text"
+                                id="efris-unspsc-room"
+                                value="90111501"
+                                placeholder="e.g. 90111501 (Hotels and motels)"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+
+                        <div>
+
+                            <label
+                                for="efris-unspsc-fb"
+                                class="block text-xs font-semibold text-slate-700 mb-1">
+
+                                Default F&B UNSPSC Code
+
+                            </label>
+
+                            <input
+                                type="text"
+                                id="efris-unspsc-fb"
+                                value="90101501"
+                                placeholder="e.g. 90101501 (Restaurants)"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- PAYMENT MAPPINGS -->
+
+                    <div class="bg-slate-50 p-4 rounded-md border border-slate-200">
+
+                        <span class="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-2">
+
+                            PMS to URA Payment Method Mappings
+                            (<code class="text-xs bg-slate-100 px-1 py-0.5 rounded text-pink-600">
+                                paymentTypeCode
+                            </code>)
+
+                        </span>
+
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+                            <!-- CASH -->
+
+                            <div>
+
+                                <label
+                                    for="efris-pay-cash"
+                                    class="block text-xs font-semibold text-slate-600 mb-1">
+
+                                    Cash Payment
+
+                                </label>
+
+                                <select
+                                    id="efris-pay-cash"
+                                    class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                                    <option value="101" selected>
+                                        101 - Cash
+                                    </option>
+
+                                    <option value="102">
+                                        102 - Cheque
+                                    </option>
+
+                                    <option value="103">
+                                        103 - Credit / Debit Card
+                                    </option>
+
+                                    <option value="104">
+                                        104 - Mobile Money / E-Wallet
+                                    </option>
+
+                                    <option value="105">
+                                        105 - Bank Transfer
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- CARD -->
+
+                            <div>
+
+                                <label
+                                    for="efris-pay-card"
+                                    class="block text-xs font-semibold text-slate-600 mb-1">
+
+                                    Card Payment (Visa/MC)
+
+                                </label>
+
+                                <select
+                                    id="efris-pay-card"
+                                    class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                                    <option value="101">
+                                        101 - Cash
+                                    </option>
+
+                                    <option value="102">
+                                        102 - Cheque
+                                    </option>
+
+                                    <option value="103" selected>
+                                        103 - Credit / Debit Card
+                                    </option>
+
+                                    <option value="104">
+                                        104 - Mobile Money / E-Wallet
+                                    </option>
+
+                                    <option value="105">
+                                        105 - Bank Transfer
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- MOBILE MONEY -->
+
+                            <div>
+
+                                <label
+                                    for="efris-pay-momo"
+                                    class="block text-xs font-semibold text-slate-600 mb-1">
+
+                                    Mobile Money (MTN/Airtel)
+
+                                </label>
+
+                                <select
+                                    id="efris-pay-momo"
+                                    class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+
+                                    <option value="101">
+                                        101 - Cash
+                                    </option>
+
+                                    <option value="102">
+                                        102 - Cheque
+                                    </option>
+
+                                    <option value="103">
+                                        103 - Credit / Debit Card
+                                    </option>
+
+                                    <option value="104" selected>
+                                        104 - Mobile Money / E-Wallet
+                                    </option>
+
+                                    <option value="105">
+                                        105 - Bank Transfer
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 8. RECEIPT + FOLIO
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    8. Receipt & Folio Customization
+                </h4>
+
+
+                <div class="space-y-3">
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+
+                        <input
+                            type="checkbox"
+                            id="efris-print-qr"
+                            class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                            checked>
+
+                        <span class="text-sm text-slate-700">
+
+                            <strong>Render EFRIS QR Code:</strong>
+
+                            Automatically embed URA verification QR code and FDN on printed guest folios and thermal POS receipts.
+
+                        </span>
+
+                    </label>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 9. MANUAL URA SYNC
+            ================================================== -->
+
+            <div class="border-t pt-4">
+
+                <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">
+                    9. Manual URA Sync Actions
+                </h4>
+
+
+                <div class="flex flex-wrap gap-3">
+
+                    <button
+                        type="button"
+                        id="btn-efris-sync-goods"
+                        class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
+
+                        Sync Goods/Services Catalogue (T126)
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-efris-sync-rates"
+                        class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
+
+                        Fetch Exchange Rates (T121)
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-efris-sync-stock"
+                        class="px-3 py-2 bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors">
+
+                        Query Current Stock Balances (T125)
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 STATUS + SAVE
+            ================================================== -->
+
+            <div
+                class="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+
+
+                <!-- Status -->
+
+                <div class="flex items-center gap-3">
+
+                    <div
+                        id="efris-status-indicator"
+                        class="w-3 h-3 rounded-full bg-slate-400">
+                    </div>
+
+
+                    <div>
+
+                        <span
+                            id="efris-status-text"
+                            class="text-sm font-semibold text-slate-800">
+
+                            Status: Unconfigured
+
+                        </span>
+
+
+                        <span
+                            id="efris-last-ping"
+                            class="block text-xs text-slate-500">
+
+                            Last Ping: Never
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- Buttons -->
+
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+
+                    <button
+                        type="button"
+                        id="btn-efris-ping"
+                        class="w-full sm:w-auto px-4 py-2 border border-slate-300 text-slate-700 font-semibold text-sm rounded-md hover:bg-slate-100 transition-colors">
+
+                        Test URA Ping (T101)
+
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="btn-efris-save"
+                        class="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-md transition-colors shadow-sm">
+
+                        Save EFRIS Settings
+
+                    </button>
+
+                </div>
+
+            </div>
+
 
         </div>
+
     </div>
+
 </section>
+
+
+
+<!-- =============================================================
+     INTEGRATION TABS JAVASCRIPT
+============================================================== -->
+
+
 
 <section id="refunds" class="section bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm mb-8 hidden">
     
@@ -3959,7 +5208,7 @@
         <div class="flex items-end">
             <button id="fetch-refunds-btn" onclick="fetchConsolidatedRefunds()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2">
                 <i id="refund-spinner" class="fas fa-spinner fa-spin hidden"></i>
-                <span>Apply Filters</span>
+                <span>Search</span>
             </button>
         </div>
     </div>
@@ -3986,7 +5235,7 @@
             </thead>
             <tbody id="consolidated-refunds-tbody" class="divide-y divide-slate-200 text-slate-800">
                 <tr>
-                    <td colspan="8" class="text-center py-6 text-slate-400">Select parameters and click "Apply Filters" to pull records.</td>
+                    <td colspan="8" class="text-center py-6 text-slate-400">Select parameters and click "Search" to pull records.</td>
                 </tr>
             </tbody>
         </table>
@@ -5888,15 +7137,44 @@ Manage payment providers used for guest payments.            </p>
 
                 <!-- Section 2: Room & Stay Details -->
                 <section class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-sm">
-                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
                         <div class="flex items-center gap-2">
                             <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold">2</span>
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Room Allocation & Stay Period</h3>
                         </div>
+                        <label class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg cursor-pointer select-none">
+                            <input type="checkbox" id="isGroupBooking" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span>Group Booking (Multiple Rooms)</span>
+                        </label>
                     </div>
 
+                    <!-- Group fields (hidden unless isGroupBooking is checked) -->
+                    <!-- Group fields (hidden unless isGroupBooking is checked) -->
+                    <div id="groupBookingPanel" class="hidden mb-4 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 space-y-3">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="flex flex-col">
+                                <label for="groupName" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Group / Organization Name</label>
+                                <input type="text" id="groupName" placeholder="e.g. Uganda Health Summit / Family Group" class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
+                            </div>
+
+                            <div class="flex flex-col">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                        Select Rooms <span id="selectedRoomsCount" class="text-indigo-600 font-semibold">(0 selected)</span>
+                                    </label>
+                                    <button type="button" id="clearGroupRoomsBtn" class="text-[11px] font-semibold text-slate-500 hover:text-rose-600">
+                                        Clear
+                                    </button>
+                                </div>
+
+                                <div id="groupRoomsChecklist" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2.5 bg-white border border-slate-200 rounded-lg">
+                                    <!-- Populated dynamically by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="flex flex-col">
+                        <div id="singleRoomWrapper" class="flex flex-col">
                             <label for="room" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Assigned Room</label>
                             <select id="room" class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-800 font-medium">
                                 <option value="">Select Room</option>
@@ -6078,6 +7356,179 @@ Manage payment providers used for guest payments.            </p>
                 </button>
             </div>
         </div>
+    </div>
+</div>
+<div id="groupSummaryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-50 hidden transition-all duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative max-h-[90vh] flex flex-col overflow-hidden border border-slate-200/80">
+        
+        <!-- Header Bar -->
+        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <i class="fa-solid fa-users text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 id="groupModalTitle" class="text-lg font-bold text-slate-800">Group Booking</h2>
+                        <span id="groupModalIdBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700"></span>
+                    </div>
+                    <p id="groupModalSubtitle" class="text-xs text-slate-500 font-medium"></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeGroupModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none">&times;</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div class="p-6 overflow-y-auto space-y-6 bg-slate-50/30">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Rooms</span>
+                    <span id="groupActiveRooms" class="text-lg font-bold text-slate-800 mt-0.5 block">0</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Stay Amount</span>
+                    <span id="groupTotalDue" class="text-lg font-bold text-indigo-900 mt-0.5 block">0.00</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Amount Paid</span>
+                    <span id="groupAmountPaid" class="text-lg font-bold text-emerald-700 mt-0.5 block">0.00</span>
+                </div>
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Outstanding Balance</span>
+                    <span id="groupBalance" class="text-lg font-bold text-rose-600 mt-0.5 block">0.00</span>
+                </div>
+            </div>
+
+            <!-- Rooming List Table -->
+            <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Rooming List & Occupants</h3>
+                    <span id="groupLeadGuestText" class="text-xs text-slate-500 font-medium"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                <th class="py-2.5 px-3">Room</th>
+                                <th class="py-2.5 px-3">Occupant / Guest</th>
+                                <th class="py-2.5 px-3">Guests</th>
+                                <th class="py-2.5 px-3">Status</th>
+                                <th class="py-2.5 px-3 text-right">Room Total</th>
+                                <th class="py-2.5 px-3 text-right">Balance</th>
+                                <th class="py-2.5 px-3 text-right">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="groupRoomingListBody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Footer with Bulk Actions -->
+        <div class="px-6 py-4 bg-slate-50/90 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 z-10">
+            <button type="button" onclick="closeGroupModal()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition">
+                Close
+            </button>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <button type="button" id="groupBulkCheckInBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Bulk Check-In</span>
+                </button>
+
+                <button type="button" id="groupPaymentBtn" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-coins"></i>
+                    <span>Group Payment</span>
+                </button>
+
+                <button type="button" id="groupBulkCheckOutBtn" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Bulk Check-Out</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="groupPaymentModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[60] hidden transition-all duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative flex flex-col overflow-hidden border border-slate-200/80">
+        
+        <!-- Header Bar -->
+        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-teal-50 text-teal-600 rounded-lg">
+                    <i class="fa-solid fa-coins text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Record Group Payment</h2>
+                    <p id="groupPaymentSubtitle" class="text-xs text-slate-500 font-medium"></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeGroupPaymentModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none">&times;</button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="groupPaymentForm" class="p-6 space-y-4">
+            <input type="hidden" id="groupPaymentGroupId">
+
+            <div class="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-600">Total Group Balance</span>
+                <span id="groupPaymentTotalBalance" class="text-sm font-bold text-rose-600">0.00</span>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentAmount" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Payment Amount <span class="text-rose-500">*</span>
+                </label>
+                <input type="number" id="groupPaymentAmount" step="0.01" min="0.01" required placeholder="0.00"
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-semibold">
+                <button type="button" id="fillFullGroupBalanceBtn"
+                    class="mt-1.5 self-start text-[11px] font-semibold text-teal-700 hover:text-teal-800">
+                    Pay full remaining balance
+                </button>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentMethod" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Payment Method <span class="text-rose-500">*</span>
+                </label>
+                <select id="groupPaymentMethod" required
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-medium">
+                    <option value="Cash">Cash</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Bank">Bank Transfer / Card</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Visa">Visa</option>
+                    <option value="MasterCard">MasterCard</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentTxnId" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Reference / Transaction ID
+                </label>
+                <input type="text" id="groupPaymentTxnId" placeholder="e.g. MOMO-884210 or Bank Ref"
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800">
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button type="button" onclick="closeGroupPaymentModal()"
+                    class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition">
+                    Cancel
+                </button>
+                <button type="submit" id="submitGroupPaymentBtn"
+                    class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Submit Payment</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
     <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
@@ -7139,6 +8590,93 @@ Manage payment providers used for guest payments.            </p>
 
 <script type="text/javascript"
 src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+</script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const tabs = document.querySelectorAll(".integration-tab");
+    const contents = document.querySelectorAll(".integration-tab-content");
+
+
+    tabs.forEach(function (tab) {
+
+        tab.addEventListener("click", function () {
+
+            const target = this.dataset.tab;
+
+
+            /* -----------------------------------------------------
+               REMOVE ACTIVE STATE FROM ALL TABS
+            ----------------------------------------------------- */
+
+            tabs.forEach(function (item) {
+
+                item.classList.remove(
+                    "text-blue-600",
+                    "border-blue-600"
+                );
+
+                item.classList.add(
+                    "text-gray-500",
+                    "border-transparent"
+                );
+
+            });
+
+
+            /* -----------------------------------------------------
+               ACTIVATE CLICKED TAB
+            ----------------------------------------------------- */
+
+            this.classList.remove(
+                "text-gray-500",
+                "border-transparent"
+            );
+
+            this.classList.add(
+                "text-blue-600",
+                "border-blue-600"
+            );
+
+
+            /* -----------------------------------------------------
+               HIDE ALL TAB CONTENT
+            ----------------------------------------------------- */
+
+            contents.forEach(function (content) {
+
+                content.classList.add("hidden");
+
+            });
+
+
+            /* -----------------------------------------------------
+               SHOW SELECTED TAB
+            ----------------------------------------------------- */
+
+            const selectedContent =
+                document.getElementById("tab-" + target);
+
+            if (selectedContent) {
+
+                selectedContent.classList.remove("hidden");
+
+            }
+
+        });
+
+    });
+
+});
+
+const hotelCurrency = localStorage.getItem('hotelCurrency');
+
+if (hotelCurrency !== 'UGX') {
+    document.getElementById('efris-tab').style.display = 'none';
+}
+
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
