@@ -7149,30 +7149,32 @@ Manage payment providers used for guest payments.            </p>
                     </div>
 
                     <!-- Group fields (hidden unless isGroupBooking is checked) -->
-                    <!-- Group fields (hidden unless isGroupBooking is checked) -->
                     <div id="groupBookingPanel" class="hidden mb-4 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100 space-y-3">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div class="flex flex-col">
                                 <label for="groupName" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Group / Organization Name</label>
                                 <input type="text" id="groupName" placeholder="e.g. Uganda Health Summit / Family Group" class="px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                             </div>
-
                             <div class="flex flex-col">
-                                <div class="flex items-center justify-between mb-1.5">
-                                    <label class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                                        Select Rooms <span id="selectedRoomsCount" class="text-indigo-600 font-semibold">(0 selected)</span>
-                                    </label>
-                                    <button type="button" id="clearGroupRoomsBtn" class="text-[11px] font-semibold text-slate-500 hover:text-rose-600">
-                                        Clear
-                                    </button>
-                                </div>
+                                <label for="groupRoomsSelect" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">Select Rooms (Ctrl/Cmd + Click)</label>
+<!-- Replace the <select id="groupRoomsSelect" multiple> block inside #groupBookingPanel with this -->
+                 <div class="flex flex-col">
+    <div class="flex items-center justify-between mb-1.5">
+        <label class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+            Select Rooms <span id="selectedRoomsCount" class="text-indigo-600 font-semibold">(0 selected)</span>
+        </label>
+        <button type="button" id="clearGroupRoomsBtn" class="text-[11px] font-semibold text-slate-500 hover:text-rose-600">
+            Clear
+        </button>
+    </div>
 
-                                <div id="groupRoomsChecklist" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2.5 bg-white border border-slate-200 rounded-lg">
-                                    <!-- Populated dynamically by JS -->
-                                </div>
-                            </div>
+    <div id="groupRoomsChecklist" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2.5 bg-white border border-slate-200 rounded-lg">
+        <!-- Populated dynamically by JS -->
+    </div>
+                  </div>                            </div>
                         </div>
                     </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div id="singleRoomWrapper" class="flex flex-col">
                             <label for="room" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Assigned Room</label>
@@ -7356,179 +7358,6 @@ Manage payment providers used for guest payments.            </p>
                 </button>
             </div>
         </div>
-    </div>
-</div>
-<div id="groupSummaryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-50 hidden transition-all duration-300">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative max-h-[90vh] flex flex-col overflow-hidden border border-slate-200/80">
-        
-        <!-- Header Bar -->
-        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-                <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                    <i class="fa-solid fa-users text-lg"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h2 id="groupModalTitle" class="text-lg font-bold text-slate-800">Group Booking</h2>
-                        <span id="groupModalIdBadge" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700"></span>
-                    </div>
-                    <p id="groupModalSubtitle" class="text-xs text-slate-500 font-medium"></p>
-                </div>
-            </div>
-            <button type="button" onclick="closeGroupModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none">&times;</button>
-        </div>
-
-        <!-- Scrollable Body -->
-        <div class="p-6 overflow-y-auto space-y-6 bg-slate-50/30">
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Active Rooms</span>
-                    <span id="groupActiveRooms" class="text-lg font-bold text-slate-800 mt-0.5 block">0</span>
-                </div>
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Stay Amount</span>
-                    <span id="groupTotalDue" class="text-lg font-bold text-indigo-900 mt-0.5 block">0.00</span>
-                </div>
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Amount Paid</span>
-                    <span id="groupAmountPaid" class="text-lg font-bold text-emerald-700 mt-0.5 block">0.00</span>
-                </div>
-                <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Outstanding Balance</span>
-                    <span id="groupBalance" class="text-lg font-bold text-rose-600 mt-0.5 block">0.00</span>
-                </div>
-            </div>
-
-            <!-- Rooming List Table -->
-            <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Rooming List & Occupants</h3>
-                    <span id="groupLeadGuestText" class="text-xs text-slate-500 font-medium"></span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                <th class="py-2.5 px-3">Room</th>
-                                <th class="py-2.5 px-3">Occupant / Guest</th>
-                                <th class="py-2.5 px-3">Guests</th>
-                                <th class="py-2.5 px-3">Status</th>
-                                <th class="py-2.5 px-3 text-right">Room Total</th>
-                                <th class="py-2.5 px-3 text-right">Balance</th>
-                                <th class="py-2.5 px-3 text-right">Edit</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupRoomingListBody" class="divide-y divide-slate-100">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sticky Footer with Bulk Actions -->
-        <div class="px-6 py-4 bg-slate-50/90 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 sticky bottom-0 z-10">
-            <button type="button" onclick="closeGroupModal()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition">
-                Close
-            </button>
-
-            <div class="flex flex-wrap items-center gap-2.5">
-                <button type="button" id="groupBulkCheckInBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-right-to-bracket"></i>
-                    <span>Bulk Check-In</span>
-                </button>
-
-                <button type="button" id="groupPaymentBtn" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-coins"></i>
-                    <span>Group Payment</span>
-                </button>
-
-                <button type="button" id="groupBulkCheckOutBtn" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Bulk Check-Out</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="groupPaymentModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[60] hidden transition-all duration-300">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative flex flex-col overflow-hidden border border-slate-200/80">
-        
-        <!-- Header Bar -->
-        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="p-2 bg-teal-50 text-teal-600 rounded-lg">
-                    <i class="fa-solid fa-coins text-lg"></i>
-                </div>
-                <div>
-                    <h2 class="text-base font-bold text-slate-800">Record Group Payment</h2>
-                    <p id="groupPaymentSubtitle" class="text-xs text-slate-500 font-medium"></p>
-                </div>
-            </div>
-            <button type="button" onclick="closeGroupPaymentModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none">&times;</button>
-        </div>
-
-        <!-- Form Body -->
-        <form id="groupPaymentForm" class="p-6 space-y-4">
-            <input type="hidden" id="groupPaymentGroupId">
-
-            <div class="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-600">Total Group Balance</span>
-                <span id="groupPaymentTotalBalance" class="text-sm font-bold text-rose-600">0.00</span>
-            </div>
-
-            <div class="flex flex-col">
-                <label for="groupPaymentAmount" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Payment Amount <span class="text-rose-500">*</span>
-                </label>
-                <input type="number" id="groupPaymentAmount" step="0.01" min="0.01" required placeholder="0.00"
-                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-semibold">
-                <button type="button" id="fillFullGroupBalanceBtn"
-                    class="mt-1.5 self-start text-[11px] font-semibold text-teal-700 hover:text-teal-800">
-                    Pay full remaining balance
-                </button>
-            </div>
-
-            <div class="flex flex-col">
-                <label for="groupPaymentMethod" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Payment Method <span class="text-rose-500">*</span>
-                </label>
-                <select id="groupPaymentMethod" required
-                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-medium">
-                    <option value="Cash">Cash</option>
-                    <option value="MTN Momo">MTN Momo</option>
-                    <option value="Airtel Pay">Airtel Pay</option>
-                    <option value="Bank">Bank Transfer / Card</option>
-                    <option value="Pesapal">Pesapal</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                    <option value="Visa">Visa</option>
-                    <option value="MasterCard">MasterCard</option>
-                </select>
-            </div>
-
-            <div class="flex flex-col">
-                <label for="groupPaymentTxnId" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                    Reference / Transaction ID
-                </label>
-                <input type="text" id="groupPaymentTxnId" placeholder="e.g. MOMO-884210 or Bank Ref"
-                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800">
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button type="button" onclick="closeGroupPaymentModal()"
-                    class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition">
-                    Cancel
-                </button>
-                <button type="submit" id="submitGroupPaymentBtn"
-                    class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
-                    <i class="fa-solid fa-check"></i>
-                    <span>Submit Payment</span>
-                </button>
-            </div>
-        </form>
     </div>
 </div>
     <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">

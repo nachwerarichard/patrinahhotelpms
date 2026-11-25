@@ -730,7 +730,7 @@ cancelDeletionBtn.addEventListener('click', () => {
  * Calculates the number of nights between check-in and check-out dates.
  * Updates the nights input field.
  */
-function groupBookingcalculateNights() {
+function calculateNights() {
     const checkInDate = new Date(checkInInput.value);
     const checkOutDate = new Date(checkOutInput.value);
 
@@ -1300,19 +1300,17 @@ async function renderBookings(page = 1, searchTerm = '') {
 
             currentBookings.forEach(booking => {
                 const isCancelled = booking.gueststatus === 'cancelled';
-                const isGroup = Boolean(booking.isGroupBooking && booking.groupId);
                 const baseBtn = "inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white focus:outline-none transition-all duration-200 w-full justify-center mb-1";
-
-                const groupBadgeHtml = isGroup ? `
-                    <button type="button"
-                        onclick="openGroupModal('${booking.groupId}')"
-                        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
-                        title="View Group ${booking.groupId}">
-                        <i class="fa-solid fa-users text-[10px]"></i>
-                        <span>${formatStatusText(booking.groupName || booking.groupId)} (${booking.groupId})</span>
-                    </button>
-                ` : '';
-
+const isGroup = Boolean(booking.isGroupBooking && booking.groupId);
+const groupBadgeHtml = isGroup ? `
+    <button type="button"
+        onclick="openGroupModal('${booking.groupId}')"
+        class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+        title="View Group ${booking.groupId}">
+        <i class="fa-solid fa-users text-[10px]"></i>
+        <span>${formatStatusText(booking.groupName || booking.groupId)} (${booking.groupId})</span>
+    </button>
+` : '';
                 let actionButtonsHtml = '';
                 if (['admin', 'super-admin', 'front office'].includes(currentUserRole)) {
                     if (isCancelled) {
@@ -1330,35 +1328,34 @@ async function renderBookings(page = 1, searchTerm = '') {
                                 </button>
                             ` : ''}
 
-                            ${isGroup ? `
-                                <div class="border-t border-slate-200 my-2"></div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block px-1 mb-1">Group Actions</span>
-                                <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
-                                    <i class="fa-solid fa-layer-group mr-1"></i> View Group
-                                </button>
-                                ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
-                                    <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
-                                        <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
-                                    </button>
-                                ` : ''}
-                                ${booking.balance > 0 ? `
-                                    <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="openGroupPaymentModal('${booking.groupId}')">
-                                        <i class="fa-solid fa-coins mr-1"></i> Group Payment
-                                    </button>
-                                ` : ''}
-                                ${booking.gueststatus === 'checkedin' ? `
-                                    <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="bulkGroupCheckOut('${booking.groupId}')">
-                                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Group Check-Out
-                                    </button>
-                                ` : ''}
-                            ` : ''}
-
                             ${['confirmed', 'reserved', 'checkedin'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="moveBooking('${booking.id}')">
                                     <i class="fa-solid ${booking.gueststatus === 'checkedin' ? 'fa-right-left' : 'fa-door-open'} mr-1"></i>
                                     ${booking.gueststatus === 'checkedin' ? 'Move' : 'Assign'}
                                 </button>
                             ` : ''}
+                            ${isGroup ? `
+    <div class="border-t border-slate-200 my-2"></div>
+    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block px-1 mb-1">Group Actions</span>
+    <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
+        <i class="fa-solid fa-layer-group mr-1"></i> View Group
+    </button>
+    ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
+        <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
+            <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
+        </button>
+    ` : ''}
+    ${booking.balance > 0 ? `
+        <button class="${baseBtn} bg-teal-600 hover:bg-teal-700" onclick="openGroupPaymentModal('${booking.groupId}')">
+            <i class="fa-solid fa-coins mr-1"></i> Group Payment
+        </button>
+    ` : ''}
+    ${booking.gueststatus === 'checkedin' ? `
+        <button class="${baseBtn} bg-amber-600 hover:bg-amber-700" onclick="bulkGroupCheckOut('${booking.groupId}')">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Group Check-Out
+        </button>
+    ` : ''}
+` : ''}
 
                             ${(booking.gueststatus === 'confirmed' || booking.gueststatus === 'reserved') ? `
                                 <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="checkinBooking('${booking.id}')">
@@ -1379,10 +1376,10 @@ async function renderBookings(page = 1, searchTerm = '') {
                             ` : ''}
 
                             ${booking.amountPaid > 0 ? `
-                                <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
-                                    <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
-                                </button>
-                            ` : ''}
+    <button class="${baseBtn} bg-rose-600 hover:bg-rose-700" onclick="openRefundModal('${booking.id}', ${booking.amountPaid})">
+        <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Issue Refund
+    </button>
+` : ''}
 
                             ${!['checkedout', 'cancelled', 'void'].includes(booking.gueststatus) ? `
                                 <button class="${baseBtn} bg-indigo-700 hover:bg-indigo-800" onclick="viewCharges('${booking.id}')">
@@ -1400,17 +1397,17 @@ async function renderBookings(page = 1, searchTerm = '') {
                                 </button>
                             ` : ''}
 
-                            ${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
-                                ${booking.isFiscalized ? `
-                                    <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
-                                        <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt
-                                    </button>
-                                ` : `
-                                    <button class="${baseBtn} bg-blue-600 hover:bg-blue-700" onclick="fiscalizeBooking('${booking.id}')">
-                                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Fiscalise Invoice
-                                    </button>
-                                `}
-                            ` : ''}
+${localStorage.getItem('hotelCurrency') === 'UGX' && booking.amountPaid > 0 ? `
+    ${booking.isFiscalized ? `
+        <button class="${baseBtn} bg-emerald-700 hover:bg-emerald-800" onclick="viewFiscalReceipt('${booking.id}')">
+            <i class="fa-solid fa-file-shield mr-1"></i> Fiscal Receipt
+        </button>
+    ` : `
+        <button class="${baseBtn} bg-blue-600 hover:bg-blue-700" onclick="fiscalizeBooking('${booking.id}')">
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Fiscalise Invoice
+        </button>
+    `}
+` : ''}
 
                             <button class="${baseBtn} bg-slate-700 hover:bg-slate-800" onclick="viewBooking('${booking.id}')">
                                 <i class="fa-solid fa-eye mr-1"></i> View
@@ -1458,10 +1455,7 @@ async function renderBookings(page = 1, searchTerm = '') {
                     tr.dataset.id = booking.id;
                     tr.className = isCancelled ? "bg-rose-50/50 hover:bg-rose-100/60 transition-colors" : "hover:bg-slate-50 transition-colors";
                     tr.innerHTML = `
-                        <td class="py-2.5 px-3 font-medium text-slate-900 capitalize">
-                            <div>${formatStatusText(booking.name)}</div>
-                            ${groupBadgeHtml}
-                        </td>
+                        <td class="py-2.5 px-3 font-medium text-slate-900 capitalize">${formatStatusText(booking.name)}</td>
                         <td class="py-2.5 px-3 text-slate-700 font-semibold">${booking.room}</td>
                         <td class="py-2.5 px-3 text-slate-600">${booking.checkIn}</td>
                         <td class="py-2.5 px-3 text-slate-600">${booking.checkOut}</td>
@@ -1490,8 +1484,7 @@ async function renderBookings(page = 1, searchTerm = '') {
                         <div class="flex justify-between items-start mb-2">
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900 capitalize">${formatStatusText(booking.name)}</h4>
-                                ${groupBadgeHtml}
-                                <p class="text-xs text-slate-500 font-medium mt-1">Room: <span class="text-indigo-600 font-bold">${booking.room}</span> | Source: <span class="capitalize">${formatStatusText(booking.guestsource)}</span></p>
+                                <p class="text-xs text-slate-500 font-medium mt-0.5">Room: <span class="text-indigo-600 font-bold">${booking.room}</span> | Source: <span class="capitalize">${formatStatusText(booking.guestsource)}</span></p>
                             </div>
                             <div class="relative">
                                 <button class="p-1.5 bg-slate-50 border border-slate-200 rounded-lg shadow-sm hover:bg-slate-100" onclick="toggleActionButtons(event, this)">
@@ -2754,23 +2747,14 @@ bookingForm.addEventListener('submit', async function(event) {
 
     let selectedRooms = [];
     if (isGroupBooking) {
-        const chosenRoomNumbers = getSelectedGroupRoomNumbers();
-        const customRate = manualRateOverride
-            ? (parseFloat(document.getElementById('amtPerNight')?.value) || 0)
-            : null;
-
-        selectedRooms = chosenRoomNumbers.map((roomNum) => {
-            const roomObj = roomCatalogByNumber.get(roomNum);
-            const roomRate = customRate !== null
-                ? customRate
-                : resolveNightlyRate(roomObj, bookingData.checkIn);
-
-            return {
-                room: roomNum,
-                amtPerNight: roomRate,
+        const selectedOptions = Array.from(document.getElementById('groupRoomsSelect')?.selectedOptions || []);
+        selectedRooms = selectedOptions
+            .map(opt => ({
+                room: opt.value.trim(),
+                amtPerNight: bookingData.amtPerNight,
                 people: bookingData.people
-            };
-        });
+            }))
+            .filter(item => item.room);
 
         if (selectedRooms.length === 0) {
             showMessage('Error', 'Please select at least one room for the group booking.', true);
@@ -2813,6 +2797,27 @@ bookingForm.addEventListener('submit', async function(event) {
             method = id ? 'PUT' : 'POST';
             payload = bookingData;
         }
+        if (isGroupBooking) {
+    const checkInStr = document.getElementById('checkIn')?.value || '';
+    const customRate = manualRateOverride ? (parseFloat(document.getElementById('amtPerNight')?.value) || 0) : null;
+    const chosenRoomNumbers = getSelectedGroupRoomNumbers();
+
+    selectedRooms = chosenRoomNumbers.map((roomNum) => {
+        const roomObj = roomCatalogByNumber.get(roomNum);
+        const roomRate = customRate !== null ? customRate : resolveNightlyRate(roomObj, checkInStr);
+
+        return {
+            room: roomNum,
+            amtPerNight: roomRate,
+            people: bookingData.people
+        };
+    });
+
+    if (selectedRooms.length === 0) {
+        showMessage('Error', 'Please select at least one room for the group booking.', true);
+        return;
+    }
+}
 
         const response = await authenticatedFetch(endpoint, {
             method,
@@ -2834,7 +2839,6 @@ bookingForm.addEventListener('submit', async function(event) {
             bookingForm.reset();
             const groupPanel = document.getElementById('groupBookingPanel');
             if (groupPanel) groupPanel.classList.add('hidden');
-            if (typeof updateSelectedRoomsBadge === 'function') updateSelectedRoomsBadge();
         }
 
         // Refresh UI components
@@ -19913,6 +19917,106 @@ const groupBookingPanel = document.getElementById('groupBookingPanel');
 const singleRoomWrapper = document.getElementById('singleRoomWrapper');
 const singleRoomSelect = document.getElementById('room');
 
+async function loadGroupBookingRooms() {
+    if (!groupRoomsChecklist) return;
+
+    const checkIn = document.getElementById('checkIn')?.value || '';
+    const checkOut = document.getElementById('checkOut')?.value || '';
+
+    if (checkIn && checkOut && checkOut <= checkIn) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">Check-out date must be after check-in date.</p>`;
+        updateSelectedRoomsBadge();
+        return;
+    }
+
+    // Preserve any rooms already checked before refreshing
+    const previouslyChecked = new Set(getSelectedGroupRoomNumbers());
+
+    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Checking available rooms...</p>`;
+
+    try {
+        const params = new URLSearchParams();
+        if (checkIn) params.set('checkIn', checkIn);
+        if (checkOut) params.set('checkOut', checkOut);
+
+        const queryString = params.toString();
+        const url = `${API_BASE_URL}/rooms/available${queryString ? `?${queryString}` : ''}`;
+
+        const res = await authenticatedFetch(url);
+        if (!res || !res.ok) {
+            const errData = res ? await res.json().catch(() => ({})) : {};
+            throw new Error(errData.message || 'Failed to load available rooms');
+        }
+
+        const data = await res.json();
+        const roomsList = Array.isArray(data) ? data : (data.rooms || []);
+
+        const normalized = roomsList.map((room) => ({
+            number: room.number,
+            rate: room.rate ?? room.amtPerNight ?? room.roomTypeId?.rate ?? room.roomTypeId?.price ?? null
+        }));
+
+        renderGroupRoomOptions(normalized);
+
+        // Re-check any rooms that are still available for the new dates
+        groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+            if (previouslyChecked.has(cb.value.trim())) {
+                cb.checked = true;
+            }
+        });
+        updateSelectedRoomsBadge();
+    } catch (error) {
+        console.error('Error loading available group rooms:', error);
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">${error.message}</p>`;
+        updateSelectedRoomsBadge();
+    }
+}
+
+// Re-filter available rooms automatically when check-in or check-out dates change
+document.getElementById('checkIn')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
+document.getElementById('checkOut')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
+
+function updateSelectedRoomsBadge() {
+    const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
+    if (selectedRoomsCount) {
+        selectedRoomsCount.textContent = `(${count} selected)`;
+    }
+}
+
+function renderGroupRoomOptions(rooms = []) {
+    if (!groupRoomsChecklist) return;
+
+    if (!rooms.length) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">No rooms available.</p>`;
+        updateSelectedRoomsBadge();
+        return;
+    }
+
+    groupRoomsChecklist.innerHTML = rooms.map((r) => {
+        const roomNum = typeof r === 'string' ? r : r.number;
+        const rateText = typeof r === 'object' && r.rate ? ` · ${Number(r.rate).toLocaleString()}` : '';
+
+        return `
+            <label class="group-room-item flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 hover:border-indigo-400 cursor-pointer text-xs font-semibold text-slate-700 transition select-none has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:text-indigo-800">
+                <input type="checkbox" value="${roomNum}" class="group-room-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="truncate">Room ${roomNum}${rateText}</span>
+            </label>
+        `;
+    }).join('');
+
+    groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+        cb.addEventListener('change', updateSelectedRoomsBadge);
+    });
+
+    updateSelectedRoomsBadge();
+}
+
 // Helper to get selected room numbers when submitting the form
 function getSelectedGroupRoomNumbers() {
     if (!groupRoomsChecklist) return [];
@@ -19944,47 +20048,8 @@ clearGroupRoomsBtn?.addEventListener('click', () => {
     updateSelectedRoomsBadge();
 });
 
-async function refreshBookingViews() {
-    if (typeof renderBookings === 'function') await renderBookings(currentPage, currentSearchTerm);
-    if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
-    if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
-    if (typeof renderCalendar === 'function') renderCalendar();
-    if (typeof renderAuditLogs === 'function') renderAuditLogs();
-}
-
-async function bulkGroupCheckIn(groupId) {
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkin`, {
-            method: 'POST'
-        });
-        const data = res ? await res.json().catch(() => ({})) : {};
-        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-in failed');
-
-        showMessage('Success', data.message || 'Group checked in!');
-        await refreshBookingViews();
-    } catch (err) {
-        showMessage('Error', err.message, true);
-    }
-}
-
-async function bulkGroupCheckOut(groupId) {
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkout`, {
-            method: 'POST',
-            body: JSON.stringify({ allowUnpaidBalance: false })
-        });
-        const data = res ? await res.json().catch(() => ({})) : {};
-        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-out failed');
-
-        showMessage('Success', data.message || 'Group checked out!');
-        await refreshBookingViews();
-    } catch (err) {
-        showMessage('Error', err.message, true);
-    }
-}
-
+// Store normalized rooms keyed by room number when /rooms/available responds
 const roomCatalogByNumber = new Map();
-let manualRateOverride = false;
 
 function resolveNightlyRate(roomDoc, checkInStr) {
     const roomType = roomDoc?.roomTypeId && typeof roomDoc.roomTypeId === 'object'
@@ -20009,6 +20074,8 @@ function resolveNightlyRate(roomDoc, checkInStr) {
 
     return rate;
 }
+let manualRateOverride = false;
+
 function calculateNights(checkInStr, checkOutStr) {
     if (!checkInStr || !checkOutStr) return 0;
     const start = new Date(`${checkInStr}T00:00:00`);
@@ -20083,6 +20150,7 @@ function recalculateFolioTotals() {
     }
 }
 
+// Reset manual rate override when dates or group toggle change
 ['checkIn', 'checkOut', 'isGroupBooking'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', () => {
         manualRateOverride = false;
@@ -20096,430 +20164,46 @@ document.getElementById('amtPerNight')?.addEventListener('input', () => {
 });
 
 document.getElementById('amountPaid')?.addEventListener('input', recalculateFolioTotals);
-
 document.getElementById('groupRoomsChecklist')?.addEventListener('change', () => {
     manualRateOverride = false;
     recalculateFolioTotals();
 });
 
-async function loadGroupBookingRooms() {
-    if (!groupRoomsChecklist) return;
+async function refreshBookingViews() {
+    if (typeof renderBookings === 'function') await renderBookings(currentPage, currentSearchTerm);
+    if (typeof renderHousekeepingRooms === 'function') renderHousekeepingRooms();
+    if (typeof fetchExecutiveDashboard === 'function') fetchExecutiveDashboard();
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof renderAuditLogs === 'function') renderAuditLogs();
+}
 
-    const checkIn = document.getElementById('checkIn')?.value || '';
-    const checkOut = document.getElementById('checkOut')?.value || '';
-
-    if (checkIn && checkOut && checkOut <= checkIn) {
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">Check-out date must be after check-in date.</p>`;
-        updateSelectedRoomsBadge();
-        recalculateFolioTotals();
-        return;
-    }
-
-    const previouslyChecked = new Set(getSelectedGroupRoomNumbers());
-    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Checking available rooms...</p>`;
-
+async function bulkGroupCheckIn(groupId) {
     try {
-        const params = new URLSearchParams();
-        if (checkIn) params.set('checkIn', checkIn);
-        if (checkOut) params.set('checkOut', checkOut);
-
-        const queryString = params.toString();
-        const url = `${API_BASE_URL}/rooms/available${queryString ? `?${queryString}` : ''}`;
-
-        const res = await authenticatedFetch(url);
-        if (!res || !res.ok) {
-            const errData = res ? await res.json().catch(() => ({})) : {};
-            throw new Error(errData.message || 'Failed to load available rooms');
-        }
-
-        const data = await res.json();
-        const roomsList = Array.isArray(data) ? data : (data.rooms || []);
-
-        roomCatalogByNumber.clear();
-        const normalized = roomsList.map((room) => {
-            const num = String(room.number || '').trim();
-            if (num) roomCatalogByNumber.set(num, room);
-            return {
-                number: num,
-                rate: resolveNightlyRate(room, checkIn)
-            };
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkin`, {
+            method: 'POST'
         });
-
-        renderGroupRoomOptions(normalized);
-
-        groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
-            if (previouslyChecked.has(cb.value.trim())) {
-                cb.checked = true;
-            }
-        });
-
-        updateSelectedRoomsBadge();
-        recalculateFolioTotals();
-    } catch (error) {
-        console.error('Error loading available group rooms:', error);
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">${error.message}</p>`;
-        updateSelectedRoomsBadge();
-    }
-}
-
-document.getElementById('checkIn')?.addEventListener('change', () => {
-    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
-});
-
-document.getElementById('checkOut')?.addEventListener('change', () => {
-    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
-});
-
-function updateSelectedRoomsBadge() {
-    const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
-    if (selectedRoomsCount) {
-        selectedRoomsCount.textContent = `(${count} selected)`;
-    }
-}
-
-function renderGroupRoomOptions(rooms = []) {
-    if (!groupRoomsChecklist) return;
-
-    if (!rooms.length) {
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">No rooms available.</p>`;
-        updateSelectedRoomsBadge();
-        return;
-    }
-
-    groupRoomsChecklist.innerHTML = rooms.map((r) => {
-        const roomNum = typeof r === 'string' ? r : r.number;
-        const rateNum = typeof r === 'object' ? Number(r.rate) : 0;
-        const rateText = rateNum > 0 ? ` · ${rateNum.toLocaleString()}` : '';
-
-        return `
-            <label class="group-room-item flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 hover:border-indigo-400 cursor-pointer text-xs font-semibold text-slate-700 transition select-none has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:text-indigo-800">
-                <input type="checkbox" value="${roomNum}" class="group-room-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                <span class="truncate">Room ${roomNum}${rateText}</span>
-            </label>
-        `;
-    }).join('');
-
-    groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
-        cb.addEventListener('change', updateSelectedRoomsBadge);
-    });
-
-    updateSelectedRoomsBadge();
-}
-
-let activeGroupId = null;
-
-function safeText(val, fallback = '-') {
-    if (val === null || val === undefined || val === '') return fallback;
-    try {
-        return typeof formatStatusText === 'function' ? formatStatusText(val) : String(val);
-    } catch {
-        return String(val);
-    }
-}
-
-function formatGroupMoney(amount) {
-    const num = Number(amount) || 0;
-    const currency = localStorage.getItem('hotelCurrency');
-    return currency
-        ? `${currency} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function closeGroupModal() {
-    const modal = document.getElementById('groupSummaryModal');
-    if (modal) modal.classList.add('hidden');
-    activeGroupId = null;
-}
-
-async function openGroupModal(groupId) {
-    if (!groupId) return;
-    activeGroupId = groupId;
-
-    const modal = document.getElementById('groupSummaryModal');
-    const tbody = document.getElementById('groupRoomingListBody');
-    const checkInBtn = document.getElementById('groupBulkCheckInBtn');
-    const paymentBtn = document.getElementById('groupPaymentBtn');
-    const checkOutBtn = document.getElementById('groupBulkCheckOutBtn');
-
-    if (!modal) return;
-    modal.classList.remove('hidden');
-
-    document.getElementById('groupModalTitle').textContent = 'Loading Group...';
-    document.getElementById('groupModalIdBadge').textContent = groupId;
-    document.getElementById('groupModalSubtitle').textContent = '';
-    if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Loading room bookings...</td></tr>`;
-    }
-
-    try {
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}`, {
-            method: 'GET'
-        });
-
         const data = res ? await res.json().catch(() => ({})) : {};
-        if (!res || !res.ok) {
-            throw new Error(data.message || 'Failed to load group booking details.');
-        }
+        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-in failed');
 
-        const summary = data.summary || {};
-        const roomBookings = Array.isArray(data.bookings)
-            ? data.bookings
-            : (Array.isArray(data.rooms) ? data.rooms : []);
-
-        const roomListStr = roomBookings.map(b => b.room).filter(Boolean).join(', ') || '-';
-        const totalOccupancy = roomBookings
-            .filter(b => !['cancelled', 'void'].includes(b.gueststatus))
-            .reduce((sum, b) => sum + (Number(b.people) || 1), 0);
-
-        document.getElementById('groupModalTitle').textContent = safeText(summary.groupName, groupId);
-        document.getElementById('groupModalIdBadge').textContent = groupId;
-        document.getElementById('groupModalSubtitle').textContent =
-            `${summary.checkIn || '-'} → ${summary.checkOut || '-'} · Rooms: ${roomListStr} (${totalOccupancy} guests)`;
-        document.getElementById('groupLeadGuestText').textContent = `Lead Guest: ${safeText(summary.leadGuest, 'N/A')}`;
-
-        document.getElementById('groupActiveRooms').textContent =
-            `${summary.activeRooms ?? roomBookings.length} / ${summary.totalRooms ?? roomBookings.length}`;
-        document.getElementById('groupTotalDue').textContent = formatGroupMoney(summary.totalDue);
-        document.getElementById('groupAmountPaid').textContent = formatGroupMoney(summary.amountPaid);
-        document.getElementById('groupBalance').textContent = formatGroupMoney(summary.balance);
-
-        const hasCheckInEligible = roomBookings.some(b => ['reserved', 'confirmed'].includes(b.gueststatus));
-        const hasCheckedInRooms = roomBookings.some(b => b.gueststatus === 'checkedin');
-        const hasBalance = (Number(summary.balance) || 0) > 0;
-
-        if (checkInBtn) {
-            checkInBtn.disabled = !hasCheckInEligible;
-            checkInBtn.classList.toggle('opacity-50', !hasCheckInEligible);
-            checkInBtn.classList.toggle('cursor-not-allowed', !hasCheckInEligible);
-        }
-        if (paymentBtn) {
-            paymentBtn.disabled = !hasBalance;
-            paymentBtn.classList.toggle('opacity-50', !hasBalance);
-            paymentBtn.classList.toggle('cursor-not-allowed', !hasBalance);
-        }
-        if (checkOutBtn) {
-            checkOutBtn.disabled = !hasCheckedInRooms;
-            checkOutBtn.classList.toggle('opacity-50', !hasCheckedInRooms);
-            checkOutBtn.classList.toggle('cursor-not-allowed', !hasCheckedInRooms);
-        }
-
-        if (!tbody) return;
-
-        if (!roomBookings.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No individual room bookings found for ${groupId}.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = roomBookings.map((b) => {
-            const isInactive = ['cancelled', 'void'].includes(b.gueststatus);
-            const roomBalance = Number(b.balance) || 0;
-            const roomTotal = Number(b.totalDue) || 0;
-            const peopleCount = Number(b.people) || 1;
-            const occupantName = safeText(b.name, 'Unassigned');
-            const statusBadge = typeof getGuestStatusBadge === 'function'
-                ? getGuestStatusBadge(b.gueststatus)
-                : safeText(b.gueststatus);
-
-            const leadTag = b.isGroupLead
-                ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Lead</span>`
-                : '';
-
-            const canEdit = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function';
-
-            return `
-                <tr class="${isInactive ? 'bg-rose-50/40 text-slate-400' : 'hover:bg-slate-50/80 text-slate-700'}">
-                    <td class="py-2.5 px-3 font-bold text-slate-900">
-                        <div>Room ${b.room || '-'}</div>
-                        <div class="text-[10px] font-medium text-slate-400">${b.id || ''}</div>
-                    </td>
-                    <td class="py-2.5 px-3 font-medium">
-                        <span class="capitalize">${occupantName}</span>
-                        ${leadTag}
-                        ${b.extraperson ? `<span class="block text-[11px] text-slate-500 font-normal">Extra: ${b.extraperson}</span>` : ''}
-                        ${b.nationalIdNo ? `<span class="block text-[11px] text-slate-400 font-normal">ID: ${b.nationalIdNo}</span>` : ''}
-                    </td>
-                    <td class="py-2.5 px-3 font-semibold">${peopleCount} ${peopleCount === 1 ? 'guest' : 'guests'}</td>
-                    <td class="py-2.5 px-3">${statusBadge}</td>
-                    <td class="py-2.5 px-3 text-right font-semibold">${formatGroupMoney(roomTotal)}</td>
-                    <td class="py-2.5 px-3 text-right font-semibold ${roomBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatGroupMoney(roomBalance)}</td>
-                    <td class="py-2.5 px-3 text-right">
-                        ${canEdit ? `
-                            <button type="button"
-                                onclick="closeGroupModal(); editBooking('${b.id}');"
-                                class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
-                                Edit
-                            </button>
-                        ` : `<span class="text-slate-300">—</span>`}
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Error opening group modal:', error);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-semibold">${error.message}</td></tr>`;
-        }
+        showMessage('Success', data.message || 'Group checked in!');
+        await refreshBookingViews();
+    } catch (err) {
+        showMessage('Error', err.message, true);
     }
 }
 
-// Wire bulk buttons inside #groupSummaryModal
-document.getElementById('groupBulkCheckInBtn')?.addEventListener('click', async () => {
-    if (!activeGroupId) return;
-    await bulkGroupCheckIn(activeGroupId);
-    if (activeGroupId) await openGroupModal(activeGroupId);
-});
-
-document.getElementById('groupBulkCheckOutBtn')?.addEventListener('click', async () => {
-    if (!activeGroupId) return;
-    await bulkGroupCheckOut(activeGroupId);
-    if (activeGroupId) await openGroupModal(activeGroupId);
-});
-
-document.getElementById('groupPaymentBtn')?.addEventListener('click', () => {
-    if (!activeGroupId) return;
-    if (typeof openGroupPaymentModal === 'function') {
-        openGroupPaymentModal(activeGroupId);
-    } else {
-        showMessage('Info', 'Group payment modal is not set up yet.');
-    }
-});
-
-let currentGroupPaymentBalance = 0;
-
-function closeGroupPaymentModal() {
-    const modal = document.getElementById('groupPaymentModal');
-    const form = document.getElementById('groupPaymentForm');
-    if (modal) modal.classList.add('hidden');
-    if (form && typeof form.reset === 'function') form.reset();
-    currentGroupPaymentBalance = 0;
-}
-
-async function openGroupPaymentModal(groupId, knownBalance = null) {
-    if (!groupId) return;
-
-    const modal = document.getElementById('groupPaymentModal');
-    const groupIdInput = document.getElementById('groupPaymentGroupId');
-    const subtitleEl = document.getElementById('groupPaymentSubtitle');
-    const balanceEl = document.getElementById('groupPaymentTotalBalance');
-    const amountInput = document.getElementById('groupPaymentAmount');
-
-    if (!modal) return;
-    modal.classList.remove('hidden');
-
-    if (groupIdInput) groupIdInput.value = groupId;
-    if (subtitleEl) subtitleEl.textContent = `Group ID: ${groupId}`;
-
-    let balance = knownBalance !== null ? Number(knownBalance) || 0 : null;
-
-    if (balance === null) {
-        if (balanceEl) balanceEl.textContent = 'Loading...';
-        try {
-            const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}`, {
-                method: 'GET'
-            });
-            const data = res ? await res.json().catch(() => ({})) : {};
-            if (res && res.ok && data.summary) {
-                balance = Number(data.summary.balance) || 0;
-                if (data.summary.groupName && subtitleEl) {
-                    subtitleEl.textContent = `${formatStatusText(data.summary.groupName)} (${groupId})`;
-                }
-            } else {
-                balance = 0;
-            }
-        } catch (err) {
-            console.warn('Could not fetch live group balance:', err);
-            balance = 0;
-        }
-    }
-
-    currentGroupPaymentBalance = balance;
-    if (balanceEl) {
-        balanceEl.textContent = typeof formatGroupMoney === 'function'
-            ? formatGroupMoney(balance)
-            : balance.toFixed(2);
-    }
-
-    if (amountInput) {
-        amountInput.value = balance > 0 ? balance.toFixed(2) : '';
-        amountInput.focus();
-    }
-}
-
-// Quick helper button to fill the full remaining balance
-document.getElementById('fillFullGroupBalanceBtn')?.addEventListener('click', () => {
-    const amountInput = document.getElementById('groupPaymentAmount');
-    if (amountInput && currentGroupPaymentBalance > 0) {
-        amountInput.value = currentGroupPaymentBalance.toFixed(2);
-    }
-});
-
-// Handle Group Payment submission
-document.getElementById('groupPaymentForm')?.addEventListener('submit', async function (event) {
-    event.preventDefault();
-
-    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
-    const currentUsername = sessionData?.username || sessionData?.name || 'System';
-
-    const groupId = document.getElementById('groupPaymentGroupId')?.value?.trim();
-    const amount = parseFloat(document.getElementById('groupPaymentAmount')?.value);
-    const paymentMethod = document.getElementById('groupPaymentMethod')?.value || 'Cash';
-    const transactionid = document.getElementById('groupPaymentTxnId')?.value?.trim() || '';
-
-    if (!groupId) {
-        showMessage('Error', 'Missing group reference.', true);
-        return;
-    }
-
-    if (!amount || Number.isNaN(amount) || amount <= 0) {
-        showMessage('Error', 'Please enter a valid payment amount greater than zero.', true);
-        return;
-    }
-
-    const submitBtn = document.getElementById('submitGroupPaymentBtn');
-    const originalHtml = submitBtn ? submitBtn.innerHTML : '';
-
+async function bulkGroupCheckOut(groupId) {
     try {
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Recording...</span>`;
-        }
-
-        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/payment`, {
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/checkout`, {
             method: 'POST',
-            body: JSON.stringify({
-                amount,
-                paymentMethod,
-                transactionid,
-                username: currentUsername
-            })
+            body: JSON.stringify({ allowUnpaidBalance: false })
         });
-
         const data = res ? await res.json().catch(() => ({})) : {};
-        if (!res || !res.ok) {
-            throw new Error(data.message || `HTTP error status: ${res?.status || 'Network error'}`);
-        }
+        if (!res || !res.ok) throw new Error(data.message || 'Bulk check-out failed');
 
-        showMessage('Success', data.message || 'Group payment recorded successfully!');
-        closeGroupPaymentModal();
-
-        if (typeof refreshBookingViews === 'function') {
-            await refreshBookingViews();
-        } else if (typeof renderBookings === 'function') {
-            await renderBookings(currentPage, currentSearchTerm);
-        }
-
-        // If the Group Summary modal is currently open for this group, refresh its numbers
-        const summaryModal = document.getElementById('groupSummaryModal');
-        if (summaryModal && !summaryModal.classList.contains('hidden') && typeof activeGroupId !== 'undefined' && activeGroupId === groupId) {
-            await openGroupModal(groupId);
-        }
-    } catch (error) {
-        console.error('Error submitting group payment:', error);
-        showMessage('Error', `Failed to record group payment: ${error.message}`, true);
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalHtml;
-        }
+        showMessage('Success', data.message || 'Group checked out!');
+        await refreshBookingViews();
+    } catch (err) {
+        showMessage('Error', err.message, true);
     }
-});
+}
