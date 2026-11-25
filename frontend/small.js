@@ -19903,106 +19903,6 @@ const groupBookingPanel = document.getElementById('groupBookingPanel');
 const singleRoomWrapper = document.getElementById('singleRoomWrapper');
 const singleRoomSelect = document.getElementById('room');
 
-async function loadGroupBookingRooms() {
-    if (!groupRoomsChecklist) return;
-
-    const checkIn = document.getElementById('checkIn')?.value || '';
-    const checkOut = document.getElementById('checkOut')?.value || '';
-
-    if (checkIn && checkOut && checkOut <= checkIn) {
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">Check-out date must be after check-in date.</p>`;
-        updateSelectedRoomsBadge();
-        return;
-    }
-
-    // Preserve any rooms already checked before refreshing
-    const previouslyChecked = new Set(getSelectedGroupRoomNumbers());
-
-    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Checking available rooms...</p>`;
-
-    try {
-        const params = new URLSearchParams();
-        if (checkIn) params.set('checkIn', checkIn);
-        if (checkOut) params.set('checkOut', checkOut);
-
-        const queryString = params.toString();
-        const url = `${API_BASE_URL}/rooms/available${queryString ? `?${queryString}` : ''}`;
-
-        const res = await authenticatedFetch(url);
-        if (!res || !res.ok) {
-            const errData = res ? await res.json().catch(() => ({})) : {};
-            throw new Error(errData.message || 'Failed to load available rooms');
-        }
-
-        const data = await res.json();
-        const roomsList = Array.isArray(data) ? data : (data.rooms || []);
-
-        const normalized = roomsList.map((room) => ({
-            number: room.number,
-            rate: room.rate ?? room.amtPerNight ?? room.roomTypeId?.rate ?? room.roomTypeId?.price ?? null
-        }));
-
-        renderGroupRoomOptions(normalized);
-
-        // Re-check any rooms that are still available for the new dates
-        groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
-            if (previouslyChecked.has(cb.value.trim())) {
-                cb.checked = true;
-            }
-        });
-        updateSelectedRoomsBadge();
-    } catch (error) {
-        console.error('Error loading available group rooms:', error);
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">${error.message}</p>`;
-        updateSelectedRoomsBadge();
-    }
-}
-
-// Re-filter available rooms automatically when check-in or check-out dates change
-document.getElementById('checkIn')?.addEventListener('change', () => {
-    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
-});
-
-document.getElementById('checkOut')?.addEventListener('change', () => {
-    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
-});
-
-
-function updateSelectedRoomsBadge() {
-    const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
-    if (selectedRoomsCount) {
-        selectedRoomsCount.textContent = `(${count} selected)`;
-    }
-}
-
-function renderGroupRoomOptions(rooms = []) {
-    if (!groupRoomsChecklist) return;
-
-    if (!rooms.length) {
-        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">No rooms available.</p>`;
-        updateSelectedRoomsBadge();
-        return;
-    }
-
-    groupRoomsChecklist.innerHTML = rooms.map((r) => {
-        const roomNum = typeof r === 'string' ? r : r.number;
-        const rateText = typeof r === 'object' && r.rate ? ` · ${Number(r.rate).toLocaleString()}` : '';
-
-        return `
-            <label class="group-room-item flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 hover:border-indigo-400 cursor-pointer text-xs font-semibold text-slate-700 transition select-none has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:text-indigo-800">
-                <input type="checkbox" value="${roomNum}" class="group-room-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                <span class="truncate">Room ${roomNum}${rateText}</span>
-            </label>
-        `;
-    }).join('');
-
-    groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
-        cb.addEventListener('change', updateSelectedRoomsBadge);
-    });
-
-    updateSelectedRoomsBadge();
-}
-
 // Helper to get selected room numbers when submitting the form
 function getSelectedGroupRoomNumbers() {
     if (!groupRoomsChecklist) return [];
@@ -20149,7 +20049,6 @@ function recalculateFolioTotals() {
     }
 }
 
-// Reset manual rate override when dates or group toggle change
 ['checkIn', 'checkOut', 'isGroupBooking'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', () => {
         manualRateOverride = false;
@@ -20163,7 +20062,112 @@ document.getElementById('amtPerNight')?.addEventListener('input', () => {
 });
 
 document.getElementById('amountPaid')?.addEventListener('input', recalculateFolioTotals);
+
 document.getElementById('groupRoomsChecklist')?.addEventListener('change', () => {
     manualRateOverride = false;
     recalculateFolioTotals();
 });
+
+async function loadGroupBookingRooms() {
+    if (!groupRoomsChecklist) return;
+
+    const checkIn = document.getElementById('checkIn')?.value || '';
+    const checkOut = document.getElementById('checkOut')?.value || '';
+
+    if (checkIn && checkOut && checkOut <= checkIn) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">Check-out date must be after check-in date.</p>`;
+        updateSelectedRoomsBadge();
+        recalculateFolioTotals();
+        return;
+    }
+
+    const previouslyChecked = new Set(getSelectedGroupRoomNumbers());
+    groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">Checking available rooms...</p>`;
+
+    try {
+        const params = new URLSearchParams();
+        if (checkIn) params.set('checkIn', checkIn);
+        if (checkOut) params.set('checkOut', checkOut);
+
+        const queryString = params.toString();
+        const url = `${API_BASE_URL}/rooms/available${queryString ? `?${queryString}` : ''}`;
+
+        const res = await authenticatedFetch(url);
+        if (!res || !res.ok) {
+            const errData = res ? await res.json().catch(() => ({})) : {};
+            throw new Error(errData.message || 'Failed to load available rooms');
+        }
+
+        const data = await res.json();
+        const roomsList = Array.isArray(data) ? data : (data.rooms || []);
+
+        roomCatalogByNumber.clear();
+        const normalized = roomsList.map((room) => {
+            const num = String(room.number || '').trim();
+            if (num) roomCatalogByNumber.set(num, room);
+            return {
+                number: num,
+                rate: resolveNightlyRate(room, checkIn)
+            };
+        });
+
+        renderGroupRoomOptions(normalized);
+
+        groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+            if (previouslyChecked.has(cb.value.trim())) {
+                cb.checked = true;
+            }
+        });
+
+        updateSelectedRoomsBadge();
+        recalculateFolioTotals();
+    } catch (error) {
+        console.error('Error loading available group rooms:', error);
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-rose-500 py-2">${error.message}</p>`;
+        updateSelectedRoomsBadge();
+    }
+}
+
+document.getElementById('checkIn')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
+document.getElementById('checkOut')?.addEventListener('change', () => {
+    if (isGroupBookingCheckbox?.checked) loadGroupBookingRooms();
+});
+
+function updateSelectedRoomsBadge() {
+    const count = groupRoomsChecklist.querySelectorAll('input[type="checkbox"]:checked').length;
+    if (selectedRoomsCount) {
+        selectedRoomsCount.textContent = `(${count} selected)`;
+    }
+}
+
+function renderGroupRoomOptions(rooms = []) {
+    if (!groupRoomsChecklist) return;
+
+    if (!rooms.length) {
+        groupRoomsChecklist.innerHTML = `<p class="col-span-full text-xs text-slate-400 py-2">No rooms available.</p>`;
+        updateSelectedRoomsBadge();
+        return;
+    }
+
+    groupRoomsChecklist.innerHTML = rooms.map((r) => {
+        const roomNum = typeof r === 'string' ? r : r.number;
+        const rateNum = typeof r === 'object' ? Number(r.rate) : 0;
+        const rateText = rateNum > 0 ? ` · ${rateNum.toLocaleString()}` : '';
+
+        return `
+            <label class="group-room-item flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 hover:border-indigo-400 cursor-pointer text-xs font-semibold text-slate-700 transition select-none has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 has-[:checked]:text-indigo-800">
+                <input type="checkbox" value="${roomNum}" class="group-room-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="truncate">Room ${roomNum}${rateText}</span>
+            </label>
+        `;
+    }).join('');
+
+    groupRoomsChecklist.querySelectorAll('.group-room-checkbox').forEach((cb) => {
+        cb.addEventListener('change', updateSelectedRoomsBadge);
+    });
+
+    updateSelectedRoomsBadge();
+}
