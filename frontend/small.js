@@ -2754,14 +2754,23 @@ bookingForm.addEventListener('submit', async function(event) {
 
     let selectedRooms = [];
     if (isGroupBooking) {
-        const selectedOptions = Array.from(document.getElementById('groupRoomsSelect')?.selectedOptions || []);
-        selectedRooms = selectedOptions
-            .map(opt => ({
-                room: opt.value.trim(),
-                amtPerNight: bookingData.amtPerNight,
+        const chosenRoomNumbers = getSelectedGroupRoomNumbers();
+        const customRate = manualRateOverride
+            ? (parseFloat(document.getElementById('amtPerNight')?.value) || 0)
+            : null;
+
+        selectedRooms = chosenRoomNumbers.map((roomNum) => {
+            const roomObj = roomCatalogByNumber.get(roomNum);
+            const roomRate = customRate !== null
+                ? customRate
+                : resolveNightlyRate(roomObj, bookingData.checkIn);
+
+            return {
+                room: roomNum,
+                amtPerNight: roomRate,
                 people: bookingData.people
-            }))
-            .filter(item => item.room);
+            };
+        });
 
         if (selectedRooms.length === 0) {
             showMessage('Error', 'Please select at least one room for the group booking.', true);
@@ -2825,6 +2834,7 @@ bookingForm.addEventListener('submit', async function(event) {
             bookingForm.reset();
             const groupPanel = document.getElementById('groupBookingPanel');
             if (groupPanel) groupPanel.classList.add('hidden');
+            if (typeof updateSelectedRoomsBadge === 'function') updateSelectedRoomsBadge();
         }
 
         // Refresh UI components
