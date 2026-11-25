@@ -20274,6 +20274,8 @@ async function openGroupModal(groupId) {
             .filter(b => !['cancelled', 'void'].includes(b.gueststatus))
             .reduce((sum, b) => sum + (Number(b.people) || 1), 0);
 
+        await populateAddGroupRoomDropdown(summary.checkIn, summary.checkOut);
+
         document.getElementById('groupModalTitle').textContent = safeText(summary.groupName, groupId);
         document.getElementById('groupModalIdBadge').textContent = groupId;
         document.getElementById('groupModalSubtitle').textContent =
@@ -20537,54 +20539,110 @@ document.getElementById('groupPaymentForm')?.addEventListener('submit', async fu
     }
 });
 
-async function populateAddGroupRoomDropdown(checkIn, checkOut) {
-    const select = document.getElementById('addGroupRoomSelect');
-    if (!select) return;
+let currentGroupCheckIn = '';
 
-    select.innerHTML = `<option value="">Loading available rooms...</option>`;
+async function fetchAvailableRoomsForGroup(checkIn, checkOut) {
+    const params = new URLSearchParams();
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    const qs = params.toString();
 
-    try {
-        const params = new URLSearchParams();
-        if (checkIn) params.set('checkIn', checkIn);
-        if (checkOut) params.set('checkOut', checkOut);
+    const candidateUrls = [
+        `${API_BASE_URL}/rooms/available${qs ? `?${qs}` : ''}`,
+        `${API_BASE_URL.replace(/\/api\/?$/, '')}/api/rooms/available${qs ? `?${qs}` : ''}`
+    ];
+    const uniqueUrls = [...new Set(candidateUrls)];
 
-        const qs = params.toString();
-        const res = await authenticatedFetch(`${API_BASE_URL}/rooms/available${qs ? `?${qs}` : ''}`, {
-            method: 'GET'
-        });
+    let lastError = new Error('Unable to fetch available rooms.');
 
-        const data = res ? await res.json().catch(() => ({})) : {};
-        const rooms = Array.isArray(data) ? data : (data.rooms || []);
+    for (const url of uniqueUrls) {
+        try {
+            const res = await authenticatedFetch(url, { method: 'GET' });
+            if (!res) continue;
 
-        if (!rooms.length) {
-            select.innerHTML = `<option value="">No rooms available for these dates</option>`;
-            return;
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                return Array.isArray(data) ? data : (data.rooms || []);
+            }
+            lastError = new Error(data.message || `HTTP ${res.status}`);
+        } catch (err) {
+            lastError = err;
         }
+    }
 
-        select.innerHTML = `<option value="">Select Room</option>` + rooms.map((r) => {
-            const rate = typeof resolveNightlyRate === 'function'
-                ? resolveNightlyRate(r, checkIn)
-                : Number(r.roomTypeId?.basePrice ?? r.rate ?? 0);
-            const rateLabel = rate > 0 ? ` (${Number(rate).toLocaleString()}/night)` : '';
-            return `<option value="${r.number}" data-rate="${rate}">Room ${r.number}${rateLabel}</option>`;
-        }).join('');
-    } catch (err) {
-        console.error('Error loading rooms for group add:', err);
-        select.innerHTML = `<option value="">Error loading rooms</option>`;
+    throw lastError;
+}
+
+function applySelectedRoomPriceToInput() {
+    const select = document.getElementById('addGroupRoomSelect');
+    const rateInput = document.getElementById('addGroupRatePerNight');
+    if (!select || !rateInput) return;
+
+    const selectedOption = select.selectedOptions?.[0];
+    const rawRate = selectedOption?.dataset?.rate;
+
+    if (rawRate !== undefined && rawRate !== '' && !Number.isNaN(Number(rawRate))) {
+        rateInput.value = Number(rawRate).toFixed(2);
+    } else {
+        rateInput.value = '';
     }
 }
 
-// Auto-fill rate input when a room is chosen in the "Add Room to Group" dropdown
-document.getElementById('addGroupRoomSelect')?.addEventListener('change', (e) => {
-    const selectedOpt = e.target.selectedOptions?.[0];
+async function populateAddGroupRoomDropdown(checkIn, checkOut) {
+    const select = document.getElementById('addGroupRoomSelect');
     const rateInput = document.getElementById('addGroupRatePerNight');
-    if (selectedOpt && rateInput) {
-        const autoRate = selectedOpt.dataset.rate;
-        if (autoRate !== undefined && Number(autoRate) > 0) {
-            rateInput.value = Number(autoRate);
+    if (!select) return;
+
+    currentGroupCheckIn = checkIn || '';
+    select.innerHTML = `<option value="">Loading available rooms...</option>`;
+    if (rateInput) rateInput.value = '';
+
+    try {
+        const rooms = await fetchAvailableRoomsForGroup(checkIn, checkOut);
+
+        if (!Array.isArray(rooms) || rooms.length === 0) {
+            select.innerHTML = `<option value="">No available rooms for these dates</option>`;
+            if (rateInput) rateInput.value = '';
+            return;
         }
+
+        select.innerHTML =
+            `<option value="">Select Room</option>` +
+            rooms
+                .map((room) => {
+                    const roomNum = String(room.number || '').trim();
+                    const typeName =
+                        room.roomTypeId && typeof room.roomTypeId === 'object'
+                            ? room.roomTypeId.name
+                            : '';
+                    const rate = resolveGroupRoomRate(room, currentGroupCheckIn);
+                    const rateFormatted = Number(rate).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    const labelParts = [`Room ${roomNum}`];
+                    if (typeName) labelParts.push(typeName);
+                    labelParts.push(`${rateFormatted}/night`);
+
+                    return `<option value="${escapeHtml(roomNum)}" data-rate="${rate}">${escapeHtml(labelParts.join(' · '))}</option>`;
+                })
+                .join('');
+
+        // Automatically select and display the first available room's price right away
+        if (select.options.length > 1) {
+            select.selectedIndex = 1;
+            applySelectedRoomPriceToInput();
+        }
+    } catch (err) {
+        console.error('Error populating group room dropdown:', err);
+        select.innerHTML = `<option value="">Could not load rooms</option>`;
+        if (rateInput) rateInput.value = '';
     }
-});
+}
+
+document.getElementById('addGroupRoomSelect')?.addEventListener('change', applySelectedRoomPriceToInput);
+
+
 
 // Submit handler to add a room to the active group
 document.getElementById('addGroupRoomForm')?.addEventListener('submit', async function (event) {
@@ -21017,4 +21075,31 @@ async function printGroupInvoice(groupId) {
             printBtn.innerHTML = origHtml;
         }
     }
+}
+
+function resolveGroupRoomRate(roomDoc, checkInStr) {
+    const roomType =
+        roomDoc?.roomTypeId && typeof roomDoc.roomTypeId === 'object'
+            ? roomDoc.roomTypeId
+            : null;
+
+    let rate = Number(roomType?.basePrice ?? roomDoc?.rate ?? roomDoc?.amtPerNight ?? 0) || 0;
+
+    if (checkInStr && Array.isArray(roomType?.seasonalRates) && roomType.seasonalRates.length > 0) {
+        const checkInDate = new Date(`${checkInStr}T00:00:00`);
+        if (!Number.isNaN(checkInDate.getTime())) {
+            const matchedSeason = roomType.seasonalRates.find((season) => {
+                if (!season?.startDate || !season?.endDate || season?.rate == null) return false;
+                const start = new Date(season.startDate);
+                const end = new Date(season.endDate);
+                return checkInDate >= start && checkInDate <= end;
+            });
+
+            if (matchedSeason && !Number.isNaN(Number(matchedSeason.rate))) {
+                rate = Number(matchedSeason.rate);
+            }
+        }
+    }
+
+    return rate;
 }
