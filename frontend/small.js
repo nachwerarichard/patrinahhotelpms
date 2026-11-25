@@ -20205,3 +20205,146 @@ function renderGroupRoomOptions(rooms = []) {
 
     updateSelectedRoomsBadge();
 }
+
+let activeGroupId = null;
+
+function formatGroupMoney(amount) {
+    const num = Number(amount) || 0;
+    const currency = localStorage.getItem('hotelCurrency');
+    return currency ? `${currency} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function closeGroupModal() {
+    const modal = document.getElementById('groupSummaryModal');
+    if (modal) modal.classList.add('hidden');
+    activeGroupId = null;
+}
+
+async function openGroupModal(groupId) {
+    if (!groupId) return;
+    activeGroupId = groupId;
+
+    const modal = document.getElementById('groupSummaryModal');
+    const tbody = document.getElementById('groupRoomingListBody');
+    const checkInBtn = document.getElementById('groupBulkCheckInBtn');
+    const paymentBtn = document.getElementById('groupPaymentBtn');
+    const checkOutBtn = document.getElementById('groupBulkCheckOutBtn');
+
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    document.getElementById('groupModalTitle').textContent = 'Loading Group...';
+    document.getElementById('groupModalIdBadge').textContent = groupId;
+    document.getElementById('groupModalSubtitle').textContent = '';
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Loading rooming list...</td></tr>`;
+    }
+
+    try {
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}`, {
+            method: 'GET'
+        });
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) {
+            throw new Error(data.message || 'Failed to load group booking details.');
+        }
+
+        const { summary = {}, bookings = [] } = data;
+
+        document.getElementById('groupModalTitle').textContent = formatStatusText(summary.groupName || groupId);
+        document.getElementById('groupModalIdBadge').textContent = groupId;
+        document.getElementById('groupModalSubtitle').textContent = `Check-In: ${summary.checkIn || '-'}  →  Check-Out: ${summary.checkOut || '-'}`;
+        document.getElementById('groupLeadGuestText').textContent = `Lead Guest: ${summary.leadGuest || '-'}`;
+
+        document.getElementById('groupActiveRooms').textContent = `${summary.activeRooms ?? 0} / ${summary.totalRooms ?? bookings.length}`;
+        document.getElementById('groupTotalDue').textContent = formatGroupMoney(summary.totalDue);
+        document.getElementById('groupAmountPaid').textContent = formatGroupMoney(summary.amountPaid);
+        document.getElementById('groupBalance').textContent = formatGroupMoney(summary.balance);
+
+        // Toggle action button availability based on room states and balance
+        const hasCheckInEligible = bookings.some(b => ['reserved', 'confirmed'].includes(b.gueststatus));
+        const hasCheckedInRooms = bookings.some(b => b.gueststatus === 'checkedin');
+        const hasBalance = (Number(summary.balance) || 0) > 0;
+
+        if (checkInBtn) {
+            checkInBtn.disabled = !hasCheckInEligible;
+            checkInBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasCheckInEligible);
+        }
+        if (paymentBtn) {
+            paymentBtn.disabled = !hasBalance;
+            paymentBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasBalance);
+        }
+        if (checkOutBtn) {
+            checkOutBtn.disabled = !hasCheckedInRooms;
+            checkOutBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasCheckedInRooms);
+        }
+
+        // Render rooming list rows
+        if (!tbody) return;
+        if (!bookings.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No rooms found in this group.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = bookings.map((b) => {
+            const isInactive = ['cancelled', 'void'].includes(b.gueststatus);
+            const roomBalance = Number(b.balance) || 0;
+            const roomTotal = Number(b.totalDue) || 0;
+            const leadTag = b.isGroupLead
+                ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Lead</span>`
+                : '';
+
+            return `
+                <tr class="${isInactive ? 'bg-rose-50/40 text-slate-400' : 'hover:bg-slate-50/80 text-slate-700'}">
+                    <td class="py-2.5 px-3 font-bold text-slate-900">Room ${b.room || '-'}</td>
+                    <td class="py-2.5 px-3 font-medium capitalize">
+                        <span>${formatStatusText(b.name || 'Unassigned')}</span>
+                        ${leadTag}
+                        ${b.nationalIdNo ? `<span class="block text-[11px] text-slate-400 font-normal">ID: ${b.nationalIdNo}</span>` : ''}
+                    </td>
+                    <td class="py-2.5 px-3">${b.people || 1}</td>
+                    <td class="py-2.5 px-3">${typeof getGuestStatusBadge === 'function' ? getGuestStatusBadge(b.gueststatus) : b.gueststatus}</td>
+                    <td class="py-2.5 px-3 text-right font-semibold">${formatGroupMoney(roomTotal)}</td>
+                    <td class="py-2.5 px-3 text-right font-semibold ${roomBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatGroupMoney(roomBalance)}</td>
+                    <td class="py-2.5 px-3 text-right">
+                        ${!['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function' ? `
+                            <button type="button"
+                                onclick="closeGroupModal(); editBooking('${b.id}');"
+                                class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
+                                Edit
+                            </button>
+                        ` : `<span class="text-slate-300">—</span>`}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Error opening group modal:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-rose-500 font-semibold">${error.message}</td></tr>`;
+        }
+    }
+}
+
+// Wire bulk buttons inside #groupSummaryModal
+document.getElementById('groupBulkCheckInBtn')?.addEventListener('click', async () => {
+    if (!activeGroupId) return;
+    await bulkGroupCheckIn(activeGroupId);
+    if (activeGroupId) await openGroupModal(activeGroupId);
+});
+
+document.getElementById('groupBulkCheckOutBtn')?.addEventListener('click', async () => {
+    if (!activeGroupId) return;
+    await bulkGroupCheckOut(activeGroupId);
+    if (activeGroupId) await openGroupModal(activeGroupId);
+});
+
+document.getElementById('groupPaymentBtn')?.addEventListener('click', () => {
+    if (!activeGroupId) return;
+    if (typeof openGroupPaymentModal === 'function') {
+        openGroupPaymentModal(activeGroupId);
+    } else {
+        showMessage('Info', 'Group payment modal is not set up yet.');
+    }
+});
