@@ -20325,6 +20325,7 @@ async function openGroupModal(groupId) {
                 : '';
 
             const canEdit = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function';
+            const canRemove = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus);
 
             return `
                 <tr class="${isInactive ? 'bg-rose-50/40 text-slate-400' : 'hover:bg-slate-50/80 text-slate-700'}">
@@ -20343,13 +20344,22 @@ async function openGroupModal(groupId) {
                     <td class="py-2.5 px-3 text-right font-semibold">${formatGroupMoney(roomTotal)}</td>
                     <td class="py-2.5 px-3 text-right font-semibold ${roomBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatGroupMoney(roomBalance)}</td>
                     <td class="py-2.5 px-3 text-right">
-                        ${canEdit ? `
-                            <button type="button"
-                                onclick="closeGroupModal(); editBooking('${b.id}');"
-                                class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
-                                Edit
-                            </button>
-                        ` : `<span class="text-slate-300">—</span>`}
+                        <div class="inline-flex items-center justify-end gap-1.5">
+                            ${canEdit ? `
+                                <button type="button"
+                                    onclick="closeGroupModal(); editBooking('${b.id}');"
+                                    class="px-2 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
+                                    Edit
+                                </button>
+                            ` : ''}
+                            ${canRemove ? `
+                                <button type="button"
+                                    onclick="removeRoomFromGroup('${groupId}', '${b.id}', '${b.room}')"
+                                    class="px-2 py-1 text-[11px] font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition">
+                                    Remove
+                                </button>
+                            ` : (!canEdit ? `<span class="text-slate-300">—</span>` : '')}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -20523,3 +20533,149 @@ document.getElementById('groupPaymentForm')?.addEventListener('submit', async fu
         }
     }
 });
+
+async function populateAddGroupRoomDropdown(checkIn, checkOut) {
+    const select = document.getElementById('addGroupRoomSelect');
+    if (!select) return;
+
+    select.innerHTML = `<option value="">Loading available rooms...</option>`;
+
+    try {
+        const params = new URLSearchParams();
+        if (checkIn) params.set('checkIn', checkIn);
+        if (checkOut) params.set('checkOut', checkOut);
+
+        const qs = params.toString();
+        const res = await authenticatedFetch(`${API_BASE_URL}/rooms/available${qs ? `?${qs}` : ''}`, {
+            method: 'GET'
+        });
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        const rooms = Array.isArray(data) ? data : (data.rooms || []);
+
+        if (!rooms.length) {
+            select.innerHTML = `<option value="">No rooms available for these dates</option>`;
+            return;
+        }
+
+        select.innerHTML = `<option value="">Select Room</option>` + rooms.map((r) => {
+            const rate = typeof resolveNightlyRate === 'function'
+                ? resolveNightlyRate(r, checkIn)
+                : Number(r.roomTypeId?.basePrice ?? r.rate ?? 0);
+            const rateLabel = rate > 0 ? ` (${Number(rate).toLocaleString()}/night)` : '';
+            return `<option value="${r.number}" data-rate="${rate}">Room ${r.number}${rateLabel}</option>`;
+        }).join('');
+    } catch (err) {
+        console.error('Error loading rooms for group add:', err);
+        select.innerHTML = `<option value="">Error loading rooms</option>`;
+    }
+}
+
+// Auto-fill rate input when a room is chosen in the "Add Room to Group" dropdown
+document.getElementById('addGroupRoomSelect')?.addEventListener('change', (e) => {
+    const selectedOpt = e.target.selectedOptions?.[0];
+    const rateInput = document.getElementById('addGroupRatePerNight');
+    if (selectedOpt && rateInput) {
+        const autoRate = selectedOpt.dataset.rate;
+        if (autoRate !== undefined && Number(autoRate) > 0) {
+            rateInput.value = Number(autoRate);
+        }
+    }
+});
+
+// Submit handler to add a room to the active group
+document.getElementById('addGroupRoomForm')?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (!activeGroupId) return;
+
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const currentUsername = sessionData?.username || sessionData?.name || 'System';
+
+    const room = document.getElementById('addGroupRoomSelect')?.value?.trim();
+    const occupantName = document.getElementById('addGroupOccupantName')?.value?.trim() || '';
+    const people = parseInt(document.getElementById('addGroupPeople')?.value, 10) || 1;
+    const rawRate = document.getElementById('addGroupRatePerNight')?.value;
+    const amtPerNight = rawRate !== '' ? parseFloat(rawRate) : undefined;
+
+    if (!room) {
+        showMessage('Error', 'Please choose a room to add.', true);
+        return;
+    }
+
+    const btn = document.getElementById('addGroupRoomBtn');
+    const origHtml = btn ? btn.innerHTML : '';
+
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Adding...</span>`;
+        }
+
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(activeGroupId)}/rooms`, {
+            method: 'POST',
+            body: JSON.stringify({
+                room,
+                occupantName,
+                people,
+                amtPerNight,
+                username: currentUsername
+            })
+        });
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) {
+            throw new Error(data.message || 'Failed to add room to group.');
+        }
+
+        showMessage('Success', data.message || `Room ${room} added!`);
+        this.reset();
+        document.getElementById('addGroupPeople').value = '1';
+
+        await openGroupModal(activeGroupId);
+        if (typeof refreshBookingViews === 'function') await refreshBookingViews();
+    } catch (err) {
+        console.error('Error adding room to group:', err);
+        showMessage('Error', err.message, true);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+});
+
+// Cancel / remove an individual room booking from the group
+async function removeRoomFromGroup(groupId, bookingId, roomNumber) {
+    if (!groupId || !bookingId) return;
+
+    const reason = window.prompt(`Reason for removing/cancelling Room ${roomNumber} from group ${groupId}:`, 'Removed from group booking');
+    if (reason === null) return; // User clicked Cancel in prompt
+
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const currentUsername = sessionData?.username || sessionData?.name || 'System';
+
+    try {
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/rooms/${encodeURIComponent(bookingId)}/cancel`,
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    reason: reason.trim() || 'Removed from group booking',
+                    username: currentUsername
+                })
+            }
+        );
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) {
+            throw new Error(data.message || 'Failed to remove room from group.');
+        }
+
+        showMessage('Success', data.message || `Room ${roomNumber} removed from group.`);
+        await openGroupModal(groupId);
+        if (typeof refreshBookingViews === 'function') await refreshBookingViews();
+    } catch (err) {
+        console.error('Error removing room from group:', err);
+        showMessage('Error', err.message, true);
+    }
+}

@@ -7399,6 +7399,42 @@ Manage payment providers used for guest payments.            </p>
                     <span id="groupBalance" class="text-lg font-bold text-rose-600 mt-0.5 block">0.00</span>
                 </div>
             </div>
+            <!-- Add inside #groupSummaryModal scrollable body, right above the Rooming List card -->
+<div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Add Room to Group</h3>
+        <span class="text-[11px] text-slate-400">Uses group check-in & check-out dates</span>
+    </div>
+
+    <form id="addGroupRoomForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 items-end">
+        <div class="flex flex-col">
+            <label for="addGroupRoomSelect" class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Room <span class="text-rose-500">*</span></label>
+            <select id="addGroupRoomSelect" required class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 font-semibold">
+                <option value="">Select Room</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col">
+            <label for="addGroupOccupantName" class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Occupant Name</label>
+            <input type="text" id="addGroupOccupantName" placeholder="Defaults to Lead Guest" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg text-slate-800">
+        </div>
+
+        <div class="flex flex-col">
+            <label for="addGroupPeople" class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Guests</label>
+            <input type="number" id="addGroupPeople" min="1" value="1" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg text-slate-800">
+        </div>
+
+        <div class="flex flex-col">
+            <label for="addGroupRatePerNight" class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Rate / Night</label>
+            <input type="number" id="addGroupRatePerNight" step="0.01" min="0" placeholder="Auto" class="px-2.5 py-2 text-xs border border-slate-200 rounded-lg text-slate-800">
+        </div>
+
+        <button type="submit" id="addGroupRoomBtn" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition inline-flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Room</span>
+        </button>
+    </form>
+</div>
 
             <!-- Rooming List Table -->
             <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">

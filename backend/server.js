@@ -13002,6 +13002,243 @@ app.post('/api/bookings/group/:groupId/payment', auth, async (req, res) => {
     }
 });
 
+// Add a room to an existing group booking
+app.post('/api/bookings/group/:groupId/rooms', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const groupId = String(req.params.groupId || '').trim();
+        const actingUser = req.user?.username || req.body?.username || 'System';
+
+        const {
+            room: roomNumberRaw,
+            occupantName,
+            people,
+            amtPerNight,
+            amountPaid = 0,
+            paymentMethod,
+            transactionid,
+            extraperson
+        } = req.body;
+
+        const roomNumber = String(roomNumberRaw || '').trim();
+        if (!roomNumber) {
+            return res.status(400).json({ message: 'Please select a room to add to the group.' });
+        }
+
+        // Find reference booking in this group to inherit dates, groupName, source, etc.
+        const groupAnchor = await Booking.findOne({ hotelId, groupId }).sort({ createdAt: 1 });
+        if (!groupAnchor) {
+            return res.status(404).json({ message: `Group ${groupId} not found.` });
+        }
+
+        const checkIn = groupAnchor.checkIn;
+        const checkOut = groupAnchor.checkOut;
+
+        // Verify room belongs to this hotel
+        const roomDoc = await Room.findOne({ hotelId, number: roomNumber }).populate('roomTypeId');
+        if (!roomDoc) {
+            return res.status(404).json({ message: `Room ${roomNumber} not found in your hotel.` });
+        }
+
+        if (roomDoc.status === 'under-maintenance') {
+            return res.status(400).json({ message: `Room ${roomNumber} is currently under maintenance.` });
+        }
+
+        // Check if this room is already part of this group (non-cancelled/non-void)
+        const existingInGroup = await Booking.findOne({
+            hotelId,
+            groupId,
+            room: roomNumber,
+            gueststatus: { $nin: ['cancelled', 'void'] }
+        });
+        if (existingInGroup) {
+            return res.status(409).json({ message: `Room ${roomNumber} is already active in group ${groupId}.` });
+        }
+
+        // Check date conflicts across all non-cancelled/non-void bookings in this hotel
+        const conflict = await Booking.findOne({
+            hotelId,
+            room: roomNumber,
+            gueststatus: { $nin: ['cancelled', 'void'] },
+            checkIn: { $lt: checkOut },
+            checkOut: { $gt: checkIn }
+        });
+
+        if (conflict) {
+            return res.status(409).json({
+                message: `Room ${roomNumber} has a conflicting booking (${conflict.id}) from ${conflict.checkIn} to ${conflict.checkOut}.`
+            });
+        }
+
+        // Compute nights and rate
+        const start = new Date(`${checkIn}T00:00:00`);
+        const end = new Date(`${checkOut}T00:00:00`);
+        const computedNights = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+        const nights = Number(groupAnchor.nights) || computedNights;
+
+        const rate = Number(
+            amtPerNight ??
+            roomDoc.roomTypeId?.basePrice ??
+            groupAnchor.amtPerNight ??
+            0
+        ) || 0;
+
+        const totalDue = Number((rate * nights).toFixed(2));
+        const paid = Math.max(0, Number(amountPaid) || 0);
+        const balance = Math.max(0, Number((totalDue - paid).toFixed(2)));
+        const paymentStatus = balance === 0 && totalDue > 0
+            ? 'Paid'
+            : paid > 0
+                ? 'Partially Paid'
+                : 'Pending';
+
+        // If the group anchor is already checked in, allow new room to start as checkedin or reserved/confirmed
+        const initialStatus = groupAnchor.gueststatus === 'checkedin' ? 'checkedin' : 'confirmed';
+
+        const newRoomBooking = new Booking({
+            hotelId,
+            id: `BKG${Math.floor(Math.random() * 900000) + 100000}`,
+            name: String(occupantName || '').trim() || groupAnchor.name,
+            room: roomNumber,
+            checkIn,
+            checkOut,
+            checkIntime: groupAnchor.checkIntime,
+            checkOuttime: groupAnchor.checkOuttime,
+            nights,
+            amtPerNight: rate,
+            totalDue,
+            amountPaid: paid,
+            balance,
+            paymentStatus,
+            paymentMethod: paymentMethod || groupAnchor.paymentMethod || 'Cash',
+            transactionid: transactionid || '',
+            gueststatus: initialStatus,
+            checkedIn: initialStatus === 'checkedin',
+            guestsource: groupAnchor.guestsource || 'Walk in',
+            people: Math.max(1, parseInt(people, 10) || Number(groupAnchor.people) || 1),
+            extraperson: extraperson ?? groupAnchor.extraperson ?? '',
+            nationality: groupAnchor.nationality || '',
+            address: groupAnchor.address || '',
+            phoneNo: groupAnchor.phoneNo || '',
+            guestEmail: groupAnchor.guestEmail || '',
+            nationalIdNo: '',
+            occupation: groupAnchor.occupation || '',
+            vehno: groupAnchor.vehno || '',
+            destination: groupAnchor.destination || '',
+            kin: groupAnchor.kin || '',
+            kintel: groupAnchor.kintel || '',
+            purpose: groupAnchor.purpose || '',
+            declarations: groupAnchor.declarations || '',
+            isGroupBooking: true,
+            groupId,
+            groupName: groupAnchor.groupName || `${groupAnchor.name} Group`,
+            isGroupLead: false,
+            recordedBy: actingUser
+        });
+
+        await newRoomBooking.save();
+
+        // Update physical room status if 'occupied' is in your roomSchema enum; otherwise 'blocked'
+        if (['confirmed', 'reserved', 'checkedin'].includes(initialStatus)) {
+            roomDoc.status = 'blocked';
+            await roomDoc.save();
+        }
+
+        await addAuditLog('Group Room Added', actingUser, hotelId, {
+            groupId,
+            bookingId: newRoomBooking.id,
+            room: roomNumber,
+            occupantName: newRoomBooking.name,
+            totalDue,
+            recordedBy: actingUser
+        });
+
+        res.status(201).json({
+            message: `Room ${roomNumber} added to group ${groupId}.`,
+            booking: newRoomBooking
+        });
+    } catch (error) {
+        console.error('Error adding room to group:', error);
+        res.status(500).json({ message: 'Failed to add room to group', error: error.message });
+    }
+});
+
+// Cancel / remove an individual room booking from a group
+app.post('/api/bookings/group/:groupId/rooms/:bookingId/cancel', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const groupId = String(req.params.groupId || '').trim();
+        const bookingId = String(req.params.bookingId || '').trim();
+        const reason = String(req.body?.reason || 'Removed from group booking').trim();
+        const actingUser = req.user?.username || req.body?.username || 'System';
+
+        const booking = await Booking.findOne({
+            hotelId,
+            groupId,
+            $or: [{ id: bookingId }, ...(bookingId.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: bookingId }] : [])]
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Room booking not found in this group.' });
+        }
+
+        if (booking.gueststatus === 'cancelled') {
+            return res.status(400).json({ message: `Room ${booking.room} is already cancelled.` });
+        }
+
+        if (booking.gueststatus === 'checkedout') {
+            return res.status(400).json({ message: `Room ${booking.room} is already checked out and cannot be cancelled.` });
+        }
+
+        const wasCheckedIn = booking.gueststatus === 'checkedin';
+        booking.gueststatus = 'cancelled';
+        booking.checkedIn = false;
+        booking.cancellationReason = reason;
+        booking.updatedBy = actingUser;
+
+        // If no money was paid, zero out balance; if money was paid, keep amountPaid visible for refund handling
+        if ((Number(booking.amountPaid) || 0) === 0) {
+            booking.balance = 0;
+            booking.paymentStatus = 'Pending';
+        }
+
+        await booking.save();
+
+        // Check if another active booking still occupies/blocks this room before freeing it
+        const stillInUse = await Booking.findOne({
+            hotelId,
+            room: booking.room,
+            _id: { $ne: booking._id },
+            gueststatus: { $in: ['confirmed', 'reserved', 'checkedin'] }
+        });
+
+        if (!stillInUse) {
+            const roomDoc = await Room.findOne({ hotelId, number: booking.room });
+            if (roomDoc && roomDoc.status !== 'under-maintenance') {
+                roomDoc.status = wasCheckedIn ? 'dirty' : 'clean';
+                await roomDoc.save();
+            }
+        }
+
+        await addAuditLog('Group Room Cancelled', actingUser, hotelId, {
+            groupId,
+            bookingId: booking.id,
+            room: booking.room,
+            guestName: booking.name,
+            reason,
+            updatedBy: actingUser
+        });
+
+        res.json({
+            message: `Room ${booking.room} removed/cancelled from group ${groupId}.`,
+            booking
+        });
+    } catch (error) {
+        console.error('Error cancelling room in group:', error);
+        res.status(500).json({ message: 'Failed to cancel room in group', error: error.message });
+    }
+});
+
 
 // Express endpoint on Render
 app.get('/api/pms/latest.json', (req, res) => {
