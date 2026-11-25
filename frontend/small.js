@@ -20208,10 +20208,21 @@ function renderGroupRoomOptions(rooms = []) {
 
 let activeGroupId = null;
 
+function safeText(val, fallback = '-') {
+    if (val === null || val === undefined || val === '') return fallback;
+    try {
+        return typeof formatStatusText === 'function' ? formatStatusText(val) : String(val);
+    } catch {
+        return String(val);
+    }
+}
+
 function formatGroupMoney(amount) {
     const num = Number(amount) || 0;
     const currency = localStorage.getItem('hotelCurrency');
-    return currency ? `${currency} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return currency
+        ? `${currency} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function closeGroupModal() {
@@ -20237,7 +20248,7 @@ async function openGroupModal(groupId) {
     document.getElementById('groupModalIdBadge').textContent = groupId;
     document.getElementById('groupModalSubtitle').textContent = '';
     if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Loading rooming list...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400 font-medium">Loading room bookings...</td></tr>`;
     }
 
     try {
@@ -20250,65 +20261,89 @@ async function openGroupModal(groupId) {
             throw new Error(data.message || 'Failed to load group booking details.');
         }
 
-        const { summary = {}, bookings = [] } = data;
+        const summary = data.summary || {};
+        const roomBookings = Array.isArray(data.bookings)
+            ? data.bookings
+            : (Array.isArray(data.rooms) ? data.rooms : []);
 
-        document.getElementById('groupModalTitle').textContent = formatStatusText(summary.groupName || groupId);
+        const roomListStr = roomBookings.map(b => b.room).filter(Boolean).join(', ') || '-';
+        const totalOccupancy = roomBookings
+            .filter(b => !['cancelled', 'void'].includes(b.gueststatus))
+            .reduce((sum, b) => sum + (Number(b.people) || 1), 0);
+
+        document.getElementById('groupModalTitle').textContent = safeText(summary.groupName, groupId);
         document.getElementById('groupModalIdBadge').textContent = groupId;
-        document.getElementById('groupModalSubtitle').textContent = `Check-In: ${summary.checkIn || '-'}  →  Check-Out: ${summary.checkOut || '-'}`;
-        document.getElementById('groupLeadGuestText').textContent = `Lead Guest: ${summary.leadGuest || '-'}`;
+        document.getElementById('groupModalSubtitle').textContent =
+            `${summary.checkIn || '-'} → ${summary.checkOut || '-'} · Rooms: ${roomListStr} (${totalOccupancy} guests)`;
+        document.getElementById('groupLeadGuestText').textContent = `Lead Guest: ${safeText(summary.leadGuest, 'N/A')}`;
 
-        document.getElementById('groupActiveRooms').textContent = `${summary.activeRooms ?? 0} / ${summary.totalRooms ?? bookings.length}`;
+        document.getElementById('groupActiveRooms').textContent =
+            `${summary.activeRooms ?? roomBookings.length} / ${summary.totalRooms ?? roomBookings.length}`;
         document.getElementById('groupTotalDue').textContent = formatGroupMoney(summary.totalDue);
         document.getElementById('groupAmountPaid').textContent = formatGroupMoney(summary.amountPaid);
         document.getElementById('groupBalance').textContent = formatGroupMoney(summary.balance);
 
-        // Toggle action button availability based on room states and balance
-        const hasCheckInEligible = bookings.some(b => ['reserved', 'confirmed'].includes(b.gueststatus));
-        const hasCheckedInRooms = bookings.some(b => b.gueststatus === 'checkedin');
+        const hasCheckInEligible = roomBookings.some(b => ['reserved', 'confirmed'].includes(b.gueststatus));
+        const hasCheckedInRooms = roomBookings.some(b => b.gueststatus === 'checkedin');
         const hasBalance = (Number(summary.balance) || 0) > 0;
 
         if (checkInBtn) {
             checkInBtn.disabled = !hasCheckInEligible;
-            checkInBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasCheckInEligible);
+            checkInBtn.classList.toggle('opacity-50', !hasCheckInEligible);
+            checkInBtn.classList.toggle('cursor-not-allowed', !hasCheckInEligible);
         }
         if (paymentBtn) {
             paymentBtn.disabled = !hasBalance;
-            paymentBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasBalance);
+            paymentBtn.classList.toggle('opacity-50', !hasBalance);
+            paymentBtn.classList.toggle('cursor-not-allowed', !hasBalance);
         }
         if (checkOutBtn) {
             checkOutBtn.disabled = !hasCheckedInRooms;
-            checkOutBtn.classList.toggle('opacity-50 cursor-not-allowed', !hasCheckedInRooms);
+            checkOutBtn.classList.toggle('opacity-50', !hasCheckedInRooms);
+            checkOutBtn.classList.toggle('cursor-not-allowed', !hasCheckedInRooms);
         }
 
-        // Render rooming list rows
         if (!tbody) return;
-        if (!bookings.length) {
-            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No rooms found in this group.</td></tr>`;
+
+        if (!roomBookings.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No individual room bookings found for ${groupId}.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = bookings.map((b) => {
+        tbody.innerHTML = roomBookings.map((b) => {
             const isInactive = ['cancelled', 'void'].includes(b.gueststatus);
             const roomBalance = Number(b.balance) || 0;
             const roomTotal = Number(b.totalDue) || 0;
+            const peopleCount = Number(b.people) || 1;
+            const occupantName = safeText(b.name, 'Unassigned');
+            const statusBadge = typeof getGuestStatusBadge === 'function'
+                ? getGuestStatusBadge(b.gueststatus)
+                : safeText(b.gueststatus);
+
             const leadTag = b.isGroupLead
                 ? `<span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Lead</span>`
                 : '';
 
+            const canEdit = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function';
+
             return `
                 <tr class="${isInactive ? 'bg-rose-50/40 text-slate-400' : 'hover:bg-slate-50/80 text-slate-700'}">
-                    <td class="py-2.5 px-3 font-bold text-slate-900">Room ${b.room || '-'}</td>
-                    <td class="py-2.5 px-3 font-medium capitalize">
-                        <span>${formatStatusText(b.name || 'Unassigned')}</span>
+                    <td class="py-2.5 px-3 font-bold text-slate-900">
+                        <div>Room ${b.room || '-'}</div>
+                        <div class="text-[10px] font-medium text-slate-400">${b.id || ''}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-medium">
+                        <span class="capitalize">${occupantName}</span>
                         ${leadTag}
+                        ${b.extraperson ? `<span class="block text-[11px] text-slate-500 font-normal">Extra: ${b.extraperson}</span>` : ''}
                         ${b.nationalIdNo ? `<span class="block text-[11px] text-slate-400 font-normal">ID: ${b.nationalIdNo}</span>` : ''}
                     </td>
-                    <td class="py-2.5 px-3">${b.people || 1}</td>
-                    <td class="py-2.5 px-3">${typeof getGuestStatusBadge === 'function' ? getGuestStatusBadge(b.gueststatus) : b.gueststatus}</td>
+                    <td class="py-2.5 px-3 font-semibold">${peopleCount} ${peopleCount === 1 ? 'guest' : 'guests'}</td>
+                    <td class="py-2.5 px-3">${statusBadge}</td>
                     <td class="py-2.5 px-3 text-right font-semibold">${formatGroupMoney(roomTotal)}</td>
                     <td class="py-2.5 px-3 text-right font-semibold ${roomBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatGroupMoney(roomBalance)}</td>
                     <td class="py-2.5 px-3 text-right">
-                        ${!['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function' ? `
+                        ${canEdit ? `
                             <button type="button"
                                 onclick="closeGroupModal(); editBooking('${b.id}');"
                                 class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
