@@ -20332,8 +20332,10 @@ updateAddGroupStayTotal();
                 : '';
 
             const canEdit = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus) && typeof editBooking === 'function';
-            const canRemove = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus);
-
+const canRemove = !['checkedout', 'cancelled', 'void'].includes(b.gueststatus);
+const safeBookingId = typeof escapeHtml === 'function' ? escapeHtml(b.id || '') : String(b.id || '');
+const safeGroupId = typeof escapeHtml === 'function' ? escapeHtml(groupId || '') : String(groupId || '');
+const safeRoomNum = typeof escapeHtml === 'function' ? escapeHtml(b.room || '') : String(b.room || '');
             return `
                 <tr class="${isInactive ? 'bg-rose-50/40 text-slate-400' : 'hover:bg-slate-50/80 text-slate-700'}">
                     <td class="py-2.5 px-3 font-bold text-slate-900">
@@ -20350,24 +20352,24 @@ updateAddGroupStayTotal();
                     <td class="py-2.5 px-3">${statusBadge}</td>
                     <td class="py-2.5 px-3 text-right font-semibold">${formatGroupMoney(roomTotal)}</td>
                     <td class="py-2.5 px-3 text-right font-semibold ${roomBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}">${formatGroupMoney(roomBalance)}</td>
-                    <td class="py-2.5 px-3 text-right">
-                        <div class="inline-flex items-center justify-end gap-1.5">
-                            ${canEdit ? `
-                                <button type="button"
-                                    onclick="closeGroupModal(); editBooking('${b.id}');"
-                                    class="px-2 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition">
-                                    Edit
-                                </button>
-                            ` : ''}
-                            ${canRemove ? `
-                                <button type="button"
-                                    onclick="removeRoomFromGroup('${groupId}', '${b.id}', '${b.room}')"
-                                    class="px-2 py-1 text-[11px] font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition">
-                                    Remove
-                                </button>
-                            ` : (!canEdit ? `<span class="text-slate-300">—</span>` : '')}
-                        </div>
-                    </td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap">
+    <div class="inline-flex items-center justify-end gap-1.5">
+        ${canEdit ? `
+            <button type="button"
+                onclick="closeGroupModal(); editBooking('${safeBookingId}');"
+                class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition whitespace-nowrap shrink-0">
+                Edit
+            </button>
+        ` : ''}
+        ${canRemove ? `
+            <button type="button"
+                onclick="removeRoomFromGroup('${safeGroupId}', '${safeBookingId}', '${safeRoomNum}')"
+                class="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition whitespace-nowrap shrink-0">
+                Remove
+            </button>
+        ` : (!canEdit ? `<span class="text-slate-300">—</span>` : '')}
+    </div>
+</td>
                 </tr>
             `;
         }).join('');
