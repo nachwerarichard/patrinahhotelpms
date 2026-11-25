@@ -19973,8 +19973,32 @@ async function bulkGroupCheckOut(groupId) {
     }
 }
 
+const roomCatalogByNumber = new Map();
 let manualRateOverride = false;
 
+function resolveNightlyRate(roomDoc, checkInStr) {
+    const roomType = roomDoc?.roomTypeId && typeof roomDoc.roomTypeId === 'object'
+        ? roomDoc.roomTypeId
+        : null;
+
+    let rate = Number(roomType?.basePrice ?? roomDoc?.rate ?? roomDoc?.amtPerNight ?? 0) || 0;
+
+    if (checkInStr && Array.isArray(roomType?.seasonalRates) && roomType.seasonalRates.length > 0) {
+        const checkInDate = new Date(`${checkInStr}T00:00:00`);
+        const matchedSeason = roomType.seasonalRates.find((s) => {
+            if (!s?.startDate || !s?.endDate || s?.rate == null) return false;
+            const start = new Date(s.startDate);
+            const end = new Date(s.endDate);
+            return checkInDate >= start && checkInDate <= end;
+        });
+
+        if (matchedSeason) {
+            rate = Number(matchedSeason.rate) || rate;
+        }
+    }
+
+    return rate;
+}
 function calculateNights(checkInStr, checkOutStr) {
     if (!checkInStr || !checkOutStr) return 0;
     const start = new Date(`${checkInStr}T00:00:00`);
