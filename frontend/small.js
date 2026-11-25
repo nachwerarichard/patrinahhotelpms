@@ -20348,3 +20348,143 @@ document.getElementById('groupPaymentBtn')?.addEventListener('click', () => {
         showMessage('Info', 'Group payment modal is not set up yet.');
     }
 });
+
+let currentGroupPaymentBalance = 0;
+
+function closeGroupPaymentModal() {
+    const modal = document.getElementById('groupPaymentModal');
+    const form = document.getElementById('groupPaymentForm');
+    if (modal) modal.classList.add('hidden');
+    if (form && typeof form.reset === 'function') form.reset();
+    currentGroupPaymentBalance = 0;
+}
+
+async function openGroupPaymentModal(groupId, knownBalance = null) {
+    if (!groupId) return;
+
+    const modal = document.getElementById('groupPaymentModal');
+    const groupIdInput = document.getElementById('groupPaymentGroupId');
+    const subtitleEl = document.getElementById('groupPaymentSubtitle');
+    const balanceEl = document.getElementById('groupPaymentTotalBalance');
+    const amountInput = document.getElementById('groupPaymentAmount');
+
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    if (groupIdInput) groupIdInput.value = groupId;
+    if (subtitleEl) subtitleEl.textContent = `Group ID: ${groupId}`;
+
+    let balance = knownBalance !== null ? Number(knownBalance) || 0 : null;
+
+    if (balance === null) {
+        if (balanceEl) balanceEl.textContent = 'Loading...';
+        try {
+            const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}`, {
+                method: 'GET'
+            });
+            const data = res ? await res.json().catch(() => ({})) : {};
+            if (res && res.ok && data.summary) {
+                balance = Number(data.summary.balance) || 0;
+                if (data.summary.groupName && subtitleEl) {
+                    subtitleEl.textContent = `${formatStatusText(data.summary.groupName)} (${groupId})`;
+                }
+            } else {
+                balance = 0;
+            }
+        } catch (err) {
+            console.warn('Could not fetch live group balance:', err);
+            balance = 0;
+        }
+    }
+
+    currentGroupPaymentBalance = balance;
+    if (balanceEl) {
+        balanceEl.textContent = typeof formatGroupMoney === 'function'
+            ? formatGroupMoney(balance)
+            : balance.toFixed(2);
+    }
+
+    if (amountInput) {
+        amountInput.value = balance > 0 ? balance.toFixed(2) : '';
+        amountInput.focus();
+    }
+}
+
+// Quick helper button to fill the full remaining balance
+document.getElementById('fillFullGroupBalanceBtn')?.addEventListener('click', () => {
+    const amountInput = document.getElementById('groupPaymentAmount');
+    if (amountInput && currentGroupPaymentBalance > 0) {
+        amountInput.value = currentGroupPaymentBalance.toFixed(2);
+    }
+});
+
+// Handle Group Payment submission
+document.getElementById('groupPaymentForm')?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+    const currentUsername = sessionData?.username || sessionData?.name || 'System';
+
+    const groupId = document.getElementById('groupPaymentGroupId')?.value?.trim();
+    const amount = parseFloat(document.getElementById('groupPaymentAmount')?.value);
+    const paymentMethod = document.getElementById('groupPaymentMethod')?.value || 'Cash';
+    const transactionid = document.getElementById('groupPaymentTxnId')?.value?.trim() || '';
+
+    if (!groupId) {
+        showMessage('Error', 'Missing group reference.', true);
+        return;
+    }
+
+    if (!amount || Number.isNaN(amount) || amount <= 0) {
+        showMessage('Error', 'Please enter a valid payment amount greater than zero.', true);
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitGroupPaymentBtn');
+    const originalHtml = submitBtn ? submitBtn.innerHTML : '';
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Recording...</span>`;
+        }
+
+        const res = await authenticatedFetch(`${API_BASE_URL}/bookings/group/${encodeURIComponent(groupId)}/payment`, {
+            method: 'POST',
+            body: JSON.stringify({
+                amount,
+                paymentMethod,
+                transactionid,
+                username: currentUsername
+            })
+        });
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) {
+            throw new Error(data.message || `HTTP error status: ${res?.status || 'Network error'}`);
+        }
+
+        showMessage('Success', data.message || 'Group payment recorded successfully!');
+        closeGroupPaymentModal();
+
+        if (typeof refreshBookingViews === 'function') {
+            await refreshBookingViews();
+        } else if (typeof renderBookings === 'function') {
+            await renderBookings(currentPage, currentSearchTerm);
+        }
+
+        // If the Group Summary modal is currently open for this group, refresh its numbers
+        const summaryModal = document.getElementById('groupSummaryModal');
+        if (summaryModal && !summaryModal.classList.contains('hidden') && typeof activeGroupId !== 'undefined' && activeGroupId === groupId) {
+            await openGroupModal(groupId);
+        }
+    } catch (error) {
+        console.error('Error submitting group payment:', error);
+        showMessage('Error', `Failed to record group payment: ${error.message}`, true);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
+    }
+});

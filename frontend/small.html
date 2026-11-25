@@ -7452,6 +7452,85 @@ Manage payment providers used for guest payments.            </p>
         </div>
     </div>
 </div>
+
+<div id="groupPaymentModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 z-[60] hidden transition-all duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative flex flex-col overflow-hidden border border-slate-200/80">
+        
+        <!-- Header Bar -->
+        <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-teal-50 text-teal-600 rounded-lg">
+                    <i class="fa-solid fa-coins text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Record Group Payment</h2>
+                    <p id="groupPaymentSubtitle" class="text-xs text-slate-500 font-medium"></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeGroupPaymentModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition text-xl leading-none">&times;</button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="groupPaymentForm" class="p-6 space-y-4">
+            <input type="hidden" id="groupPaymentGroupId">
+
+            <div class="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-600">Total Group Balance</span>
+                <span id="groupPaymentTotalBalance" class="text-sm font-bold text-rose-600">0.00</span>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentAmount" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Payment Amount <span class="text-rose-500">*</span>
+                </label>
+                <input type="number" id="groupPaymentAmount" step="0.01" min="0.01" required placeholder="0.00"
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-semibold">
+                <button type="button" id="fillFullGroupBalanceBtn"
+                    class="mt-1.5 self-start text-[11px] font-semibold text-teal-700 hover:text-teal-800">
+                    Pay full remaining balance
+                </button>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentMethod" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Payment Method <span class="text-rose-500">*</span>
+                </label>
+                <select id="groupPaymentMethod" required
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800 font-medium">
+                    <option value="Cash">Cash</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Airtel Pay">Airtel Pay</option>
+                    <option value="Bank">Bank Transfer / Card</option>
+                    <option value="Pesapal">Pesapal</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Visa">Visa</option>
+                    <option value="MasterCard">MasterCard</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="groupPaymentTxnId" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Reference / Transaction ID
+                </label>
+                <input type="text" id="groupPaymentTxnId" placeholder="e.g. MOMO-884210 or Bank Ref"
+                    class="px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none text-slate-800">
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button type="button" onclick="closeGroupPaymentModal()"
+                    class="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-100 transition">
+                    Cancel
+                </button>
+                <button type="submit" id="submitGroupPaymentBtn"
+                    class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs rounded-xl shadow-sm transition inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Submit Payment</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
     <div id="incidentalChargeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md relative">
             <span class="absolute top-4 right-4 text-gray-500 text-3xl font-bold cursor-pointer hover:text-gray-800" onclick="closeIncidentalChargeModal()">&times;</span>
