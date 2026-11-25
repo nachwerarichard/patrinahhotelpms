@@ -1336,6 +1336,9 @@ async function renderBookings(page = 1, searchTerm = '') {
                                 <button class="${baseBtn} bg-indigo-600 hover:bg-indigo-700" onclick="openGroupModal('${booking.groupId}')">
                                     <i class="fa-solid fa-layer-group mr-1"></i> View Group
                                 </button>
+                                <button class="${baseBtn} bg-slate-800 hover:bg-slate-900" onclick="printGroupInvoice('${booking.groupId}')">
+        <i class="fa-solid fa-print mr-1"></i> Print Group Invoice
+    </button>
                                 ${['confirmed', 'reserved'].includes(booking.gueststatus) ? `
                                     <button class="${baseBtn} bg-emerald-600 hover:bg-emerald-700" onclick="bulkGroupCheckIn('${booking.groupId}')">
                                         <i class="fa-solid fa-right-to-bracket mr-1"></i> Group Check-In
@@ -20677,5 +20680,341 @@ async function removeRoomFromGroup(groupId, bookingId, roomNumber) {
     } catch (err) {
         console.error('Error removing room from group:', err);
         showMessage('Error', err.message, true);
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatInvoiceCurrency(amount) {
+    const num = Number(amount) || 0;
+    const currency = (localStorage.getItem('hotelCurrency') || '').trim();
+    const formatted = num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+    return currency ? `${currency} ${formatted}` : formatted;
+}
+
+async function printGroupInvoice(groupId) {
+    const targetGroupId = groupId || activeGroupId;
+    if (!targetGroupId) {
+        showMessage('Error', 'No group selected to print.', true);
+        return;
+    }
+
+    const printBtn = document.getElementById('groupPrintInvoiceBtn');
+    const origHtml = printBtn ? printBtn.innerHTML : '';
+
+    try {
+        if (printBtn) {
+            printBtn.disabled = true;
+            printBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Preparing...</span>`;
+        }
+
+        const res = await authenticatedFetch(
+            `${API_BASE_URL}/bookings/group/${encodeURIComponent(targetGroupId)}`,
+            { method: 'GET' }
+        );
+
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok) {
+            throw new Error(data.message || 'Failed to load group invoice data.');
+        }
+
+        const summary = data.summary || {};
+        const bookings = Array.isArray(data.bookings)
+            ? data.bookings
+            : (Array.isArray(data.rooms) ? data.rooms : []);
+
+        if (!bookings.length) {
+            throw new Error('No room bookings found for this group.');
+        }
+
+        const sessionData = JSON.parse(localStorage.getItem('loggedInUser') || '{}');
+        const hotelName = escapeHtml(
+            sessionData?.hotelName ||
+            localStorage.getItem('hotelName') ||
+            'Hotel / Property Folio'
+        );
+
+        const groupTitle = escapeHtml(
+            typeof safeText === 'function'
+                ? safeText(summary.groupName, targetGroupId)
+                : (summary.groupName || targetGroupId)
+        );
+        const leadGuest = escapeHtml(
+            typeof safeText === 'function'
+                ? safeText(summary.leadGuest, 'N/A')
+                : (summary.leadGuest || 'N/A')
+        );
+
+        const activeBookings = bookings.filter(b => !['cancelled', 'void'].includes(b.gueststatus));
+        const totalDue = Number(summary.totalDue ?? activeBookings.reduce((s, b) => s + (Number(b.totalDue) || 0), 0)) || 0;
+        const totalPaid = Number(summary.amountPaid ?? activeBookings.reduce((s, b) => s + (Number(b.amountPaid) || 0), 0)) || 0;
+        const totalBalance = Number(summary.balance ?? activeBookings.reduce((s, b) => s + (Number(b.balance) || 0), 0)) || 0;
+        const totalNights = activeBookings[0]?.nights || bookings[0]?.nights || '-';
+
+        // Collect unique payment methods & transaction IDs if present
+        const paymentRefs = [...new Set(
+            bookings
+                .map(b => [b.paymentMethod, b.transactionid].filter(Boolean).join(' · '))
+                .filter(Boolean)
+        )];
+
+        const rowsHtml = bookings.map((b) => {
+            const isInactive = ['cancelled', 'void'].includes(b.gueststatus);
+            const nights = Number(b.nights) || 1;
+            const rate = Number(b.amtPerNight) || 0;
+            const roomDue = Number(b.totalDue) || 0;
+            const roomPaid = Number(b.amountPaid) || 0;
+            const roomBal = Number(b.balance) || 0;
+            const occupant = escapeHtml(
+                typeof safeText === 'function' ? safeText(b.name, 'Unassigned') : (b.name || 'Unassigned')
+            );
+            const statusLabel = escapeHtml(
+                typeof safeText === 'function' ? safeText(b.gueststatus, '-') : (b.gueststatus || '-')
+            );
+
+            return `
+                <tr class="${isInactive ? 'inactive-row' : ''}">
+                    <td>
+                        <strong>Room ${escapeHtml(b.room || '-')}</strong>
+                        <div class="sub">${escapeHtml(b.id || '')}${b.isGroupLead ? ' · Lead' : ''}</div>
+                    </td>
+                    <td>
+                        <div>${occupant}</div>
+                        ${b.extraperson ? `<div class="sub">Extra: ${escapeHtml(b.extraperson)}</div>` : ''}
+                    </td>
+                    <td class="center">${statusLabel}</td>
+                    <td class="center">${nights}</td>
+                    <td class="right">${formatInvoiceCurrency(rate)}</td>
+                    <td class="right">${formatInvoiceCurrency(roomDue)}</td>
+                    <td class="right">${formatInvoiceCurrency(roomPaid)}</td>
+                    <td class="right ${roomBal > 0 ? 'due' : 'paid'}">${formatInvoiceCurrency(roomBal)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const printWindow = window.open('', '_blank', 'width=900,height=720');
+        if (!printWindow) {
+            showMessage('Error', 'Pop-up blocked. Please allow pop-ups to view or print the group invoice.', true);
+            return;
+        }
+
+        const issuedDate = new Date().toLocaleString();
+
+        printWindow.document.open();
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Group Invoice - ${escapeHtml(targetGroupId)}</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        color: #0f172a;
+                        margin: 0;
+                        padding: 28px;
+                        background: #f8fafc;
+                    }
+                    .sheet {
+                        max-width: 860px;
+                        margin: 0 auto;
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        padding: 28px 32px;
+                    }
+                    .top-bar {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        border-bottom: 2px solid #0f172a;
+                        padding-bottom: 16px;
+                        margin-bottom: 20px;
+                        gap: 16px;
+                    }
+                    .hotel-name { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+                    .doc-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; font-weight: 700; }
+                    .group-id { font-size: 16px; font-weight: 800; color: #4338ca; text-align: right; }
+                    .issued { font-size: 11px; color: #64748b; text-align: right; margin-top: 4px; }
+                    .meta-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 10px 24px;
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        padding: 14px 16px;
+                        margin-bottom: 20px;
+                        font-size: 13px;
+                    }
+                    .meta-item span.label { color: #64748b; font-weight: 600; }
+                    .meta-item span.val { font-weight: 700; color: #0f172a; }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 12px;
+                        margin-bottom: 20px;
+                    }
+                    th {
+                        background: #f1f5f9;
+                        color: #334155;
+                        font-size: 10px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.06em;
+                        padding: 9px 8px;
+                        border-bottom: 1px solid #cbd5e1;
+                        text-align: left;
+                    }
+                    td {
+                        padding: 9px 8px;
+                        border-bottom: 1px solid #e2e8f0;
+                        vertical-align: top;
+                    }
+                    td.center, th.center { text-align: center; }
+                    td.right, th.right { text-align: right; }
+                    .sub { font-size: 10px; color: #64748b; margin-top: 2px; }
+                    .inactive-row { opacity: 0.5; text-decoration: line-through; }
+                    .due { color: #be123c; font-weight: 700; }
+                    .paid { color: #047857; font-weight: 700; }
+                    .totals-box {
+                        margin-left: auto;
+                        width: 100%;
+                        max-width: 340px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        padding: 14px 16px;
+                        background: #f8fafc;
+                    }
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 13px;
+                        padding: 5px 0;
+                    }
+                    .total-row.grand {
+                        border-top: 1px solid #cbd5e1;
+                        margin-top: 6px;
+                        padding-top: 10px;
+                        font-size: 15px;
+                        font-weight: 800;
+                    }
+                    .footer-note {
+                        margin-top: 22px;
+                        padding-top: 12px;
+                        border-top: 1px dashed #cbd5e1;
+                        font-size: 11px;
+                        color: #64748b;
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 12px;
+                    }
+                    .no-print {
+                        text-align: center;
+                        margin-bottom: 18px;
+                    }
+                    .print-btn {
+                        background: #4338ca;
+                        color: #fff;
+                        border: none;
+                        padding: 10px 20px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    }
+                    .print-btn:hover { background: #3730a3; }
+                    @media print {
+                        body { background: #fff; padding: 0; }
+                        .sheet { border: none; border-radius: 0; padding: 0; max-width: none; }
+                        .no-print { display: none !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="no-print">
+                    <button type="button" class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+                </div>
+
+                <div class="sheet">
+                    <div class="top-bar">
+                        <div>
+                            <div class="doc-label">Consolidated Group Folio / Invoice</div>
+                            <h1 class="hotel-name">${hotelName}</h1>
+                        </div>
+                        <div>
+                            <div class="group-id">Group: ${escapeHtml(targetGroupId)}</div>
+                            <div class="issued">Generated: ${escapeHtml(issuedDate)}</div>
+                        </div>
+                    </div>
+
+                    <div class="meta-grid">
+                        <div class="meta-item"><span class="label">Group / Event:</span> <span class="val">${groupTitle}</span></div>
+                        <div class="meta-item"><span class="label">Lead Guest:</span> <span class="val">${leadGuest}</span></div>
+                        <div class="meta-item"><span class="label">Stay Period:</span> <span class="val">${escapeHtml(summary.checkIn || '-')} &rarr; ${escapeHtml(summary.checkOut || '-')} (${escapeHtml(totalNights)} night(s))</span></div>
+                        <div class="meta-item"><span class="label">Rooms:</span> <span class="val">${escapeHtml(summary.activeRooms ?? activeBookings.length)} active / ${escapeHtml(bookings.length)} total</span></div>
+                        ${paymentRefs.length ? `<div class="meta-item" style="grid-column: 1 / -1;"><span class="label">Payment / Ref:</span> <span class="val">${escapeHtml(paymentRefs.join(' | '))}</span></div>` : ''}
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Room / Ref</th>
+                                <th>Guest / Occupant</th>
+                                <th class="center">Status</th>
+                                <th class="center">Nights</th>
+                                <th class="right">Rate / Night</th>
+                                <th class="right">Total Due</th>
+                                <th class="right">Paid</th>
+                                <th class="right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="totals-box">
+                        <div class="total-row">
+                            <span>Consolidated Total Due:</span>
+                            <strong>${formatInvoiceCurrency(totalDue)}</strong>
+                        </div>
+                        <div class="total-row">
+                            <span>Total Amount Paid:</span>
+                            <strong class="paid">${formatInvoiceCurrency(totalPaid)}</strong>
+                        </div>
+                        <div class="total-row grand">
+                            <span>Outstanding Balance:</span>
+                            <span class="${totalBalance > 0 ? 'due' : 'paid'}">${formatInvoiceCurrency(totalBalance)}</span>
+                        </div>
+                    </div>
+
+                    <div class="footer-note">
+                        <span>Group ID: ${escapeHtml(targetGroupId)}</span>
+                        <span>Cancelled/void rooms (if any) are struck through and excluded from active totals.</span>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } catch (error) {
+        console.error('Error generating group invoice:', error);
+        showMessage('Error', error.message || 'Could not generate group invoice.', true);
+    } finally {
+        if (printBtn) {
+            printBtn.disabled = false;
+            printBtn.innerHTML = origHtml;
+        }
     }
 }
