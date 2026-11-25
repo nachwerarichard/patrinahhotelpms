@@ -4365,6 +4365,7 @@ app.post('/api/bookings/:id/fiscalize', auth,async (req, res) => {
  * @access  Private
  */
 
+
 app.get('/api/bookings/:id/fiscal-receipt', auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -5924,6 +5925,46 @@ app.post('/api/bookings/:id/checkin', auth, async (req, res) => {
     } catch (error) {
         console.error("CHECKIN ERROR:", error);
         res.status(500).json({ message: error.message });
+    }
+});
+
+app.get('/api/bookings/group/:groupId', auth, async (req, res) => {
+    try {
+        const hotelId = req.user.hotelId;
+        const { groupId } = req.params;
+
+        const bookings = await Booking.find({ hotelId, groupId }).sort({ room: 1 });
+        if (!bookings.length) {
+            return res.status(404).json({ message: 'Group booking not found.' });
+        }
+
+        const summary = bookings.reduce((acc, b) => {
+            if (b.gueststatus !== 'cancelled' && b.gueststatus !== 'void') {
+                acc.activeRooms += 1;
+                acc.totalDue += Number(b.totalDue) || 0;
+                acc.amountPaid += Number(b.amountPaid) || 0;
+                acc.balance += Number(b.balance) || 0;
+                acc.totalPeople += Number(b.people) || 0;
+            }
+            return acc;
+        }, {
+            groupId,
+            groupName: bookings[0].groupName || `${bookings[0].name} Group`,
+            leadGuest: bookings.find(b => b.isGroupLead)?.name || bookings[0].name,
+            checkIn: bookings[0].checkIn,
+            checkOut: bookings[0].checkOut,
+            totalRooms: bookings.length,
+            activeRooms: 0,
+            totalPeople: 0,
+            totalDue: 0,
+            amountPaid: 0,
+            balance: 0
+        });
+
+        res.json({ summary, bookings });
+    } catch (error) {
+        console.error('Error fetching group booking:', error);
+        res.status(500).json({ message: 'Error fetching group booking', error: error.message });
     }
 });
 
@@ -12789,45 +12830,7 @@ app.get('/api/reports/profit-loss', auth, async (req, res) => {
 
 
 // Get group summary + all room bookings in the group
-app.get('/api/bookings/group/:groupId', auth, async (req, res) => {
-    try {
-        const hotelId = req.user.hotelId;
-        const { groupId } = req.params;
 
-        const bookings = await Booking.find({ hotelId, groupId }).sort({ room: 1 });
-        if (!bookings.length) {
-            return res.status(404).json({ message: 'Group booking not found.' });
-        }
-
-        const summary = bookings.reduce((acc, b) => {
-            if (b.gueststatus !== 'cancelled' && b.gueststatus !== 'void') {
-                acc.activeRooms += 1;
-                acc.totalDue += Number(b.totalDue) || 0;
-                acc.amountPaid += Number(b.amountPaid) || 0;
-                acc.balance += Number(b.balance) || 0;
-                acc.totalPeople += Number(b.people) || 0;
-            }
-            return acc;
-        }, {
-            groupId,
-            groupName: bookings[0].groupName || `${bookings[0].name} Group`,
-            leadGuest: bookings.find(b => b.isGroupLead)?.name || bookings[0].name,
-            checkIn: bookings[0].checkIn,
-            checkOut: bookings[0].checkOut,
-            totalRooms: bookings.length,
-            activeRooms: 0,
-            totalPeople: 0,
-            totalDue: 0,
-            amountPaid: 0,
-            balance: 0
-        });
-
-        res.json({ summary, bookings });
-    } catch (error) {
-        console.error('Error fetching group booking:', error);
-        res.status(500).json({ message: 'Error fetching group booking', error: error.message });
-    }
-});
 
 // Bulk Check-In all reserved/confirmed bookings in a group
 app.post('/api/bookings/group/:groupId/checkin', auth, async (req, res) => {
