@@ -19,6 +19,303 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+const {
+    createNovusAgents
+} = require("./agents/novusAgents");
+
+
+const novusAgents = createNovusAgents({
+    Booking,
+    Inventory,
+    Sale,
+    KitchenOrder,
+    IncidentalCharge,
+    ClientAccount,
+    AuditLog,
+    RoomHistory
+});
+
+// ============================================================
+// NOVUS AI OPERATIONAL FUNCTION REGISTRY
+// ============================================================
+
+function createAIOperationalFunctions({
+    hotelId,
+    username
+}) {
+
+    return {
+
+        // ======================================================
+        // INVENTORY
+        // ======================================================
+
+        searchInventory:
+            async (args) => {
+
+                return await novusAgents.inventory.search({
+                    hotelId,
+                    ...args
+                });
+
+            },
+
+
+        recordInventoryPurchase:
+            async (args) => {
+
+                return await novusAgents.inventory
+                    .recordPurchase({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        recordInventorySpoilage:
+            async (args) => {
+
+                return await novusAgents.inventory
+                    .recordSpoilage({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // SALES
+        // ======================================================
+
+        recordSale:
+            async (args) => {
+
+                return await novusAgents.sales
+                    .recordSale({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // FOLIO
+        // ======================================================
+
+        searchGuestFolios:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .findGuest({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        postGuestFolioCharge:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .addCharge({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        postIncidentalCharge:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .postIncidentalCharge({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // ROOMS
+        // ======================================================
+
+        updateRoomStatus:
+            async (args) => {
+
+                return await novusAgents.rooms
+                    .updateStatus({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        searchRoomHistory:
+            async (args) => {
+
+                return await novusAgents.rooms
+                    .searchHistory({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // KITCHEN
+        // ======================================================
+
+        createKitchenOrder:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .createOrder({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        updateKitchenOrderStatus:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .updateStatus({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        searchKitchenOrders:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .search({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // FRONT DESK
+        // ======================================================
+
+        searchBookings:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .searchBookings({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        checkInGuest:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .checkIn({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        checkOutGuest:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .checkOut({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // AUDIT
+        // ======================================================
+
+        searchAuditLogs:
+            async (args) => {
+
+                return await novusAgents.audit
+                    .search({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            }
+    };
+}
+
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
@@ -13321,109 +13618,47 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         // =================================================================
         // INTERNAL FUNCTION REGISTRY
         // =================================================================
-        const internalFunctions = {
+        const operationalFunctions =
+    createAIOperationalFunctions({
+        hotelId,
+        username
+    });
 
-            // READ
-            searchBookings:
-                searchBookingsTool,
 
-            searchRooms:
-                searchRoomsTool,
+const internalFunctions = {
 
-            searchStatusReports:
-                searchStatusReportsTool,
+    // EXISTING READ-ONLY FUNCTIONS
+    searchUserGuide,
+    searchBookings,
+    searchStatusReports,
+    searchRooms,
+    searchRoomTypes,
+    searchCashJournal,
+    searchInventory,
+    searchSales,
+    searchExpenses,
+    searchChecklists,
+    searchUsers,
+    searchAuditLogs,
+    searchKitchenOrders,
+    searchGateways,
+    searchIncidentalCharges,
+    searchClientAccounts,
+    searchCentralStore,
+    searchDepartmentStock,
+    searchStockTransfers,
+    searchFunctionSpaces,
+    searchBanquetEvents,
+    searchEmployees,
+    searchAttendance,
+    searchHotelAssets,
+    searchWorkOrders,
+    searchGuestFeedback,
 
-            searchCashJournal:
-                searchCashJournalTool,
 
-            searchInventory:
-                searchInventoryTool,
-
-            searchSales:
-                searchSalesTool,
-
-            searchExpenses:
-                searchExpensesTool,
-
-            searchChecklists:
-                searchChecklistsTool,
-
-            searchRoomTypes:
-                searchRoomTypesTool,
-
-            searchUsers:
-                searchUsersTool,
-
-            searchAuditLogs:
-                searchAuditLogsTool,
-
-            searchKitchenOrders:
-                searchKitchenOrdersTool,
-
-            searchGateways:
-                searchGatewaysTool,
-
-            searchPaymentTransactions:
-                searchPaymentTransactionsTool,
-
-            searchIncidentalCharges:
-                searchIncidentalChargesTool,
-
-            searchClientAccounts:
-                searchClientAccountsTool,
-
-            searchCentralStore:
-                searchCentralStoreTool,
-
-            searchDepartmentStock:
-                searchDepartmentStockTool,
-
-            searchStockTransfers:
-                searchStockTransfersTool,
-
-            searchFunctionSpaces:
-                searchFunctionSpacesTool,
-
-            searchBanquetEvents:
-                searchBanquetEventsTool,
-
-            searchEmployees:
-                searchEmployeesTool,
-
-            searchAttendance:
-                searchAttendanceTool,
-
-            searchHotelAssets:
-                searchHotelAssetsTool,
-
-            searchWorkOrders:
-                searchWorkOrdersTool,
-
-            searchGuestFeedback:
-                searchGuestFeedbackTool,
-
-            searchUserGuide:
-                searchUserGuideTool,
-
-            // AUTONOMOUS OPERATIONS
-            createSale:
-                createSaleTool,
-
-            createOrUpdateInventoryItem:
-                createOrUpdateInventoryItemTool,
-
-            adjustInventoryStock:
-                adjustInventoryStockTool,
-
-            markKitchenOrderPreparing:
-                markKitchenOrderPreparingTool,
-
-            markKitchenOrderReady:
-                markKitchenOrderReadyTool,
-
-            markKitchenOrderServed:
-                markKitchenOrderServedTool
-        };
+    // NEW OPERATIONAL FUNCTIONS
+    ...operationalFunctions
+};
 
         // =================================================================
         // DYNAMIC DATE CONTEXT
@@ -13652,6 +13887,129 @@ may require checking:
 
 Combine the results into a useful operational summary.
 
+OPERATIONAL AGENT RULES:
+
+You are the Novus CloudPMS Manager Agent.
+
+You are allowed to perform hotel operational actions through approved
+backend tools.
+
+You must NEVER modify MongoDB directly.
+
+You must use the appropriate operational tool.
+
+The backend is the authoritative source of truth.
+
+Never claim an operation succeeded unless the backend tool returned
+success: true.
+
+If an operational tool returns an error, clearly tell the user that
+the operation failed and explain the reason returned by the backend.
+
+Never invent MongoDB IDs.
+
+Never invent guest folio IDs.
+
+Never invent booking IDs.
+
+Never invent room numbers.
+
+Never invent stock quantities.
+
+Never invent prices.
+
+Never invent payment confirmations.
+
+HOTEL ISOLATION:
+
+All operations automatically belong to the authenticated hotelId.
+
+Never attempt to supply, change or override hotelId based on user input.
+
+SECURITY:
+
+Do not expose credentials, secrets, passwords, payment gateway keys,
+API keys or other sensitive configuration.
+
+Do not reveal another hotel's records.
+
+FOLIO OPERATIONS:
+
+Before posting a charge to a guest folio, identify the correct
+ClientAccount.
+
+If multiple guests or folios match, do not guess.
+
+Ask the user to identify the guest or room.
+
+Do not post a charge to a closed folio.
+
+ROOM OPERATIONS:
+
+When asked to mark a room clean, use updateRoomStatus with:
+
+status = "clean"
+
+When asked to mark a room dirty, use:
+
+status = "dirty"
+
+For housekeeping work in progress:
+
+status = "In progress"
+
+For maintenance:
+
+status = "under-maintenance"
+
+For blocked rooms:
+
+status = "blocked"
+
+INVENTORY:
+
+Never allow a sale to create negative inventory.
+
+Never manipulate inventory simply to make a sale succeed.
+
+If stock is insufficient, report the insufficient stock.
+
+SALES:
+
+A sale must contain the item, quantity and selling price.
+
+If the user asks to charge the sale to a guest room, use
+paymentMethod = "Folio" and the correct ClientAccount accountId.
+
+KITCHEN:
+
+Kitchen orders use the following lifecycle:
+
+Pending
+Preparing
+Ready
+Served
+
+Use the correct kitchen operation for each transition.
+
+FRONT DESK:
+
+A guest can only be checked out when the backend confirms that the
+booking balance is zero.
+
+Do not bypass this rule.
+
+CONFIRMATION:
+
+For successful write operations, give a concise confirmation containing:
+
+- what happened
+- relevant guest/room/item
+- quantity or amount
+- resulting status/balance where available
+
+Do not claim that an operation happened before the tool returns success.
+
 ========================================================
 SECURITY AND TENANT ISOLATION
 ========================================================
@@ -13689,10 +14047,507 @@ ${userGuideText}
         const toolsConfig = [
             {
                 functionDeclarations: [
+                    // ============================================================
+// OPERATIONAL AI TOOLS
+// ============================================================
+
+{
+    name: "recordInventoryPurchase",
+
+    description:
+        "Records a purchase/restock of an inventory item. Use this only when the user explicitly asks to record stock received or purchased.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            item: {
+                type: "STRING",
+                description:
+                    "Inventory item name"
+            },
+
+            department: {
+                type: "STRING",
+                description:
+                    "Inventory department, for example Bar, Restaurant or Kitchen"
+            },
+
+            quantity: {
+                type: "NUMBER",
+                description:
+                    "Quantity purchased"
+            },
+
+            buyingprice: {
+                type: "NUMBER",
+                description:
+                    "Buying price per unit"
+            },
+
+            sellingprice: {
+                type: "NUMBER",
+                description:
+                    "Selling price per unit"
+            }
+
+        },
+
+        required: [
+            "item",
+            "quantity"
+        ]
+    }
+},
+
+
+{
+    name: "recordInventorySpoilage",
+
+    description:
+        "Records stock that has been spoiled, damaged or otherwise removed from usable inventory.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            item: {
+                type: "STRING"
+            },
+
+            department: {
+                type: "STRING"
+            },
+
+            quantity: {
+                type: "NUMBER"
+            }
+
+        },
+
+        required: [
+            "item",
+            "quantity"
+        ]
+    }
+},
+
+
+{
+    name: "recordSale",
+
+    description:
+        "Records a hotel POS sale. Can also post the sale to a guest folio when paymentMethod is Folio and accountId is supplied.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            department: {
+                type: "STRING",
+                description:
+                    "Bar, Restaurant or Kitchen"
+            },
+
+            item: {
+                type: "STRING"
+            },
+
+            number: {
+                type: "NUMBER",
+                description:
+                    "Quantity sold"
+            },
+
+            bp: {
+                type: "NUMBER",
+                description:
+                    "Buying price per unit"
+            },
+
+            sp: {
+                type: "NUMBER",
+                description:
+                    "Selling price per unit"
+            },
+
+            paymentMethod: {
+                type: "STRING",
+                description:
+                    "Cash, Card, MobileMoney, Folio, M-Pesa or Pesapal"
+            },
+
+            accountId: {
+                type: "STRING",
+                description:
+                    "MongoDB ClientAccount ID when charging the guest folio"
+            }
+
+        },
+
+        required: [
+            "department",
+            "item",
+            "number",
+            "sp"
+        ]
+    }
+},
+
+
+{
+    name: "searchGuestFolios",
+
+    description:
+        "Finds open guest folios using guest name or room number.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            guestName: {
+                type: "STRING"
+            },
+
+            roomNumber: {
+                type: "STRING"
+            }
+
+        }
+    }
+},
+
+
+{
+    name: "postGuestFolioCharge",
+
+    description:
+        "Posts a charge directly to an existing open guest folio. Use for laundry, spa, minibar, restaurant, bar or other guest charges.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            accountId: {
+                type: "STRING",
+                description:
+                    "MongoDB ClientAccount ID"
+            },
+
+            description: {
+                type: "STRING",
+                description:
+                    "Description of the guest charge"
+            },
+
+            amount: {
+                type: "NUMBER",
+                description:
+                    "Total charge amount"
+            },
+
+            quantity: {
+                type: "NUMBER"
+            },
+
+            type: {
+                type: "STRING",
+                description:
+                    "Bar, Restaurant or Other"
+            },
+
+            bp: {
+                type: "NUMBER"
+            },
+
+            sp: {
+                type: "NUMBER"
+            }
+
+        },
+
+        required: [
+            "accountId",
+            "description",
+            "amount"
+        ]
+    }
+},
+
+
+{
+    name: "postIncidentalCharge",
+
+    description:
+        "Posts an incidental charge against a guest booking. Use when a charge belongs to a booking but is not being recorded as a direct POS folio charge.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            bookingId: {
+                type: "STRING"
+            },
+
+            guestName: {
+                type: "STRING"
+            },
+
+            roomNumber: {
+                type: "STRING"
+            },
+
+            type: {
+                type: "STRING",
+                description:
+                    "Bar, Restaurant, Laundry, Spa or Other"
+            },
+
+            description: {
+                type: "STRING"
+            },
+
+            amount: {
+                type: "NUMBER"
+            }
+
+        },
+
+        required: [
+            "bookingId",
+            "description",
+            "amount"
+        ]
+    }
+},
+
+
+{
+    name: "updateRoomStatus",
+
+    description:
+        "Changes a room housekeeping/operational status. Valid statuses are clean, In progress, dirty, under-maintenance and blocked.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            roomNumber: {
+                type: "STRING",
+                description:
+                    "Room number"
+            },
+
+            status: {
+                type: "STRING",
+                description:
+                    "clean, In progress, dirty, under-maintenance or blocked"
+            }
+
+        },
+
+        required: [
+            "roomNumber",
+            "status"
+        ]
+    }
+},
+
+
+{
+    name: "searchRoomHistory",
+
+    description:
+        "Searches historical room status changes.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            roomNumber: {
+                type: "STRING"
+            },
+
+            status: {
+                type: "STRING"
+            }
+
+        }
+    }
+},
+
+
+{
+    name: "createKitchenOrder",
+
+    description:
+        "Creates a restaurant/kitchen order.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            item: {
+                type: "STRING"
+            },
+
+            number: {
+                type: "NUMBER"
+            },
+
+            department: {
+                type: "STRING"
+            },
+
+            waiter: {
+                type: "STRING"
+            },
+
+            tableNumber: {
+                type: "STRING"
+            },
+
+            accountId: {
+                type: "STRING",
+                description:
+                    "ClientAccount ID when the order is charged to a guest room"
+            },
+
+            bp: {
+                type: "NUMBER"
+            },
+
+            sp: {
+                type: "NUMBER"
+            }
+
+        },
+
+        required: [
+            "item",
+            "number"
+        ]
+    }
+},
+
+
+{
+    name: "updateKitchenOrderStatus",
+
+    description:
+        "Changes a kitchen order status to Pending, Preparing, Ready or Served.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            orderId: {
+                type: "STRING"
+            },
+
+            status: {
+                type: "STRING",
+                description:
+                    "Pending, Preparing, Ready or Served"
+            }
+
+        },
+
+        required: [
+            "orderId",
+            "status"
+        ]
+    }
+},
+
+
+{
+    name: "searchKitchenOrders",
+
+    description:
+        "Searches kitchen orders by status.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            status: {
+                type: "STRING",
+                description:
+                    "Pending, Preparing, Ready or Served"
+            }
+
+        }
+    }
+},
+
+
+{
+    name: "checkInGuest",
+
+    description:
+        "Checks an existing booking guest into the hotel.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            bookingId: {
+                type: "STRING",
+                description:
+                    "MongoDB Booking ID"
+            }
+
+        },
+
+        required: [
+            "bookingId"
+        ]
+    }
+},
+
+
+{
+    name: "checkOutGuest",
+
+    description:
+        "Checks a guest out only when the booking balance is zero.",
+
+    parameters: {
+        type: "OBJECT",
+
+        properties: {
+
+            bookingId: {
+                type: "STRING",
+                description:
+                    "MongoDB Booking ID"
+            }
+
+        },
+
+        required: [
+            "bookingId"
+        ]
+    }
+},
 
                     // =====================================================
                     // USER GUIDE
                     // =====================================================
+
                     {
                         name: "searchUserGuide",
                         description:
@@ -16456,6 +17311,9 @@ app.post('/api/bookings/group/:groupId/rooms/:bookingId/cancel', auth, async (re
         res.status(500).json({ message: 'Failed to cancel room in group', error: error.message });
     }
 });
+
+
+
 
 
 // Express endpoint on Render
