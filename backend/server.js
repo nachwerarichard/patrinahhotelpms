@@ -11163,34 +11163,46 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  * Protected Multi-Tenant AI Assistant Endpoint with Full Database Access
  */
 
+// ============================================================================
+// NOVUS COPILOT - COMPLETE MANAGER CHAT ENDPOINT
+// ============================================================================
+// Replace your CURRENT:
+//     app.post('/api/ai/manager-chat', ...)
+// route with this entire block.
+//
+// DO NOT create another /api/ai/manager-chat route.
+// DO NOT change your existing /api/... endpoints.
+// ============================================================================
+
 app.post('/api/ai/manager-chat', auth, async (req, res) => {
 
     try {
 
-        // ============================================================
+        // ====================================================================
         // 1. AUTHENTICATED HOTEL CONTEXT
-        // ============================================================
+        // ====================================================================
 
         const hotelId = req.user?.hotelId;
 
         if (!hotelId || hotelId === 'global') {
             return res.status(400).json({
+                success: false,
                 message: "Hotel context missing or unauthorized."
             });
         }
-
 
         const { message, history } = req.body;
 
         if (!message || !String(message).trim()) {
             return res.status(400).json({
+                success: false,
                 message: "Message query is required."
             });
         }
 
-
         const userRole =
-            req.user?.role || 'staff';
+            req.user?.role ||
+            'staff';
 
         const username =
             req.user?.username ||
@@ -11199,9 +11211,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             'Staff';
 
 
-        // ============================================================
+        // ====================================================================
         // 2. HOTEL PROFILE
-        // ============================================================
+        // ====================================================================
 
         const hotelProfile =
             await Hotel.findById(hotelId).lean();
@@ -11219,9 +11231,9 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             "N/A";
 
 
-        // ============================================================
+        // ====================================================================
         // 3. GLOBAL USER GUIDE
-        // ============================================================
+        // ====================================================================
 
         const guideSections =
             await UserGuideSection
@@ -11232,87 +11244,1771 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 })
                 .lean();
 
-
         const userGuideText =
             guideSections.length
-
                 ? guideSections
                     .map(sec =>
                         `### ${sec.title} (${sec.moduleKey})\n${sec.content}`
                     )
                     .join('\n\n---\n\n')
-
                 : "No SOP user guide sections have been uploaded yet.";
 
 
-        // ============================================================
-        // 4. YOUR EXISTING HELPER FUNCTIONS
-        // ============================================================
+        // ====================================================================
+        // 4. HELPER FUNCTIONS
+        // ====================================================================
 
-        // KEEP your existing:
+        const getAvailableStock = (inventory) => {
+
+            if (!inventory) {
+                return 0;
+            }
+
+            return Math.max(
+                0,
+                Number(inventory.opening || 0) +
+                Number(inventory.purchases || 0) -
+                Number(inventory.sales || 0) -
+                Number(inventory.spoilage || 0)
+            );
+        };
+
+
+        const normalizeItemName = (item) => {
+
+            return String(item || '')
+                .trim()
+                .replace(/\s*\(x\d+\)\s*$/i, '')
+                .trim();
+        };
+
+
+        const checkInventoryAvailability = async ({
+            item,
+            quantity,
+            department
+        }) => {
+
+            const normalizedItem =
+                normalizeItemName(item);
+
+            const requestedQty =
+                Number(quantity);
+
+            if (!normalizedItem) {
+
+                return {
+                    allowed: false,
+                    reason: "INVALID_ITEM",
+                    message:
+                        "An inventory item name is required."
+                };
+            }
+
+            if (
+                !Number.isFinite(requestedQty) ||
+                requestedQty <= 0
+            ) {
+
+                return {
+                    allowed: false,
+                    reason: "INVALID_QUANTITY",
+                    message:
+                        "Quantity must be greater than zero."
+                };
+            }
+
+            const escapedItem =
+                normalizedItem.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    '\\$&'
+                );
+
+            const inventory =
+                await Inventory.findOne({
+                    hotelId,
+                    item: {
+                        $regex: `^${escapedItem}$`,
+                        $options: 'i'
+                    }
+                });
+
+            if (!inventory) {
+
+                return {
+                    allowed: false,
+                    reason: "INVENTORY_NOT_FOUND",
+                    item: normalizedItem,
+                    availableQuantity: 0,
+                    message:
+                        `Inventory item "${normalizedItem}" was not found.`
+                };
+            }
+
+            const availableQuantity =
+                getAvailableStock(inventory);
+
+            if (
+                inventory.trackInventory !== false &&
+                availableQuantity < requestedQty
+            ) {
+
+                return {
+                    allowed: false,
+                    reason: "INSUFFICIENT_STOCK",
+                    item: normalizedItem,
+                    availableQuantity,
+                    requestedQuantity: requestedQty,
+                    message:
+                        `Insufficient stock for "${normalizedItem}". ` +
+                        `Available: ${availableQuantity}, requested: ${requestedQty}.`
+                };
+            }
+
+            return {
+                allowed: true,
+                item: normalizedItem,
+                availableQuantity,
+                requestedQuantity: requestedQty,
+                inventory,
+                stockTracked:
+                    inventory.trackInventory !== false
+            };
+        };
+
+
+        const writeAuditLog = async ({
+            action,
+            details,
+            success = true
+        }) => {
+
+            try {
+
+                await AuditLog.create({
+                    hotelId,
+                    action,
+                    user: username,
+                    details:
+                        typeof details === 'string'
+                            ? details
+                            : JSON.stringify(details),
+                    timestamp: new Date()
+                });
+
+            } catch (auditError) {
+
+                console.error(
+                    "AI Copilot audit logging failed:",
+                    auditError.message
+                );
+            }
+        };
+
+
+        // ====================================================================
+        // 5. EXISTING AUTONOMOUS SALES TOOL
+        // ====================================================================
+
+        const createSaleTool = async ({
+            item,
+            department = 'Bar',
+            quantity,
+            sellingPrice,
+            buyingPrice = 0,
+            accountId = null
+        }) => {
+
+            try {
+
+                const normalizedItem =
+                    normalizeItemName(item);
+
+                const qty =
+                    Number(quantity);
+
+                const sellPrice =
+                    Number(sellingPrice);
+
+                const buyPrice =
+                    Number(buyingPrice || 0);
+
+
+                if (!normalizedItem) {
+
+                    return {
+                        success: false,
+                        reason: "INVALID_ITEM",
+                        message:
+                            "Sale item is required."
+                    };
+                }
+
+
+                if (
+                    !Number.isFinite(qty) ||
+                    qty <= 0
+                ) {
+
+                    return {
+                        success: false,
+                        reason: "INVALID_QUANTITY",
+                        message:
+                            "Sale quantity must be greater than zero."
+                    };
+                }
+
+
+                if (
+                    !Number.isFinite(sellPrice) ||
+                    sellPrice < 0
+                ) {
+
+                    return {
+                        success: false,
+                        reason: "INVALID_SELLING_PRICE",
+                        message:
+                            "A valid selling price is required."
+                    };
+                }
+
+
+                // ------------------------------------------------------------
+                // CHECK INVENTORY BEFORE SALE
+                // ------------------------------------------------------------
+
+                const stockCheck =
+                    await checkInventoryAvailability({
+                        item: normalizedItem,
+                        quantity: qty,
+                        department
+                    });
+
+
+                if (!stockCheck.allowed) {
+
+                    await writeAuditLog({
+                        action:
+                            "Sale Rejected by AI Copilot",
+                        success: false,
+                        details:
+                            stockCheck.message
+                    });
+
+                    return {
+                        success: false,
+                        reason:
+                            stockCheck.reason,
+                        item:
+                            normalizedItem,
+                        requestedQuantity:
+                            qty,
+                        availableQuantity:
+                            stockCheck.availableQuantity || 0,
+                        message:
+                            stockCheck.message
+                    };
+                }
+
+
+                // ------------------------------------------------------------
+                // CALCULATE SALE
+                // ------------------------------------------------------------
+
+                const total =
+                    qty * sellPrice;
+
+                const totalBuyingCost =
+                    qty * buyPrice;
+
+                const profit =
+                    total - totalBuyingCost;
+
+                const percentageprofit =
+                    total > 0
+                        ? (profit / total) * 100
+                        : 0;
+
+
+                // ------------------------------------------------------------
+                // UPDATE INVENTORY
+                // ------------------------------------------------------------
+
+                let updatedInventory =
+                    stockCheck.inventory;
+
+
+                if (stockCheck.stockTracked) {
+
+                    const currentInventory =
+                        await Inventory.findOne({
+                            _id:
+                                stockCheck.inventory._id,
+                            hotelId
+                        });
+
+
+                    if (!currentInventory) {
+
+                        return {
+                            success: false,
+                            reason:
+                                "INVENTORY_DISAPPEARED",
+                            message:
+                                `Inventory record for "${normalizedItem}" ` +
+                                `could not be found. Sale was not created.`
+                        };
+                    }
+
+
+                    const currentAvailable =
+                        getAvailableStock(
+                            currentInventory
+                        );
+
+
+                    if (currentAvailable < qty) {
+
+                        return {
+                            success: false,
+                            reason:
+                                "STOCK_CHANGED",
+                            item:
+                                normalizedItem,
+                            availableQuantity:
+                                currentAvailable,
+                            requestedQuantity:
+                                qty,
+                            message:
+                                `Stock changed before the sale could be completed. ` +
+                                `Available: ${currentAvailable}, requested: ${qty}.`
+                        };
+                    }
+
+
+                    currentInventory.sales =
+                        Number(currentInventory.sales || 0) +
+                        qty;
+
+                    currentInventory.closing =
+                        getAvailableStock(
+                            currentInventory
+                        );
+
+                    await currentInventory.save();
+
+                    updatedInventory =
+                        currentInventory;
+                }
+
+
+                // ------------------------------------------------------------
+                // CREATE SALE RECORD
+                // ------------------------------------------------------------
+
+                const sale =
+                    await Sale.create({
+                        hotelId,
+                        department,
+                        item:
+                            normalizedItem,
+                        number:
+                            qty,
+                        bp:
+                            buyPrice,
+                        sp:
+                            sellPrice,
+                        profit,
+                        percentageprofit,
+                        paymentMethod:
+                            accountId
+                                ? 'Folio'
+                                : undefined,
+                        recordedBy:
+                            username,
+                        date:
+                            new Date()
+                    });
+
+
+                // ------------------------------------------------------------
+                // OPTIONAL FOLIO POSTING
+                // ------------------------------------------------------------
+
+                let folioResult = null;
+
+
+                if (accountId) {
+
+                    const account =
+                        await ClientAccount.findOne({
+                            _id: accountId,
+                            hotelId
+                        });
+
+
+                    if (!account) {
+
+                        // Roll back inventory if folio does not exist.
+                        if (
+                            stockCheck.stockTracked &&
+                            updatedInventory
+                        ) {
+
+                            updatedInventory.sales =
+                                Math.max(
+                                    0,
+                                    Number(
+                                        updatedInventory.sales || 0
+                                    ) - qty
+                                );
+
+                            updatedInventory.closing =
+                                getAvailableStock(
+                                    updatedInventory
+                                );
+
+                            await updatedInventory.save();
+                        }
+
+
+                        await Sale.deleteOne({
+                            _id: sale._id
+                        });
+
+
+                        return {
+                            success: false,
+                            reason:
+                                "FOLIO_NOT_FOUND",
+                            message:
+                                "The requested guest folio was not found. Sale was not completed."
+                        };
+                    }
+
+
+                    if (account.isClosed) {
+
+                        if (
+                            stockCheck.stockTracked &&
+                            updatedInventory
+                        ) {
+
+                            updatedInventory.sales =
+                                Math.max(
+                                    0,
+                                    Number(
+                                        updatedInventory.sales || 0
+                                    ) - qty
+                                );
+
+                            updatedInventory.closing =
+                                getAvailableStock(
+                                    updatedInventory
+                                );
+
+                            await updatedInventory.save();
+                        }
+
+
+                        await Sale.deleteOne({
+                            _id: sale._id
+                        });
+
+
+                        return {
+                            success: false,
+                            reason:
+                                "FOLIO_CLOSED",
+                            message:
+                                "The guest folio is already closed. Sale was not completed."
+                        };
+                    }
+
+
+                    account.charges =
+                        account.charges || [];
+
+                    account.charges.push({
+                        description:
+                            `${normalizedItem} x${qty}`,
+                        amount:
+                            total,
+                        quantity:
+                            qty,
+                        number:
+                            qty,
+                        sp:
+                            sellPrice,
+                        bp:
+                            buyPrice,
+                        type:
+                            department === 'Restaurant'
+                                ? 'Restaurant'
+                                : 'Bar',
+                        date:
+                            new Date()
+                    });
+
+
+                    account.totalCharges =
+                        Number(account.totalCharges || 0) +
+                        total;
+
+
+                    await account.save();
+
+
+                    folioResult = {
+                        success: true,
+                        accountId:
+                            account._id,
+                        amount:
+                            total
+                    };
+                }
+
+
+                await writeAuditLog({
+                    action:
+                        "AI Copilot Sale Created",
+                    success: true,
+                    details: {
+                        saleId:
+                            sale._id,
+                        item:
+                            normalizedItem,
+                        quantity:
+                            qty,
+                        department,
+                        total,
+                        accountId
+                    }
+                });
+
+
+                return {
+                    success: true,
+                    message:
+                        `Sale of ${qty} x ${normalizedItem} recorded successfully.`,
+                    saleId:
+                        sale._id,
+                    item:
+                        normalizedItem,
+                    quantity:
+                        qty,
+                    department,
+                    sellingPrice:
+                        sellPrice,
+                    total,
+                    profit,
+                    inventoryRemaining:
+                        stockCheck.stockTracked
+                            ? getAvailableStock(updatedInventory)
+                            : null,
+                    folio:
+                        folioResult
+                };
+
+            } catch (error) {
+
+                console.error(
+                    "AI create sale error:",
+                    error
+                );
+
+                return {
+                    success: false,
+                    reason:
+                        "SALE_CREATION_ERROR",
+                    message:
+                        "Sale could not be completed.",
+                    error:
+                        error.message
+                };
+            }
+        };
+
+
+        // ====================================================================
+        // 6. EXISTING AUTONOMOUS INVENTORY TOOL
+        // ====================================================================
+
+        const createOrUpdateInventoryItemTool = async ({
+            item,
+            department = 'Bar',
+            opening = 0,
+            purchases = 0,
+            sales = 0,
+            spoilage = 0,
+            buyingprice = 0,
+            sellingprice = 0,
+            lowStock = 5,
+            trackInventory = true
+        }) => {
+
+            try {
+
+                if (!item || !String(item).trim()) {
+
+                    return {
+                        success: false,
+                        reason:
+                            "INVALID_ITEM",
+                        message:
+                            "Inventory item name is required."
+                    };
+                }
+
+
+                const normalizedItem =
+                    normalizeItemName(item);
+
+
+                let inventory =
+                    await Inventory.findOne({
+                        hotelId,
+                        item: {
+                            $regex:
+                                `^${normalizedItem.replace(
+                                    /[.*+?^${}()|[\]\\]/g,
+                                    '\\$&'
+                                )}$`,
+                            $options: 'i'
+                        },
+                        department
+                    });
+
+
+                if (!inventory) {
+
+                    inventory =
+                        new Inventory({
+                            hotelId,
+                            item:
+                                normalizedItem,
+                            department,
+                            opening:
+                                Number(opening || 0),
+                            purchases:
+                                Number(purchases || 0),
+                            sales:
+                                Number(sales || 0),
+                            spoilage:
+                                Number(spoilage || 0),
+                            buyingprice:
+                                Number(buyingprice || 0),
+                            sellingprice:
+                                Number(sellingprice || 0),
+                            lowStock:
+                                Number(lowStock || 5),
+                            trackInventory:
+                                trackInventory !== false
+                        });
+
+                } else {
+
+                    inventory.department =
+                        department;
+
+                    inventory.buyingprice =
+                        Number(buyingprice);
+
+                    inventory.sellingprice =
+                        Number(sellingprice);
+
+                    inventory.lowStock =
+                        Number(lowStock);
+
+                    inventory.trackInventory =
+                        trackInventory !== false;
+                }
+
+
+                inventory.closing =
+                    getAvailableStock(
+                        inventory
+                    );
+
+                await inventory.save();
+
+
+                await writeAuditLog({
+                    action:
+                        "AI Copilot Inventory Item Created/Updated",
+                    success: true,
+                    details: {
+                        inventoryId:
+                            inventory._id,
+                        item:
+                            inventory.item
+                    }
+                });
+
+
+                return {
+                    success: true,
+                    message:
+                        `Inventory item "${inventory.item}" is ready.`,
+                    inventory:
+                        inventory.toObject()
+                };
+
+            } catch (error) {
+
+                console.error(
+                    "AI inventory create/update error:",
+                    error
+                );
+
+                return {
+                    success: false,
+                    reason:
+                        "INVENTORY_ITEM_ERROR",
+                    message:
+                        "Inventory item could not be created or updated.",
+                    error:
+                        error.message
+                };
+            }
+        };
+
+
+        // ====================================================================
+        // 7. AUTONOMOUS STOCK ADJUSTMENT
+        // ====================================================================
+
+        const adjustInventoryStockTool = async ({
+            item,
+            department = 'Bar',
+            adjustment,
+            reason = "AI Copilot stock adjustment"
+        }) => {
+
+            try {
+
+                const qty =
+                    Number(adjustment);
+
+                if (
+                    !Number.isFinite(qty) ||
+                    qty === 0
+                ) {
+
+                    return {
+                        success: false,
+                        reason:
+                            "INVALID_ADJUSTMENT",
+                        message:
+                            "Stock adjustment must be a non-zero number."
+                    };
+                }
+
+
+                const normalizedItem =
+                    normalizeItemName(item);
+
+
+                const inventory =
+                    await Inventory.findOne({
+                        hotelId,
+                        item: {
+                            $regex:
+                                `^${normalizedItem.replace(
+                                    /[.*+?^${}()|[\]\\]/g,
+                                    '\\$&'
+                                )}$`,
+                            $options: 'i'
+                        },
+                        department
+                    });
+
+
+                if (!inventory) {
+
+                    return {
+                        success: false,
+                        reason:
+                            "INVENTORY_NOT_FOUND",
+                        message:
+                            `Inventory item "${normalizedItem}" was not found.`
+                    };
+                }
+
+
+                const currentStock =
+                    getAvailableStock(
+                        inventory
+                    );
+
+
+                const newStock =
+                    currentStock + qty;
+
+
+                if (newStock < 0) {
+
+                    return {
+                        success: false,
+                        reason:
+                            "NEGATIVE_STOCK",
+                        message:
+                            `Adjustment would create negative stock. ` +
+                            `Current stock: ${currentStock}, adjustment: ${qty}.`
+                    };
+                }
+
+
+                if (qty > 0) {
+
+                    inventory.purchases =
+                        Number(
+                            inventory.purchases || 0
+                        ) + qty;
+
+                } else {
+
+                    inventory.spoilage =
+                        Number(
+                            inventory.spoilage || 0
+                        ) + Math.abs(qty);
+                }
+
+
+                inventory.closing =
+                    getAvailableStock(
+                        inventory
+                    );
+
+
+                await inventory.save();
+
+
+                await writeAuditLog({
+                    action:
+                        "AI Copilot Inventory Adjustment",
+                    success: true,
+                    details: {
+                        item:
+                            normalizedItem,
+                        adjustment:
+                            qty,
+                        reason,
+                        newStock:
+                            inventory.closing
+                    }
+                });
+
+
+                return {
+                    success: true,
+                    message:
+                        `Inventory adjusted successfully.`,
+                    item:
+                        normalizedItem,
+                    adjustment:
+                        qty,
+                    previousStock:
+                        currentStock,
+                    newStock:
+                        inventory.closing
+                };
+
+            } catch (error) {
+
+                console.error(
+                    "AI inventory adjustment error:",
+                    error
+                );
+
+                return {
+                    success: false,
+                    reason:
+                        "INVENTORY_ADJUSTMENT_ERROR",
+                    message:
+                        "Inventory adjustment failed.",
+                    error:
+                        error.message
+                };
+            }
+        };
+
+
+        // ====================================================================
+        // 8. KITCHEN STATUS TOOLS
+        // ====================================================================
+
+        const updateKitchenStatus =
+            async ({
+                orderId,
+                status
+            }) => {
+
+                try {
+
+                    if (!orderId) {
+
+                        return {
+                            success: false,
+                            reason:
+                                "ORDER_ID_REQUIRED",
+                            message:
+                                "Kitchen order ID is required."
+                        };
+                    }
+
+
+                    const allowedStatuses = [
+                        'Pending',
+                        'Preparing',
+                        'Ready',
+                        'Served'
+                    ];
+
+
+                    if (
+                        !allowedStatuses.includes(status)
+                    ) {
+
+                        return {
+                            success: false,
+                            reason:
+                                "INVALID_STATUS",
+                            message:
+                                `Invalid kitchen status "${status}".`
+                        };
+                    }
+
+
+                    const order =
+                        await KitchenOrder.findOne({
+                            _id:
+                                orderId,
+                            hotelId
+                        });
+
+
+                    if (!order) {
+
+                        return {
+                            success: false,
+                            reason:
+                                "ORDER_NOT_FOUND",
+                            message:
+                                "Kitchen order was not found."
+                        };
+                    }
+
+
+                    order.status =
+                        status;
+
+
+                    const now =
+                        new Date();
+
+
+                    if (status === 'Preparing') {
+                        order.preparingAt = now;
+                    }
+
+                    if (status === 'Ready') {
+                        order.readyAt = now;
+                    }
+
+                    if (status === 'Served') {
+                        order.servedAt = now;
+                    }
+
+
+                    await order.save();
+
+
+                    await writeAuditLog({
+                        action:
+                            `AI Copilot Kitchen Order ${status}`,
+                        success: true,
+                        details: {
+                            orderId,
+                            status
+                        }
+                    });
+
+
+                    return {
+                        success: true,
+                        message:
+                            `Kitchen order marked ${status}.`,
+                        order:
+                            order.toObject()
+                    };
+
+                } catch (error) {
+
+                    console.error(
+                        "AI kitchen status error:",
+                        error
+                    );
+
+                    return {
+                        success: false,
+                        reason:
+                            "KITCHEN_STATUS_ERROR",
+                        message:
+                            "Kitchen order status could not be updated.",
+                        error:
+                            error.message
+                    };
+                }
+            };
+
+
+        const markKitchenOrderPreparingTool =
+            async ({ orderId }) =>
+                updateKitchenStatus({
+                    orderId,
+                    status: 'Preparing'
+                });
+
+
+        const markKitchenOrderReadyTool =
+            async ({ orderId }) =>
+                updateKitchenStatus({
+                    orderId,
+                    status: 'Ready'
+                });
+
+
+        const markKitchenOrderServedTool =
+            async ({ orderId }) =>
+                updateKitchenStatus({
+                    orderId,
+                    status: 'Served'
+                });
+
+
+        // ====================================================================
+        // 9. READ-ONLY TENANT-ISOLATED TOOLS
+        // ====================================================================
+
+        const searchBookingsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Booking.find(
+                    safeFilter
+                )
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchRoomsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Room.find(
+                    safeFilter
+                )
+                    .populate('roomTypeId')
+                    .lean();
+            };
+
+
+        const searchStatusReportsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await StatusReport.find(
+                    safeFilter
+                )
+                    .populate('roomId')
+                    .sort({
+                        dateTime: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchCashJournalTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await CashJournal.find(
+                    safeFilter
+                )
+                    .sort({
+                        date: -1
+                    })
+                    .limit(30)
+                    .lean();
+            };
+
+
+        const searchInventoryTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.item) {
+
+                    safeFilter.item = {
+                        $regex:
+                            String(safeFilter.item),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await Inventory.find(
+                    safeFilter
+                )
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchSalesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.item) {
+
+                    safeFilter.item = {
+                        $regex:
+                            String(safeFilter.item),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await Sale.find(
+                    safeFilter
+                )
+                    .sort({
+                        date: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchExpensesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Expense.find(
+                    safeFilter
+                )
+                    .sort({
+                        date: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchChecklistsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Checklist.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(30)
+                    .lean();
+            };
+
+
+        const searchRoomTypesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.name) {
+
+                    safeFilter.name = {
+                        $regex:
+                            String(safeFilter.name),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await RoomType.find(
+                    safeFilter
+                )
+                    .lean();
+            };
+
+
+        const searchUsersTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await User.find(
+                    safeFilter
+                )
+                    .select('-password')
+                    .lean();
+            };
+
+
+        const searchAuditLogsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.action) {
+
+                    safeFilter.action = {
+                        $regex:
+                            String(safeFilter.action),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await AuditLog.find(
+                    safeFilter
+                )
+                    .sort({
+                        timestamp: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchKitchenOrdersTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.item) {
+
+                    safeFilter.item = {
+                        $regex:
+                            String(safeFilter.item),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await KitchenOrder.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchGatewaysTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Gateway.find(
+                    safeFilter
+                )
+                    .select(
+                        '-consumerKey -consumerSecret'
+                    )
+                    .lean();
+            };
+
+
+        const searchPaymentTransactionsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await PaymentTransaction.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchIncidentalChargesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.guestName) {
+
+                    safeFilter.guestName = {
+                        $regex:
+                            String(safeFilter.guestName),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await IncidentalCharge.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchClientAccountsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.guestName) {
+
+                    safeFilter.guestName = {
+                        $regex:
+                            String(safeFilter.guestName),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await ClientAccount.find(
+                    safeFilter
+                )
+                    .sort({
+                        updatedAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchCentralStoreTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.sku) {
+
+                    safeFilter.sku = {
+                        $regex:
+                            String(safeFilter.sku),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.itemName) {
+
+                    safeFilter.itemName = {
+                        $regex:
+                            String(safeFilter.itemName),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await CentralStore.find(
+                    safeFilter
+                )
+                    .sort({
+                        itemName: 1
+                    })
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchDepartmentStockTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await DepartmentStock.find(
+                    safeFilter
+                )
+                    .populate('itemId')
+                    .sort({
+                        department: 1
+                    })
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchStockTransfersTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await StockTransfer.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchFunctionSpacesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await FunctionSpace.find(
+                    safeFilter
+                )
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchBanquetEventsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await BanquetEvent.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchEmployeesTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Employee.find(
+                    safeFilter
+                )
+                    .select('-password')
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchAttendanceTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                return await Attendance.find(
+                    safeFilter
+                )
+                    .sort({
+                        date: -1
+                    })
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchHotelAssetsTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.assetCode) {
+
+                    safeFilter.assetCode = {
+                        $regex:
+                            String(
+                                safeFilter.assetCode
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.assetName) {
+
+                    safeFilter.assetName = {
+                        $regex:
+                            String(
+                                safeFilter.assetName
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.location) {
+
+                    safeFilter.location = {
+                        $regex:
+                            String(
+                                safeFilter.location
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await HotelAsset.find(
+                    safeFilter
+                )
+                    .sort({
+                        assetName: 1
+                    })
+                    .limit(100)
+                    .lean();
+            };
+
+
+        const searchWorkOrdersTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.workOrderNumber) {
+
+                    safeFilter.workOrderNumber = {
+                        $regex:
+                            String(
+                                safeFilter.workOrderNumber
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.locationRoom) {
+
+                    safeFilter.locationRoom = {
+                        $regex:
+                            String(
+                                safeFilter.locationRoom
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.assignedTo) {
+
+                    safeFilter.assignedTo = {
+                        $regex:
+                            String(
+                                safeFilter.assignedTo
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await WorkOrder.find(
+                    safeFilter
+                )
+                    .populate('assetId')
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchGuestFeedbackTool =
+            async (queryFilter = {}) => {
+
+                const safeFilter = {
+                    ...queryFilter,
+                    hotelId
+                };
+
+                if (safeFilter.guestName) {
+
+                    safeFilter.guestName = {
+                        $regex:
+                            String(
+                                safeFilter.guestName
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                if (safeFilter.roomNumber) {
+
+                    safeFilter.roomNumber =
+                        String(
+                            safeFilter.roomNumber
+                        );
+                }
+
+                if (safeFilter.bookingCustomId) {
+
+                    safeFilter.bookingCustomId = {
+                        $regex:
+                            String(
+                                safeFilter.bookingCustomId
+                            ),
+                        $options:
+                            'i'
+                    };
+                }
+
+                return await GuestFeedback.find(
+                    safeFilter
+                )
+                    .sort({
+                        createdAt: -1
+                    })
+                    .limit(50)
+                    .lean();
+            };
+
+
+        const searchUserGuideTool =
+            async ({ moduleKey } = {}) => {
+
+                const filter = {};
+
+                if (moduleKey) {
+
+                    filter.moduleKey =
+                        String(moduleKey)
+                            .trim()
+                            .toLowerCase();
+                }
+
+                return await UserGuideSection
+                    .find(filter)
+                    .sort({
+                        order: 1,
+                        title: 1
+                    })
+                    .lean();
+            };
+
+
+        // ====================================================================
+        // 10. OPERATIONAL AGENT REGISTRY
+        // ====================================================================
+
+        // IMPORTANT:
+        // createAIOperationalFunctions MUST already be defined elsewhere
+        // in server.js and must return an object such as:
         //
-        // getAvailableStock
-        // normalizeItemName
-        // checkInventoryAvailability
-        // writeAuditLog
-        //
-        // exactly as they currently exist.
-
-
-        // ============================================================
-        // 5. YOUR EXISTING AUTONOMOUS FUNCTIONS
-        // ============================================================
-
-        // KEEP your existing:
-        //
-        // createSaleTool
-        // createOrUpdateInventoryItemTool
-        // adjustInventoryStockTool
-        // markKitchenOrderPreparingTool
-        // markKitchenOrderReadyTool
-        // markKitchenOrderServedTool
-        //
-        // exactly as they currently exist.
-
-
-        // ============================================================
-        // 6. YOUR EXISTING READ-ONLY FUNCTIONS
-        // ============================================================
-
-        // KEEP all your existing functions:
-        //
-        // searchBookingsTool
-        // searchRoomsTool
-        // searchStatusReportsTool
-        // searchCashJournalTool
-        // searchInventoryTool
-        // searchSalesTool
-        // searchExpensesTool
-        // searchChecklistsTool
-        // searchRoomTypesTool
-        // searchUsersTool
-        // searchAuditLogsTool
-        // searchKitchenOrdersTool
-        // searchGatewaysTool
-        // searchPaymentTransactionsTool
-        // searchIncidentalChargesTool
-        // searchClientAccountsTool
-        // searchCentralStoreTool
-        // searchDepartmentStockTool
-        // searchStockTransfersTool
-        // searchFunctionSpacesTool
-        // searchBanquetEventsTool
-        // searchEmployeesTool
-        // searchAttendanceTool
-        // searchHotelAssetsTool
-        // searchWorkOrdersTool
-        // searchGuestFeedbackTool
-        // searchUserGuideTool
-
-
-        // ============================================================
-        // 7. CREATE OPERATIONAL FUNCTION REGISTRY
-        // ============================================================
+        // {
+        //     searchInventory,
+        //     recordInventoryPurchase,
+        //     recordInventorySpoilage,
+        //     recordSale,
+        //     searchGuestFolios,
+        //     postGuestFolioCharge,
+        //     postIncidentalCharge,
+        //     updateRoomStatus,
+        //     searchRoomHistory,
+        //     createKitchenOrder,
+        //     updateKitchenOrderStatus,
+        //     searchKitchenOrders,
+        //     searchBookings,
+        //     checkInGuest,
+        //     checkOutGuest,
+        //     searchAuditLogs
+        // }
 
         const operationalFunctions =
             createAIOperationalFunctions({
@@ -11321,15 +13017,13 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             });
 
 
-        // ============================================================
-        // 8. COMPLETE INTERNAL FUNCTION REGISTRY
-        // ============================================================
+        // ====================================================================
+        // 11. COMPLETE INTERNAL FUNCTION REGISTRY
+        // ====================================================================
 
         const internalFunctions = {
 
-            // --------------------------------------------------------
-            // READ ONLY
-            // --------------------------------------------------------
+            // READ-ONLY TOOLS
 
             searchUserGuide:
                 searchUserGuideTool,
@@ -11413,17 +13107,36 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 searchGuestFeedbackTool,
 
 
-            // --------------------------------------------------------
-            // AUTONOMOUS OPERATIONAL AGENTS
-            // --------------------------------------------------------
+            // EXISTING AUTONOMOUS TOOLS
+
+            createSale:
+                createSaleTool,
+
+            createOrUpdateInventoryItem:
+                createOrUpdateInventoryItemTool,
+
+            adjustInventoryStock:
+                adjustInventoryStockTool,
+
+            markKitchenOrderPreparing:
+                markKitchenOrderPreparingTool,
+
+            markKitchenOrderReady:
+                markKitchenOrderReadyTool,
+
+            markKitchenOrderServed:
+                markKitchenOrderServedTool,
+
+
+            // AGENT-BASED OPERATIONAL TOOLS
 
             ...operationalFunctions
         };
 
 
-        // ============================================================
-        // 9. SYSTEM INSTRUCTION
-        // ============================================================
+        // ====================================================================
+        // 12. SYSTEM INSTRUCTION
+        // ====================================================================
 
         const localTimeISO =
             new Date().toISOString();
@@ -11435,15 +13148,16 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
         const systemInstruction = `
 You are "Novus Copilot", the administrative and operational AI assistant for ${hotelName}.
 
-Current User: ${username}
+CURRENT USER:
+Username: ${username}
 Role: ${userRole}
 
-CURRENT PROPERTY PROFILE:
-Property Name: ${hotelName}
+PROPERTY:
+Name: ${hotelName}
 Location: ${hotelLocation}
 Contact: ${hotelContact}
 
-CURRENT AUTHENTICATED HOTEL:
+AUTHENTICATED HOTEL:
 hotelId: ${hotelId}
 
 TODAY:
@@ -11451,9 +13165,14 @@ ${localDateStr}
 
 You are an operational AI assistant for Novus CloudPMS.
 
+========================================================
+BACKEND AUTHORITY
+========================================================
+
 The backend is the authoritative source of truth.
 
 Never invent:
+
 - bookings
 - guests
 - rooms
@@ -11465,30 +13184,36 @@ Never invent:
 - booking IDs
 - MongoDB IDs
 
-Never claim an operation succeeded unless the corresponding
-backend tool returns success: true.
+Never claim an operation succeeded unless the backend tool
+returned success: true.
+
+If a backend tool returns success:false, report the failure
+accurately.
+
+Never turn a failed operation into a successful answer.
 
 ========================================================
 SALES
 ========================================================
 
-When the user asks to create or record a sale:
+When the user asks to record a sale:
 
-Use the appropriate sales operational tool.
+1. Identify the item.
+2. Identify quantity.
+3. Identify department.
+4. Identify price if required.
+5. Use the appropriate operational sales tool.
+6. Let the backend validate inventory.
+7. Never manipulate stock merely to make a sale succeed.
 
-The server must verify inventory.
-
-Never create a sale merely because the user wants it created.
-
-Never create negative inventory.
-
-If stock is insufficient, report the actual backend rejection.
+If inventory is insufficient, report the actual available
+quantity and backend rejection.
 
 ========================================================
 INVENTORY
 ========================================================
 
-Use the inventory operational tools for:
+Use operational inventory tools for:
 
 - creating inventory items
 - updating inventory metadata
@@ -11498,7 +13223,11 @@ Use the inventory operational tools for:
 - increasing stock
 - reducing stock
 
-Never manipulate stock simply to make a sale succeed.
+Never invent stock.
+
+Never create negative inventory.
+
+Never alter inventory merely to make another operation succeed.
 
 ========================================================
 KITCHEN
@@ -11511,13 +13240,11 @@ Preparing
 Ready
 Served
 
-Use the appropriate kitchen operational tool.
+Use the appropriate kitchen tool.
 
-Never claim that an order is Ready unless the backend confirms success.
+Never claim an order is Ready unless the backend confirms it.
 
-Never claim that an order is Served unless the backend confirms success.
-
-Do not delete served kitchen orders unless a separate authorised workflow exists.
+Never claim an order is Served unless the backend confirms it.
 
 ========================================================
 FOLIOS
@@ -11525,11 +13252,12 @@ FOLIOS
 
 Before posting a guest charge:
 
-1. Identify the correct ClientAccount.
-2. If multiple guests match, do not guess.
-3. Do not post to a closed folio.
-4. Use the authenticated hotel context.
-5. Never accept hotelId from the AI as authority.
+1. Identify the correct guest.
+2. Identify the correct ClientAccount.
+3. If multiple guests match, do not guess.
+4. Never post to a closed folio.
+5. Use the authenticated hotel context.
+6. Never trust hotelId supplied by the AI.
 
 ========================================================
 ROOMS
@@ -11543,14 +13271,14 @@ dirty
 under-maintenance
 blocked
 
-Use the room operational tool when changing room status.
+Use the operational room-status tool for room changes.
 
 ========================================================
 FRONT DESK
 ========================================================
 
-A guest can only be checked out when the backend confirms that
-the booking balance is zero.
+A guest may only be checked out when the backend confirms
+that the booking balance is zero.
 
 Never bypass this rule.
 
@@ -11558,15 +13286,20 @@ Never bypass this rule.
 USER GUIDE
 ========================================================
 
-The complete Novus CloudPMS User Guide is provided below.
+The complete global Novus CloudPMS User Guide is available
+below.
 
-When answering questions about how to use the PMS:
+When answering "how do I use Novus?" questions:
 
-Use the documented procedures, button names and workflows.
+- use documented procedures
+- use documented button names
+- use documented workflows
+- do not invent UI buttons
+- do not invent routes
+- do not invent procedures
 
-Do not invent UI buttons or procedures.
-
-If the guide does not contain the requested procedure, say so clearly.
+If the guide does not contain the requested procedure,
+say so clearly.
 
 ========================================================
 SECURITY
@@ -11591,77 +13324,1187 @@ Never expose:
 - other sensitive credentials
 
 ========================================================
-USER GUIDE
+GLOBAL USER GUIDE
 ========================================================
 
 ${userGuideText}
 `.trim();
 
 
-        // ============================================================
-        // 10. GEMINI TOOL DECLARATIONS
-        // ============================================================
-
-        /*
-         * KEEP YOUR EXISTING toolsConfig ARRAY HERE.
-         *
-         * IMPORTANT:
-         * The names in toolsConfig MUST exactly match the keys
-         * in internalFunctions.
-         *
-         * Example:
-         *
-         * Gemini:
-         *     name: "searchUserGuide"
-         *
-         * Registry:
-         *     searchUserGuide: searchUserGuideTool
-         *
-         * Gemini:
-         *     name: "recordSale"
-         *
-         * Registry:
-         *     recordSale: operationalFunctions.recordSale
-         */
+        // ====================================================================
+        // 13. GEMINI TOOL DECLARATIONS
+        // ====================================================================
+        //
+        // The important rule:
+        //
+        //     Gemini name === internalFunctions key
+        //
+        // Do NOT use searchUserGuideTool as the Gemini name.
+        //
+        // ====================================================================
 
         const toolsConfig = [
             {
                 functionDeclarations: [
-                    // KEEP YOUR EXISTING 26 READ-ONLY DECLARATIONS
-                    // AND YOUR NEW OPERATIONAL DECLARATIONS HERE.
+
+                    // --------------------------------------------------------
+                    // USER GUIDE
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchUserGuide",
+                        description:
+                            "Searches the global Novus CloudPMS user guide for documented procedures and SOPs.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                moduleKey: {
+                                    type: "STRING",
+                                    description:
+                                        "Optional module key such as inventory, sales, rooms, bookings, staff, front-desk."
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // BOOKINGS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchBookings",
+                        description:
+                            "Searches hotel bookings for the authenticated hotel.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                id: {
+                                    type: "STRING"
+                                },
+                                name: {
+                                    type: "STRING"
+                                },
+                                room: {
+                                    type: "STRING"
+                                },
+                                gueststatus: {
+                                    type: "STRING"
+                                },
+                                checkedIn: {
+                                    type: "BOOLEAN"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // ROOMS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchRooms",
+                        description:
+                            "Searches hotel rooms and current room states.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // ROOM STATUS HISTORY
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchStatusReports",
+                        description:
+                            "Searches room status and housekeeping history.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                roomId: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // ROOM TYPES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchRoomTypes",
+                        description:
+                            "Searches configured room types and rates.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // CASH JOURNAL
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchCashJournal",
+                        description:
+                            "Searches hotel cash journal records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                date: {
+                                    type: "STRING"
+                                },
+                                action: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // INVENTORY
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchInventory",
+                        description:
+                            "Searches departmental inventory and stock records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // SALES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchSales",
+                        description:
+                            "Searches sales records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                paymentMethod: {
+                                    type: "STRING"
+                                },
+                                recordedBy: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // EXPENSES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchExpenses",
+                        description:
+                            "Searches hotel expenses.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                category: {
+                                    type: "STRING"
+                                },
+                                recordedBy: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // CHECKLISTS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchChecklists",
+                        description:
+                            "Searches hotel inspection and checklist records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // USERS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchUsers",
+                        description:
+                            "Searches hotel users while excluding passwords.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                username: {
+                                    type: "STRING"
+                                },
+                                role: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // AUDIT LOGS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchAuditLogs",
+                        description:
+                            "Searches hotel audit logs.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                action: {
+                                    type: "STRING"
+                                },
+                                user: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // KITCHEN
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchKitchenOrders",
+                        description:
+                            "Searches kitchen orders.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                },
+                                waiter: {
+                                    type: "STRING"
+                                },
+                                tableNumber: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // GATEWAYS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchGateways",
+                        description:
+                            "Searches configured payment gateways without exposing gateway secrets.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: {
+                                    type: "STRING"
+                                },
+                                provider: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // PAYMENT TRANSACTIONS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchPaymentTransactions",
+                        description:
+                            "Searches payment transaction records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: {
+                                    type: "STRING"
+                                },
+                                paymentMethod: {
+                                    type: "STRING"
+                                },
+                                transactionid: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // INCIDENTAL CHARGES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchIncidentalCharges",
+                        description:
+                            "Searches incidental guest charges.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                type: {
+                                    type: "STRING"
+                                },
+                                isPaid: {
+                                    type: "BOOLEAN"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // CLIENT ACCOUNTS / FOLIOS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchClientAccounts",
+                        description:
+                            "Searches guest folio/client account records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                isClosed: {
+                                    type: "BOOLEAN"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // CENTRAL STORE
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchCentralStore",
+                        description:
+                            "Searches central store inventory.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                sku: {
+                                    type: "STRING"
+                                },
+                                itemName: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // DEPARTMENT STOCK
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchDepartmentStock",
+                        description:
+                            "Searches departmental stock records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                department: {
+                                    type: "STRING"
+                                },
+                                itemId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // STOCK TRANSFERS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchStockTransfers",
+                        description:
+                            "Searches stock transfer records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                fromDepartment: {
+                                    type: "STRING"
+                                },
+                                toDepartment: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // FUNCTION SPACES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchFunctionSpaces",
+                        description:
+                            "Searches hotel function spaces.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // BANQUET EVENTS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchBanquetEvents",
+                        description:
+                            "Searches banquet and event records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: {
+                                    type: "STRING"
+                                },
+                                eventName: {
+                                    type: "STRING"
+                                },
+                                date: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // EMPLOYEES
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchEmployees",
+                        description:
+                            "Searches hotel employee records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                name: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                role: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // ATTENDANCE
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchAttendance",
+                        description:
+                            "Searches employee attendance records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                employeeId: {
+                                    type: "STRING"
+                                },
+                                date: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // HOTEL ASSETS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchHotelAssets",
+                        description:
+                            "Searches hotel asset records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                assetCode: {
+                                    type: "STRING"
+                                },
+                                assetName: {
+                                    type: "STRING"
+                                },
+                                location: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // WORK ORDERS
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchWorkOrders",
+                        description:
+                            "Searches maintenance work orders.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                workOrderNumber: {
+                                    type: "STRING"
+                                },
+                                locationRoom: {
+                                    type: "STRING"
+                                },
+                                assignedTo: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // --------------------------------------------------------
+                    // GUEST FEEDBACK
+                    // --------------------------------------------------------
+
+                    {
+                        name: "searchGuestFeedback",
+                        description:
+                            "Searches guest feedback and service recovery records.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                bookingCustomId: {
+                                    type: "STRING"
+                                },
+                                overallRating: {
+                                    type: "NUMBER"
+                                },
+                                isResolved: {
+                                    type: "BOOLEAN"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // ========================================================
+                    // AUTONOMOUS TOOLS
+                    // ========================================================
+
+                    {
+                        name: "createSale",
+                        description:
+                            "Records a sale after validating inventory. Use this for actual sale creation.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "item",
+                                "quantity",
+                                "sellingPrice"
+                            ],
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING",
+                                    enum: [
+                                        "Bar",
+                                        "Restaurant",
+                                        "Kitchen"
+                                    ]
+                                },
+                                quantity: {
+                                    type: "NUMBER"
+                                },
+                                sellingPrice: {
+                                    type: "NUMBER"
+                                },
+                                buyingPrice: {
+                                    type: "NUMBER"
+                                },
+                                accountId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "createOrUpdateInventoryItem",
+                        description:
+                            "Creates or updates an inventory item.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "item"
+                            ],
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                opening: {
+                                    type: "NUMBER"
+                                },
+                                purchases: {
+                                    type: "NUMBER"
+                                },
+                                sales: {
+                                    type: "NUMBER"
+                                },
+                                spoilage: {
+                                    type: "NUMBER"
+                                },
+                                buyingprice: {
+                                    type: "NUMBER"
+                                },
+                                sellingprice: {
+                                    type: "NUMBER"
+                                },
+                                lowStock: {
+                                    type: "NUMBER"
+                                },
+                                trackInventory: {
+                                    type: "BOOLEAN"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "adjustInventoryStock",
+                        description:
+                            "Adjusts inventory stock while preventing negative stock.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "item",
+                                "adjustment"
+                            ],
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                adjustment: {
+                                    type: "NUMBER"
+                                },
+                                reason: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "markKitchenOrderPreparing",
+                        description:
+                            "Marks a kitchen order as Preparing.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "orderId"
+                            ],
+                            properties: {
+                                orderId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "markKitchenOrderReady",
+                        description:
+                            "Marks a kitchen order as Ready.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "orderId"
+                            ],
+                            properties: {
+                                orderId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "markKitchenOrderServed",
+                        description:
+                            "Marks a kitchen order as Served.",
+                        parameters: {
+                            type: "OBJECT",
+                            required: [
+                                "orderId"
+                            ],
+                            properties: {
+                                orderId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    // ========================================================
+                    // AGENT OPERATIONAL TOOLS
+                    // ========================================================
+
+                    {
+                        name: "recordInventoryPurchase",
+                        description:
+                            "Records inventory received/purchased.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                quantity: {
+                                    type: "NUMBER"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                buyingPrice: {
+                                    type: "NUMBER"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "recordInventorySpoilage",
+                        description:
+                            "Records inventory spoilage.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                quantity: {
+                                    type: "NUMBER"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                reason: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "recordSale",
+                        description:
+                            "Records a PMS sale through the Sales Agent.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                number: {
+                                    type: "NUMBER"
+                                },
+                                bp: {
+                                    type: "NUMBER"
+                                },
+                                sp: {
+                                    type: "NUMBER"
+                                },
+                                accountId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "searchGuestFolios",
+                        description:
+                            "Searches open guest folios.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                guestName: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "postGuestFolioCharge",
+                        description:
+                            "Posts an approved charge to a guest folio.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                accountId: {
+                                    type: "STRING"
+                                },
+                                description: {
+                                    type: "STRING"
+                                },
+                                amount: {
+                                    type: "NUMBER"
+                                },
+                                quantity: {
+                                    type: "NUMBER"
+                                },
+                                type: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "postIncidentalCharge",
+                        description:
+                            "Posts an incidental guest charge.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                bookingId: {
+                                    type: "STRING"
+                                },
+                                bookingCustomId: {
+                                    type: "STRING"
+                                },
+                                guestName: {
+                                    type: "STRING"
+                                },
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                type: {
+                                    type: "STRING"
+                                },
+                                description: {
+                                    type: "STRING"
+                                },
+                                amount: {
+                                    type: "NUMBER"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "updateRoomStatus",
+                        description:
+                            "Updates a room operational status.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "searchRoomHistory",
+                        description:
+                            "Searches room status history.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                roomNumber: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "createKitchenOrder",
+                        description:
+                            "Creates a kitchen order.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                item: {
+                                    type: "STRING"
+                                },
+                                number: {
+                                    type: "NUMBER"
+                                },
+                                department: {
+                                    type: "STRING"
+                                },
+                                waiter: {
+                                    type: "STRING"
+                                },
+                                tableNumber: {
+                                    type: "STRING"
+                                },
+                                accountId: {
+                                    type: "STRING"
+                                },
+                                bp: {
+                                    type: "NUMBER"
+                                },
+                                sp: {
+                                    type: "NUMBER"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "updateKitchenOrderStatus",
+                        description:
+                            "Updates a kitchen order status.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                orderId: {
+                                    type: "STRING"
+                                },
+                                status: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "searchBookings",
+                        description:
+                            "Searches bookings through the Front Desk Agent.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                status: {
+                                    type: "STRING"
+                                },
+                                room: {
+                                    type: "STRING"
+                                },
+                                guestName: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "checkInGuest",
+                        description:
+                            "Checks in a guest using the authenticated hotel context.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                bookingId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    },
+
+
+                    {
+                        name: "checkOutGuest",
+                        description:
+                            "Checks out a guest only when backend rules permit.",
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                bookingId: {
+                                    type: "STRING"
+                                }
+                            }
+                        }
+                    }
                 ]
             }
         ];
 
 
-        // ============================================================
-        // 11. CONVERSATION HISTORY
-        // ============================================================
+        // ====================================================================
+        // 14. CONVERSATION HISTORY
+        // ====================================================================
 
         const formattedContents =
             Array.isArray(history)
                 ? [...history]
                 : [];
 
+
         formattedContents.push({
             role: "user",
             parts: [
                 {
-                    text: message
+                    text:
+                        String(message)
                 }
             ]
         });
 
 
-        // ============================================================
-        // 12. GEMINI FUNCTION-CALL LOOP
-        // ============================================================
+        // ====================================================================
+        // 15. GEMINI FUNCTION-CALL LOOP
+        // ====================================================================
 
         let responseText = "";
 
         let loops = 0;
 
-        const maxLoops = 5;
+        const maxLoops = 8;
 
 
         while (loops < maxLoops) {
@@ -11689,9 +14532,9 @@ ${userGuideText}
                 });
 
 
-            // ========================================================
-            // AI REQUESTED TOOL EXECUTION
-            // ========================================================
+            // ---------------------------------------------------------------
+            // FUNCTION CALLS
+            // ---------------------------------------------------------------
 
             if (
                 aiResponse.functionCalls &&
@@ -11711,7 +14554,8 @@ ${userGuideText}
 
 
                 for (
-                    const call of aiResponse.functionCalls
+                    const call
+                    of aiResponse.functionCalls
                 ) {
 
                     const toolName =
@@ -11721,84 +14565,21 @@ ${userGuideText}
                         call.args || {};
 
 
-                    // =================================================
-                    // EXECUTE REGISTERED TOOL
-                    // =================================================
+                    console.log(
+                        `🤖 Novus Copilot executing tool: ${toolName}`,
+                        toolArgs
+                    );
+
+
+                    // -------------------------------------------------------
+                    // NEVER allow an unregistered tool to crash the endpoint
+                    // -------------------------------------------------------
 
                     if (
-                        typeof internalFunctions[toolName] ===
-                        "function"
+                        typeof internalFunctions[
+                            toolName
+                        ] !== 'function'
                     ) {
-
-                        let toolResultData;
-
-
-                        try {
-
-                            toolResultData =
-                                await internalFunctions[
-                                    toolName
-                                ](
-                                    toolArgs
-                                );
-
-                        } catch (
-                            toolExecutionError
-                        ) {
-
-                            console.error(
-                                `AI tool ${toolName} execution error:`,
-                                toolExecutionError
-                            );
-
-                            toolResultData = {
-
-                                success:
-                                    false,
-
-                                error:
-                                    toolExecutionError.message,
-
-                                message:
-                                    `Tool "${toolName}" failed to execute.`
-                            };
-                        }
-
-
-                        // =================================================
-                        // RETURN TOOL RESULT TO GEMINI
-                        // =================================================
-
-                        formattedContents.push({
-
-                            role:
-                                "user",
-
-                            parts: [
-
-                                {
-
-                                    functionResponse: {
-
-                                        name:
-                                            toolName,
-
-                                        response: {
-
-                                            result:
-                                                toolResultData
-                                        }
-                                    }
-                                }
-                            ]
-                        });
-
-
-                    } else {
-
-                        // =================================================
-                        // UNKNOWN TOOL
-                        // =================================================
 
                         console.error(
                             `AI attempted to call unregistered tool: ${toolName}`
@@ -11813,7 +14594,6 @@ ${userGuideText}
                             parts: [
 
                                 {
-
                                     functionResponse: {
 
                                         name:
@@ -11837,42 +14617,147 @@ ${userGuideText}
                                 }
                             ]
                         });
+
+
+                        continue;
                     }
+
+
+                    let toolResultData;
+
+
+                    try {
+
+                        toolResultData =
+                            await internalFunctions[
+                                toolName
+                            ](
+                                toolArgs
+                            );
+
+
+                    } catch (
+                        toolExecutionError
+                    ) {
+
+                        console.error(
+                            `AI tool ${toolName} execution error:`,
+                            toolExecutionError
+                        );
+
+
+                        toolResultData = {
+
+                            success:
+                                false,
+
+                            error:
+                                toolExecutionError.message,
+
+                            message:
+                                `Tool "${toolName}" failed to execute.`
+                        };
+                    }
+
+
+                    // -------------------------------------------------------
+                    // NORMALIZE TOOL RESULT
+                    // -------------------------------------------------------
+
+                    if (
+                        toolResultData === undefined
+                    ) {
+
+                        toolResultData = {
+
+                            success:
+                                false,
+
+                            error:
+                                "EMPTY_TOOL_RESULT",
+
+                            message:
+                                `Tool "${toolName}" returned no result.`
+                        };
+                    }
+
+
+                    // -------------------------------------------------------
+                    // SEND TOOL RESULT BACK TO GEMINI
+                    // -------------------------------------------------------
+
+                    formattedContents.push({
+
+                        role:
+                            "user",
+
+                        parts: [
+
+                            {
+
+                                functionResponse: {
+
+                                    name:
+                                        toolName,
+
+                                    response: {
+
+                                        result:
+                                            toolResultData
+                                    }
+                                }
+                            }
+                        ]
+                    });
                 }
 
 
                 loops++;
 
-            } else {
+                continue;
+            }
 
-                // ========================================================
-                // NORMAL AI RESPONSE
-                // ========================================================
+
+            // ---------------------------------------------------------------
+            // NORMAL AI RESPONSE
+            // ---------------------------------------------------------------
+
+            responseText =
+                aiResponse.text ||
+                "";
+
+
+            break;
+        }
+
+
+        // ====================================================================
+        // 16. LOOP FALLBACK
+        // ====================================================================
+
+        if (!responseText.trim()) {
+
+            if (loops >= maxLoops) {
 
                 responseText =
-                    aiResponse.text;
+                    "I completed the available operational checks, but the request required more processing steps than allowed. Please narrow the request and try again.";
 
-                break;
+            } else {
+
+                responseText =
+                    "I gathered the available operational records, but could not generate a complete response.";
             }
         }
 
 
-        // ============================================================
-        // FALLBACK
-        // ============================================================
-
-        if (!responseText) {
-
-            responseText =
-                "I gathered the operational records, but could not generate a complete summary within the allotted query steps. Please narrow your request and try again.";
-        }
-
-
-        // ============================================================
-        // RESPONSE
-        // ============================================================
+        // ====================================================================
+        // 17. FINAL RESPONSE
+        // ====================================================================
 
         return res.json({
+
+            success:
+                true,
 
             reply:
                 responseText
@@ -11887,22 +14772,28 @@ ${userGuideText}
         );
 
 
+        // ================================================================
+        // RATE LIMIT / RESOURCE EXHAUSTED
+        // ================================================================
+
+        const errorMessage =
+            error?.message ||
+            String(error);
+
+
         const isRateLimit =
-            error.status === 429 ||
-            error.code === 429 ||
-            (
-                error.message &&
-                error.message.includes("429")
-            ) ||
-            (
-                error.message &&
-                error.message.includes("RESOURCE_EXHAUSTED")
-            );
+            error?.status === 429 ||
+            error?.code === 429 ||
+            errorMessage.includes("429") ||
+            errorMessage.includes("RESOURCE_EXHAUSTED");
 
 
         if (isRateLimit) {
 
             return res.status(429).json({
+
+                success:
+                    false,
 
                 status:
                     429,
@@ -11916,16 +14807,23 @@ ${userGuideText}
         }
 
 
+        // ================================================================
+        // NORMAL SERVER ERROR
+        // ================================================================
+
         return res.status(500).json({
+
+            success:
+                false,
 
             status:
                 500,
 
             message:
-                "Server error during operations dataset inquiry",
+                "Server error during Novus Copilot operation.",
 
             error:
-                error.message
+                errorMessage
         });
     }
 });
