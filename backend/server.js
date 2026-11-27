@@ -14474,6 +14474,62 @@ ${userGuideText}
             }
         ];
 
+        // ============================================================================
+// REMOVE DUPLICATE GEMINI FUNCTION DECLARATIONS
+// ============================================================================
+//
+// Gemini rejects the entire request if the same function name appears
+// more than once. This keeps the first declaration and removes duplicates.
+//
+// Example:
+// searchBookings
+// searchBookings
+//
+// becomes:
+//
+// searchBookings
+//
+// ============================================================================
+
+const seenGeminiTools = new Set();
+
+const uniqueFunctionDeclarations =
+    toolsConfig
+        .flatMap(toolGroup =>
+            toolGroup.functionDeclarations || []
+        )
+        .filter(tool => {
+
+            if (!tool || !tool.name) {
+                return false;
+            }
+
+            if (seenGeminiTools.has(tool.name)) {
+                console.warn(
+                    `⚠️ Duplicate Gemini tool removed: ${tool.name}`
+                );
+
+                return false;
+            }
+
+            seenGeminiTools.add(tool.name);
+
+            return true;
+        });
+
+
+const safeToolsConfig = [
+    {
+        functionDeclarations:
+            uniqueFunctionDeclarations
+    }
+];
+
+
+console.log(
+    `🤖 Novus Copilot registered ${uniqueFunctionDeclarations.length} unique Gemini tools.`
+);
+
 
         // ====================================================================
         // 14. CONVERSATION HISTORY
@@ -14524,7 +14580,7 @@ ${userGuideText}
                             systemInstruction,
 
                         tools:
-                            toolsConfig,
+    safeToolsConfig,
 
                         temperature:
                             0.15
