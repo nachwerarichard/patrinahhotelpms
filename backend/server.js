@@ -19,302 +19,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const {
-    createNovusAgents
-} = require("./agents/novusAgents");
 
-
-const novusAgents = createNovusAgents({
-    Booking,
-    Inventory,
-    Sale,
-    KitchenOrder,
-    IncidentalCharge,
-    ClientAccount,
-    AuditLog,
-    RoomHistory
-});
-
-// ============================================================
-// NOVUS AI OPERATIONAL FUNCTION REGISTRY
-// ============================================================
-
-function createAIOperationalFunctions({
-    hotelId,
-    username
-}) {
-
-    return {
-
-        // ======================================================
-        // INVENTORY
-        // ======================================================
-
-        searchInventory:
-            async (args) => {
-
-                return await novusAgents.inventory.search({
-                    hotelId,
-                    ...args
-                });
-
-            },
-
-
-        recordInventoryPurchase:
-            async (args) => {
-
-                return await novusAgents.inventory
-                    .recordPurchase({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        recordInventorySpoilage:
-            async (args) => {
-
-                return await novusAgents.inventory
-                    .recordSpoilage({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // SALES
-        // ======================================================
-
-        recordSale:
-            async (args) => {
-
-                return await novusAgents.sales
-                    .recordSale({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // FOLIO
-        // ======================================================
-
-        searchGuestFolios:
-            async (args) => {
-
-                return await novusAgents.folio
-                    .findGuest({
-
-                        hotelId,
-                        ...args
-
-                    });
-
-            },
-
-
-        postGuestFolioCharge:
-            async (args) => {
-
-                return await novusAgents.folio
-                    .addCharge({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        postIncidentalCharge:
-            async (args) => {
-
-                return await novusAgents.folio
-                    .postIncidentalCharge({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // ROOMS
-        // ======================================================
-
-        updateRoomStatus:
-            async (args) => {
-
-                return await novusAgents.rooms
-                    .updateStatus({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        searchRoomHistory:
-            async (args) => {
-
-                return await novusAgents.rooms
-                    .searchHistory({
-
-                        hotelId,
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // KITCHEN
-        // ======================================================
-
-        createKitchenOrder:
-            async (args) => {
-
-                return await novusAgents.kitchen
-                    .createOrder({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        updateKitchenOrderStatus:
-            async (args) => {
-
-                return await novusAgents.kitchen
-                    .updateStatus({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        searchKitchenOrders:
-            async (args) => {
-
-                return await novusAgents.kitchen
-                    .search({
-
-                        hotelId,
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // FRONT DESK
-        // ======================================================
-
-        searchBookings:
-            async (args) => {
-
-                return await novusAgents.frontDesk
-                    .searchBookings({
-
-                        hotelId,
-                        ...args
-
-                    });
-
-            },
-
-
-        checkInGuest:
-            async (args) => {
-
-                return await novusAgents.frontDesk
-                    .checkIn({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        checkOutGuest:
-            async (args) => {
-
-                return await novusAgents.frontDesk
-                    .checkOut({
-
-                        hotelId,
-                        user: username,
-
-                        ...args
-
-                    });
-
-            },
-
-
-        // ======================================================
-        // AUDIT
-        // ======================================================
-
-        searchAuditLogs:
-            async (args) => {
-
-                return await novusAgents.audit
-                    .search({
-
-                        hotelId,
-                        ...args
-
-                    });
-
-            }
-    };
-}
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
@@ -11145,6 +10850,303 @@ app.post('/api/public/hotel', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+const {
+    createNovusAgents
+} = require("./agents/novusAgents");
+
+
+const novusAgents = createNovusAgents({
+    Booking,
+    Inventory,
+    Sale,
+    KitchenOrder,
+    IncidentalCharge,
+    ClientAccount,
+    AuditLog,
+    RoomHistory
+});
+
+// ============================================================
+// NOVUS AI OPERATIONAL FUNCTION REGISTRY
+// ============================================================
+
+function createAIOperationalFunctions({
+    hotelId,
+    username
+}) {
+
+    return {
+
+        // ======================================================
+        // INVENTORY
+        // ======================================================
+
+        searchInventory:
+            async (args) => {
+
+                return await novusAgents.inventory.search({
+                    hotelId,
+                    ...args
+                });
+
+            },
+
+
+        recordInventoryPurchase:
+            async (args) => {
+
+                return await novusAgents.inventory
+                    .recordPurchase({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        recordInventorySpoilage:
+            async (args) => {
+
+                return await novusAgents.inventory
+                    .recordSpoilage({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // SALES
+        // ======================================================
+
+        recordSale:
+            async (args) => {
+
+                return await novusAgents.sales
+                    .recordSale({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // FOLIO
+        // ======================================================
+
+        searchGuestFolios:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .findGuest({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        postGuestFolioCharge:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .addCharge({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        postIncidentalCharge:
+            async (args) => {
+
+                return await novusAgents.folio
+                    .postIncidentalCharge({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // ROOMS
+        // ======================================================
+
+        updateRoomStatus:
+            async (args) => {
+
+                return await novusAgents.rooms
+                    .updateStatus({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        searchRoomHistory:
+            async (args) => {
+
+                return await novusAgents.rooms
+                    .searchHistory({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // KITCHEN
+        // ======================================================
+
+        createKitchenOrder:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .createOrder({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        updateKitchenOrderStatus:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .updateStatus({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        searchKitchenOrders:
+            async (args) => {
+
+                return await novusAgents.kitchen
+                    .search({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // FRONT DESK
+        // ======================================================
+
+        searchBookings:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .searchBookings({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            },
+
+
+        checkInGuest:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .checkIn({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        checkOutGuest:
+            async (args) => {
+
+                return await novusAgents.frontDesk
+                    .checkOut({
+
+                        hotelId,
+                        user: username,
+
+                        ...args
+
+                    });
+
+            },
+
+
+        // ======================================================
+        // AUDIT
+        // ======================================================
+
+        searchAuditLogs:
+            async (args) => {
+
+                return await novusAgents.audit
+                    .search({
+
+                        hotelId,
+                        ...args
+
+                    });
+
+            }
+    };
+}
 
 // ----------------------
 // 4️⃣ Start server with normalization + index creation
