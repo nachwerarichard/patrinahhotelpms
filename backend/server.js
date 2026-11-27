@@ -11164,7 +11164,13 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  */
 
 app.post('/api/ai/manager-chat', auth, async (req, res) => {
+
     try {
+
+        // ============================================================
+        // 1. AUTHENTICATED HOTEL CONTEXT
+        // ============================================================
+
         const hotelId = req.user?.hotelId;
 
         if (!hotelId || hotelId === 'global') {
@@ -11172,6 +11178,7 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
                 message: "Hotel context missing or unauthorized."
             });
         }
+
 
         const { message, history } = req.body;
 
@@ -11181,2860 +11188,407 @@ app.post('/api/ai/manager-chat', auth, async (req, res) => {
             });
         }
 
-        const userRole = req.user?.role || 'staff';
-        const username = req.user?.username || 'Staff';
 
-        // ================================================================
-        // ENSURE BANQUET EVENT MODEL IS REGISTERED
-        // ================================================================
-        const BanquetEventModel =
-            typeof BanquetEvent !== 'undefined'
-                ? BanquetEvent
-                : mongoose.models.BanquetEvent ||
-                  mongoose.model('BanquetEvent', banquetEventSchema);
+        const userRole =
+            req.user?.role || 'staff';
 
-        // ================================================================
-        // HOTEL PROFILE
-        // ================================================================
-        const hotelProfile = await Hotel.findById(hotelId).lean();
+        const username =
+            req.user?.username ||
+            req.user?.name ||
+            req.user?.email ||
+            'Staff';
 
-        const hotelName = hotelProfile?.name || "this property";
-        const hotelLocation = hotelProfile?.location || "Unknown Location";
-        const hotelContact = hotelProfile?.phoneNumber || "N/A";
 
-        // ================================================================
-        // GLOBAL USER GUIDE
-        // ================================================================
-        const guideSections = await UserGuideSection.find({})
-            .sort({ order: 1, title: 1 })
-            .lean();
+        // ============================================================
+        // 2. HOTEL PROFILE
+        // ============================================================
 
-        const userGuideText = guideSections.length
-            ? guideSections
-                  .map(
-                      sec =>
-                          `### ${sec.title} (${sec.moduleKey})\n${sec.content}`
-                  )
-                  .join('\n\n---\n\n')
-            : "No SOP user guide sections have been uploaded yet.";
+        const hotelProfile =
+            await Hotel.findById(hotelId).lean();
 
-        // =================================================================
-        // HELPER: GET AVAILABLE INVENTORY STOCK
-        // =================================================================
-        const getAvailableStock = inventory => {
-            if (!inventory) return 0;
+        const hotelName =
+            hotelProfile?.name ||
+            "this property";
 
-            return Math.max(
-                0,
-                Number(inventory.opening || 0) +
-                Number(inventory.purchases || 0) -
-                Number(inventory.sales || 0) -
-                Number(inventory.spoilage || 0)
-            );
-        };
+        const hotelLocation =
+            hotelProfile?.location ||
+            "Unknown Location";
 
-        // =================================================================
-        // HELPER: NORMALIZE ITEM NAME
-        // =================================================================
-        const normalizeItemName = item => {
-            return String(item || '')
-                .trim()
-                .replace(/\s*\(x\d+\)\s*$/i, '')
-                .trim();
-        };
+        const hotelContact =
+            hotelProfile?.phoneNumber ||
+            "N/A";
 
-        // =================================================================
-        // HELPER: CHECK INVENTORY AVAILABILITY
-        // =================================================================
-        const checkInventoryAvailability = async ({
-            item,
-            quantity,
-            department
-        }) => {
-            const normalizedItem = normalizeItemName(item);
-            const requestedQty = Number(quantity);
 
-            if (!normalizedItem) {
-                return {
-                    allowed: false,
-                    reason: "INVALID_ITEM",
-                    message: "An inventory item name is required."
-                };
-            }
+        // ============================================================
+        // 3. GLOBAL USER GUIDE
+        // ============================================================
 
-            if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-                return {
-                    allowed: false,
-                    reason: "INVALID_QUANTITY",
-                    message: "Quantity must be greater than zero."
-                };
-            }
+        const guideSections =
+            await UserGuideSection
+                .find({})
+                .sort({
+                    order: 1,
+                    title: 1
+                })
+                .lean();
 
-            const inventory = await Inventory.findOne({
-                hotelId,
-                item: {
-                    $regex: `^${normalizedItem.replace(
-                        /[.*+?^${}()|[\]\\]/g,
-                        '\\$&'
-                    )}$`,
-                    $options: 'i'
-                }
-            }).sort({ date: -1 });
 
-            if (!inventory) {
-                return {
-                    allowed: false,
-                    reason: "ITEM_NOT_IN_INVENTORY",
-                    item: normalizedItem,
-                    requestedQuantity: requestedQty,
-                    availableQuantity: 0,
-                    message:
-                        `Cannot complete the operation because "${normalizedItem}" ` +
-                        `is not registered in inventory for this hotel.`
-                };
-            }
+        const userGuideText =
+            guideSections.length
 
-            // Restaurant behaviour is preserved from your existing system.
-            // Restaurant items may be configured as not directly stock-tracked.
-            const shouldTrackStock =
-                inventory.trackInventory !== false &&
-                String(department || '').toLowerCase() !== 'restaurant';
-
-            if (!shouldTrackStock) {
-                return {
-                    allowed: true,
-                    inventory,
-                    item: normalizedItem,
-                    requestedQuantity: requestedQty,
-                    availableQuantity: null,
-                    stockTracked: false,
-                    message:
-                        `"${normalizedItem}" is configured as non-stock-tracked ` +
-                        `for this operation.`
-                };
-            }
-
-            const availableQuantity = getAvailableStock(inventory);
-
-            if (availableQuantity < requestedQty) {
-                return {
-                    allowed: false,
-                    reason: "INSUFFICIENT_STOCK",
-                    item: normalizedItem,
-                    requestedQuantity: requestedQty,
-                    availableQuantity,
-                    inventoryId: inventory._id,
-                    message:
-                        `Insufficient stock for "${normalizedItem}". ` +
-                        `Requested: ${requestedQty}. Available: ${availableQuantity}.`
-                };
-            }
-
-            return {
-                allowed: true,
-                inventory,
-                item: normalizedItem,
-                requestedQuantity: requestedQty,
-                availableQuantity,
-                stockTracked: true,
-                message: "Inventory available."
-            };
-        };
-
-        // =================================================================
-        // HELPER: AUDIT LOG
-        // =================================================================
-        const writeAuditLog = async ({
-            action,
-            details,
-            success = true
-        }) => {
-            try {
-                await AuditLog.create({
-                    hotelId,
-                    action,
-                    user: username,
-                    username,
-                    details:
-                        typeof details === 'string'
-                            ? details
-                            : JSON.stringify(details),
-                    success,
-                    timestamp: new Date()
-                });
-            } catch (auditError) {
-                console.error(
-                    "AI Copilot audit logging failed:",
-                    auditError.message
-                );
-            }
-        };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: CREATE SALE
-        // =================================================================
-        const createSaleTool = async ({
-            item,
-            department = 'Bar',
-            quantity,
-            sellingPrice,
-            buyingPrice = 0,
-            accountId = null
-        }) => {
-            try {
-                const normalizedItem = normalizeItemName(item);
-                const qty = Number(quantity);
-                const sellPrice = Number(sellingPrice);
-                const buyPrice = Number(buyingPrice || 0);
-
-                if (!normalizedItem) {
-                    return {
-                        success: false,
-                        reason: "INVALID_ITEM",
-                        message: "Sale item is required."
-                    };
-                }
-
-                if (!Number.isFinite(qty) || qty <= 0) {
-                    return {
-                        success: false,
-                        reason: "INVALID_QUANTITY",
-                        message: "Sale quantity must be greater than zero."
-                    };
-                }
-
-                if (!Number.isFinite(sellPrice) || sellPrice < 0) {
-                    return {
-                        success: false,
-                        reason: "INVALID_SELLING_PRICE",
-                        message:
-                            "A valid selling price is required."
-                    };
-                }
-
-                // ---------------------------------------------------------
-                // CHECK INVENTORY BEFORE CREATING SALE
-                // ---------------------------------------------------------
-                const stockCheck = await checkInventoryAvailability({
-                    item: normalizedItem,
-                    quantity: qty,
-                    department
-                });
-
-                if (!stockCheck.allowed) {
-                    await writeAuditLog({
-                        action: "Sale Rejected by AI Copilot",
-                        success: false,
-                        details: stockCheck.message
-                    });
-
-                    return {
-                        success: false,
-                        reason: stockCheck.reason,
-                        item: normalizedItem,
-                        requestedQuantity: qty,
-                        availableQuantity:
-                            stockCheck.availableQuantity ?? 0,
-                        message: stockCheck.message
-                    };
-                }
-
-                const total = qty * sellPrice;
-                const totalBuyingCost = qty * buyPrice;
-                const profit = total - totalBuyingCost;
-
-                const percentageprofit =
-                    total > 0
-                        ? (profit / total) * 100
-                        : 0;
-
-                // ---------------------------------------------------------
-                // UPDATE INVENTORY
-                // ---------------------------------------------------------
-                let updatedInventory = stockCheck.inventory;
-
-                if (stockCheck.stockTracked) {
-
-                    /*
-                     * Re-fetch the inventory immediately before updating.
-                     * This protects against a second sale consuming stock
-                     * between the first availability check and this update.
-                     */
-                    const currentInventory = await Inventory.findOne({
-                        _id: stockCheck.inventory._id,
-                        hotelId
-                    });
-
-                    if (!currentInventory) {
-                        return {
-                            success: false,
-                            reason: "INVENTORY_DISAPPEARED",
-                            message:
-                                `Inventory record for "${normalizedItem}" ` +
-                                `could not be found. Sale was not created.`
-                        };
-                    }
-
-                    const currentAvailable =
-                        getAvailableStock(currentInventory);
-
-                    if (currentAvailable < qty) {
-                        await writeAuditLog({
-                            action: "Sale Rejected - Stock Changed",
-                            success: false,
-                            details: {
-                                item: normalizedItem,
-                                requestedQuantity: qty,
-                                availableQuantity: currentAvailable
-                            }
-                        });
-
-                        return {
-                            success: false,
-                            reason: "INSUFFICIENT_STOCK",
-                            item: normalizedItem,
-                            requestedQuantity: qty,
-                            availableQuantity: currentAvailable,
-                            message:
-                                `Sale rejected. Stock changed before the ` +
-                                `sale could be completed. Available: ${currentAvailable}.`
-                        };
-                    }
-
-                    currentInventory.sales =
-                        Number(currentInventory.sales || 0) + qty;
-
-                    currentInventory.closing =
-                        Math.max(
-                            0,
-                            Number(currentInventory.opening || 0) +
-                            Number(currentInventory.purchases || 0) -
-                            Number(currentInventory.sales || 0) -
-                            Number(currentInventory.spoilage || 0)
-                        );
-
-                    await currentInventory.save();
-
-                    updatedInventory = currentInventory;
-                }
-
-                // ---------------------------------------------------------
-                // CREATE SALE
-                // ---------------------------------------------------------
-                const saleData = {
-                    hotelId,
-                    item: normalizedItem,
-                    department,
-                    quantity: qty,
-                    sellingPrice: sellPrice,
-                    buyingPrice: buyPrice,
-                    total,
-                    profit,
-                    percentageprofit,
-                    recordedBy: username,
-                    date: new Date()
-                };
-
-                /*
-                 * Only attach accountId if supplied.
-                 * This prevents the AI from inventing account information.
-                 */
-                if (accountId) {
-                    saleData.accountId = accountId;
-                }
-
-                const sale = await Sale.create(saleData);
-
-                // ---------------------------------------------------------
-                // OPTIONAL CLIENT ACCOUNT CHARGE
-                // ---------------------------------------------------------
-                if (accountId) {
-                    try {
-                        const clientAccount =
-                            await ClientAccount.findOne({
-                                _id: accountId,
-                                hotelId
-                            });
-
-                        if (clientAccount) {
-
-                            const currentBalance =
-                                Number(
-                                    clientAccount.balance || 0
-                                );
-
-                            clientAccount.balance =
-                                currentBalance + total;
-
-                            await clientAccount.save();
-                        }
-                    } catch (accountError) {
-                        console.error(
-                            "AI sale client account update failed:",
-                            accountError.message
-                        );
-                    }
-                }
-
-                await writeAuditLog({
-                    action: "Sale Created by AI Copilot",
-                    success: true,
-                    details: {
-                        saleId: sale._id,
-                        item: normalizedItem,
-                        department,
-                        quantity: qty,
-                        total,
-                        recordedBy: username
-                    }
-                });
-
-                return {
-                    success: true,
-                    message:
-                        `Sale successfully created for ${qty} x "${normalizedItem}".`,
-                    sale: {
-                        id: sale._id,
-                        item: normalizedItem,
-                        department,
-                        quantity: qty,
-                        sellingPrice: sellPrice,
-                        buyingPrice: buyPrice,
-                        total,
-                        profit,
-                        percentageprofit,
-                        recordedBy: username
-                    },
-                    inventory: updatedInventory
-                        ? {
-                              id: updatedInventory._id,
-                              item: updatedInventory.item,
-                              availableQuantity:
-                                  getAvailableStock(updatedInventory)
-                          }
-                        : null
-                };
-
-            } catch (error) {
-                console.error(
-                    "AI createSaleTool error:",
-                    error
-                );
-
-                return {
-                    success: false,
-                    reason: "SALE_CREATION_ERROR",
-                    message:
-                        "The sale could not be created.",
-                    error: error.message
-                };
-            }
-        };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: CREATE / UPDATE INVENTORY ITEM
-        // =================================================================
-        const createOrUpdateInventoryItemTool = async ({
-            item,
-            department = 'Bar',
-            buyingprice = 0,
-            sellingprice = 0,
-            lowStock = 5,
-            trackInventory = true,
-            opening = null
-        }) => {
-            try {
-                const normalizedItem = normalizeItemName(item);
-
-                if (!normalizedItem) {
-                    return {
-                        success: false,
-                        reason: "INVALID_ITEM",
-                        message:
-                            "Inventory item name is required."
-                    };
-                }
-
-                const safeBuyingPrice =
-                    Number(buyingprice || 0);
-
-                const safeSellingPrice =
-                    Number(sellingprice || 0);
-
-                const safeLowStock =
-                    Number(lowStock ?? 5);
-
-                if (
-                    !Number.isFinite(safeBuyingPrice) ||
-                    safeBuyingPrice < 0
-                ) {
-                    return {
-                        success: false,
-                        reason: "INVALID_BUYING_PRICE",
-                        message:
-                            "Buying price must be zero or greater."
-                    };
-                }
-
-                if (
-                    !Number.isFinite(safeSellingPrice) ||
-                    safeSellingPrice < 0
-                ) {
-                    return {
-                        success: false,
-                        reason: "INVALID_SELLING_PRICE",
-                        message:
-                            "Selling price must be zero or greater."
-                    };
-                }
-
-                let inventory =
-                    await Inventory.findOne({
-                        hotelId,
-                        item: {
-                            $regex:
-                                `^${normalizedItem.replace(
-                                    /[.*+?^${}()|[\]\\]/g,
-                                    '\\$&'
-                                )}$`,
-                            $options: 'i'
-                        }
-                    }).sort({ date: -1 });
-
-                // ---------------------------------------------------------
-                // UPDATE EXISTING ITEM
-                // ---------------------------------------------------------
-                if (inventory) {
-
-                    inventory.department =
-                        department ||
-                        inventory.department;
-
-                    inventory.buyingprice =
-                        safeBuyingPrice;
-
-                    inventory.sellingprice =
-                        safeSellingPrice;
-
-                    inventory.lowStock =
-                        safeLowStock;
-
-                    inventory.trackInventory =
-                        trackInventory !== false;
-
-                    /*
-                     * IMPORTANT:
-                     * We intentionally DO NOT allow AI to overwrite:
-                     *
-                     * sales
-                     * purchases
-                     * spoilage
-                     * closing
-                     *
-                     * merely by calling this tool.
-                     *
-                     * Those quantities should be changed through
-                     * controlled stock operations.
-                     */
-
-                    await inventory.save();
-
-                    await writeAuditLog({
-                        action:
-                            "Inventory Item Updated by AI Copilot",
-                        success: true,
-                        details: {
-                            inventoryId:
-                                inventory._id,
-                            item:
-                                inventory.item,
-                            department:
-                                inventory.department
-                        }
-                    });
-
-                    return {
-                        success: true,
-                        action: "updated",
-                        message:
-                            `Inventory item "${inventory.item}" was updated successfully.`,
-                        inventory: {
-                            id: inventory._id,
-                            item: inventory.item,
-                            department:
-                                inventory.department,
-                            buyingprice:
-                                inventory.buyingprice,
-                            sellingprice:
-                                inventory.sellingprice,
-                            lowStock:
-                                inventory.lowStock,
-                            trackInventory:
-                                inventory.trackInventory,
-                            availableQuantity:
-                                getAvailableStock(
-                                    inventory
-                                )
-                        }
-                    };
-                }
-
-                // ---------------------------------------------------------
-                // CREATE NEW ITEM
-                // ---------------------------------------------------------
-                const initialOpening =
-                    opening === null
-                        ? 0
-                        : Number(opening);
-
-                if (
-                    !Number.isFinite(initialOpening) ||
-                    initialOpening < 0
-                ) {
-                    return {
-                        success: false,
-                        reason: "INVALID_OPENING_STOCK",
-                        message:
-                            "Opening stock must be zero or greater."
-                    };
-                }
-
-                inventory =
-                    await Inventory.create({
-                        hotelId,
-                        item: normalizedItem,
-                        department:
-                            department || 'Bar',
-                        buyingprice:
-                            safeBuyingPrice,
-                        sellingprice:
-                            safeSellingPrice,
-                        lowStock:
-                            safeLowStock,
-                        trackInventory:
-                            trackInventory !== false,
-                        opening:
-                            initialOpening,
-                        purchases: 0,
-                        sales: 0,
-                        spoilage: 0,
-                        closing:
-                            initialOpening,
-                        date: new Date()
-                    });
-
-                await writeAuditLog({
-                    action:
-                        "Inventory Item Created by AI Copilot",
-                    success: true,
-                    details: {
-                        inventoryId:
-                            inventory._id,
-                        item:
-                            inventory.item,
-                        department:
-                            inventory.department,
-                        opening:
-                            initialOpening
-                    }
-                });
-
-                return {
-                    success: true,
-                    action: "created",
-                    message:
-                        `Inventory item "${inventory.item}" was created successfully.`,
-                    inventory: {
-                        id: inventory._id,
-                        item: inventory.item,
-                        department:
-                            inventory.department,
-                        buyingprice:
-                            inventory.buyingprice,
-                        sellingprice:
-                            inventory.sellingprice,
-                        lowStock:
-                            inventory.lowStock,
-                        trackInventory:
-                            inventory.trackInventory,
-                        availableQuantity:
-                            getAvailableStock(
-                                inventory
-                            )
-                    }
-                };
-
-            } catch (error) {
-                console.error(
-                    "AI inventory creation/update error:",
-                    error
-                );
-
-                return {
-                    success: false,
-                    reason:
-                        "INVENTORY_UPDATE_ERROR",
-                    message:
-                        "The inventory item could not be created or updated.",
-                    error:
-                        error.message
-                };
-            }
-        };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: ADJUST INVENTORY STOCK
-        // =================================================================
-        const adjustInventoryStockTool = async ({
-            item,
-            quantity,
-            adjustmentType = 'purchase',
-            department = null,
-            reason = ''
-        }) => {
-            try {
-                const normalizedItem =
-                    normalizeItemName(item);
-
-                const qty = Number(quantity);
-
-                if (!normalizedItem) {
-                    return {
-                        success: false,
-                        reason: "INVALID_ITEM",
-                        message:
-                            "Inventory item is required."
-                    };
-                }
-
-                if (
-                    !Number.isFinite(qty) ||
-                    qty <= 0
-                ) {
-                    return {
-                        success: false,
-                        reason: "INVALID_QUANTITY",
-                        message:
-                            "Adjustment quantity must be greater than zero."
-                    };
-                }
-
-                const inventory =
-                    await Inventory.findOne({
-                        hotelId,
-                        item: {
-                            $regex:
-                                `^${normalizedItem.replace(
-                                    /[.*+?^${}()|[\]\\]/g,
-                                    '\\$&'
-                                )}$`,
-                            $options: 'i'
-                        }
-                    }).sort({ date: -1 });
-
-                if (!inventory) {
-                    return {
-                        success: false,
-                        reason:
-                            "ITEM_NOT_IN_INVENTORY",
-                        message:
-                            `"${normalizedItem}" does not exist in inventory. Create the inventory item first.`
-                    };
-                }
-
-                const type =
-                    String(adjustmentType)
-                        .trim()
-                        .toLowerCase();
-
-                // ---------------------------------------------------------
-                // PURCHASE / RECEIVING STOCK
-                // ---------------------------------------------------------
-                if (
-                    type === 'purchase' ||
-                    type === 'receive' ||
-                    type === 'received'
-                ) {
-                    inventory.purchases =
-                        Number(
-                            inventory.purchases || 0
-                        ) + qty;
-                }
-
-                // ---------------------------------------------------------
-                // SPOILAGE / WASTE
-                // ---------------------------------------------------------
-                else if (
-                    type === 'spoilage' ||
-                    type === 'waste'
-                ) {
-                    const available =
-                        getAvailableStock(
-                            inventory
-                        );
-
-                    if (available < qty) {
-                        return {
-                            success: false,
-                            reason:
-                                "INSUFFICIENT_STOCK",
-                            message:
-                                `Cannot record spoilage of ${qty}. Available stock is ${available}.`
-                        };
-                    }
-
-                    inventory.spoilage =
-                        Number(
-                            inventory.spoilage || 0
-                        ) + qty;
-                }
-
-                // ---------------------------------------------------------
-                // MANUAL STOCK INCREASE
-                // ---------------------------------------------------------
-                else if (
-                    type === 'increase' ||
-                    type === 'add'
-                ) {
-                    inventory.purchases =
-                        Number(
-                            inventory.purchases || 0
-                        ) + qty;
-                }
-
-                // ---------------------------------------------------------
-                // MANUAL STOCK REDUCTION
-                // ---------------------------------------------------------
-                else if (
-                    type === 'decrease' ||
-                    type === 'remove'
-                ) {
-                    const available =
-                        getAvailableStock(
-                            inventory
-                        );
-
-                    if (available < qty) {
-                        return {
-                            success: false,
-                            reason:
-                                "INSUFFICIENT_STOCK",
-                            message:
-                                `Cannot reduce stock by ${qty}. Available stock is ${available}.`
-                        };
-                    }
-
-                    inventory.sales =
-                        Number(
-                            inventory.sales || 0
-                        ) + qty;
-                }
-
-                else {
-                    return {
-                        success: false,
-                        reason:
-                            "INVALID_ADJUSTMENT_TYPE",
-                        message:
-                            "Adjustment type must be purchase, receive, spoilage, waste, increase, add, decrease, or remove."
-                    };
-                }
-
-                inventory.closing =
-                    Math.max(
-                        0,
-                        Number(
-                            inventory.opening || 0
-                        ) +
-                        Number(
-                            inventory.purchases || 0
-                        ) -
-                        Number(
-                            inventory.sales || 0
-                        ) -
-                        Number(
-                            inventory.spoilage || 0
-                        )
-                    );
-
-                await inventory.save();
-
-                await writeAuditLog({
-                    action:
-                        "Inventory Stock Adjusted by AI Copilot",
-                    success: true,
-                    details: {
-                        item:
-                            inventory.item,
-                        quantity:
-                            qty,
-                        adjustmentType:
-                            type,
-                        reason,
-                        department:
-                            department ||
-                            inventory.department,
-                        newClosingStock:
-                            inventory.closing
-                    }
-                });
-
-                return {
-                    success: true,
-                    message:
-                        `Inventory stock for "${inventory.item}" was adjusted successfully.`,
-                    adjustmentType:
-                        type,
-                    quantity:
-                        qty,
-                    inventory: {
-                        id:
-                            inventory._id,
-                        item:
-                            inventory.item,
-                        department:
-                            inventory.department,
-                        purchases:
-                            inventory.purchases,
-                        sales:
-                            inventory.sales,
-                        spoilage:
-                            inventory.spoilage,
-                        closing:
-                            inventory.closing,
-                        availableQuantity:
-                            getAvailableStock(
-                                inventory
-                            )
-                    }
-                };
-
-            } catch (error) {
-                console.error(
-                    "AI inventory adjustment error:",
-                    error
-                );
-
-                return {
-                    success: false,
-                    reason:
-                        "INVENTORY_ADJUSTMENT_ERROR",
-                    message:
-                        "Inventory adjustment failed.",
-                    error:
-                        error.message
-                };
-            }
-        };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: MARK KITCHEN ORDER PREPARING
-        // =================================================================
-        const markKitchenOrderPreparingTool =
-            async ({ orderId }) => {
-                try {
-                    if (!orderId) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ID_REQUIRED",
-                            message:
-                                "Kitchen order ID is required."
-                        };
-                    }
-
-                    const order =
-                        await KitchenOrder.findOne({
-                            _id: orderId,
-                            hotelId
-                        });
-
-                    if (!order) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_NOT_FOUND",
-                            message:
-                                "Kitchen order was not found for this hotel."
-                        };
-                    }
-
-                    if (
-                        order.status ===
-                        'Served'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ALREADY_SERVED",
-                            message:
-                                "A served order cannot be moved back to Preparing."
-                        };
-                    }
-
-                    if (
-                        order.status ===
-                        'Ready'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ALREADY_READY",
-                            message:
-                                "This kitchen order is already Ready."
-                        };
-                    }
-
-                    order.status =
-                        'Preparing';
-
-                    if (
-                        !order.preparingAt
-                    ) {
-                        order.preparingAt =
-                            new Date();
-                    }
-
-                    await order.save();
-
-                    await writeAuditLog({
-                        action:
-                            "Kitchen Order Marked Preparing by AI Copilot",
-                        success: true,
-                        details: {
-                            orderId:
-                                order._id,
-                            item:
-                                order.item
-                        }
-                    });
-
-                    return {
-                        success: true,
-                        message:
-                            `Kitchen order ${order._id} is now Preparing.`,
-                        order: {
-                            id:
-                                order._id,
-                            item:
-                                order.item,
-                            quantity:
-                                order.quantity,
-                            status:
-                                order.status
-                        }
-                    };
-
-                } catch (error) {
-                    console.error(
-                        "AI mark preparing error:",
-                        error
-                    );
-
-                    return {
-                        success: false,
-                        reason:
-                            "KITCHEN_PREPARING_ERROR",
-                        message:
-                            "Kitchen order could not be marked Preparing.",
-                        error:
-                            error.message
-                    };
-                }
-            };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: MARK KITCHEN ORDER READY
-        // =================================================================
-        const markKitchenOrderReadyTool =
-            async ({ orderId }) => {
-                try {
-                    if (!orderId) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ID_REQUIRED",
-                            message:
-                                "Kitchen order ID is required."
-                        };
-                    }
-
-                    const order =
-                        await KitchenOrder.findOne({
-                            _id: orderId,
-                            hotelId
-                        });
-
-                    if (!order) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_NOT_FOUND",
-                            message:
-                                "Kitchen order was not found for this hotel."
-                        };
-                    }
-
-                    if (
-                        order.status ===
-                        'Ready'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ALREADY_READY",
-                            message:
-                                "This kitchen order is already Ready."
-                        };
-                    }
-
-                    if (
-                        order.status ===
-                        'Served'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ALREADY_SERVED",
-                            message:
-                                "This kitchen order has already been Served."
-                        };
-                    }
-
-                    const orderQuantity =
-                        Number(
-                            order.quantity || 1
-                        );
-
-                    // ------------------------------------------------------
-                    // DETERMINE DEPARTMENT
-                    // ------------------------------------------------------
-                    const department =
-                        order.department ||
-                        'Restaurant';
-
-                    // ------------------------------------------------------
-                    // CHECK INVENTORY
-                    // ------------------------------------------------------
-                    const stockCheck =
-                        await checkInventoryAvailability({
-                            item:
-                                order.item,
-                            quantity:
-                                orderQuantity,
-                            department
-                        });
-
-                    if (!stockCheck.allowed) {
-
-                        await writeAuditLog({
-                            action:
-                                "Kitchen Order Ready Rejected by AI Copilot",
-                            success: false,
-                            details: {
-                                orderId:
-                                    order._id,
-                                item:
-                                    order.item,
-                                reason:
-                                    stockCheck.reason,
-                                message:
-                                    stockCheck.message
-                            }
-                        });
-
-                        return {
-                            success: false,
-                            reason:
-                                stockCheck.reason,
-                            message:
-                                `Kitchen order cannot be marked Ready. ${stockCheck.message}`,
-                            orderId:
-                                order._id,
-                            item:
-                                order.item,
-                            requestedQuantity:
-                                orderQuantity,
-                            availableQuantity:
-                                stockCheck.availableQuantity ??
-                                0
-                        };
-                    }
-
-                    // ------------------------------------------------------
-                    // DEDUCT INVENTORY
-                    // ------------------------------------------------------
-                    let updatedInventory =
-                        stockCheck.inventory;
-
-                    if (
-                        stockCheck.stockTracked
-                    ) {
-                        const currentInventory =
-                            await Inventory.findOne({
-                                _id:
-                                    stockCheck.inventory
-                                        ._id,
-                                hotelId
-                            });
-
-                        if (!currentInventory) {
-                            return {
-                                success: false,
-                                reason:
-                                    "INVENTORY_NOT_FOUND",
-                                message:
-                                    `Inventory for "${order.item}" could not be found. Order was not marked Ready.`
-                            };
-                        }
-
-                        const available =
-                            getAvailableStock(
-                                currentInventory
-                            );
-
-                        if (
-                            available <
-                            orderQuantity
-                        ) {
-                            return {
-                                success: false,
-                                reason:
-                                    "INSUFFICIENT_STOCK",
-                                message:
-                                    `Cannot mark order Ready. "${order.item}" has ${available} available but ${orderQuantity} is required.`,
-                                availableQuantity:
-                                    available
-                            };
-                        }
-
-                        currentInventory.sales =
-                            Number(
-                                currentInventory.sales ||
-                                0
-                            ) +
-                            orderQuantity;
-
-                        currentInventory.closing =
-                            Math.max(
-                                0,
-                                Number(
-                                    currentInventory
-                                        .opening ||
-                                    0
-                                ) +
-                                Number(
-                                    currentInventory
-                                        .purchases ||
-                                    0
-                                ) -
-                                Number(
-                                    currentInventory
-                                        .sales ||
-                                    0
-                                ) -
-                                Number(
-                                    currentInventory
-                                        .spoilage ||
-                                    0
-                                )
-                            );
-
-                        await currentInventory.save();
-
-                        updatedInventory =
-                            currentInventory;
-                    }
-
-                    // ------------------------------------------------------
-                    // CREATE SALE
-                    // ------------------------------------------------------
-                    const sellingPrice =
-                        Number(
-                            order.sellingPrice ||
-                            order.price ||
-                            0
-                        );
-
-                    const buyingPrice =
-                        Number(
-                            order.buyingPrice ||
-                            0
-                        );
-
-                    const total =
-                        orderQuantity *
-                        sellingPrice;
-
-                    const totalBuyingCost =
-                        orderQuantity *
-                        buyingPrice;
-
-                    const profit =
-                        total -
-                        totalBuyingCost;
-
-                    const percentageprofit =
-                        total > 0
-                            ? (profit /
-                                  total) *
-                              100
-                            : 0;
-
-                    const sale =
-                        await Sale.create({
-                            hotelId,
-                            item:
-                                normalizeItemName(
-                                    order.item
-                                ),
-                            department,
-                            quantity:
-                                orderQuantity,
-                            sellingPrice,
-                            buyingPrice,
-                            total,
-                            profit,
-                            percentageprofit,
-                            recordedBy:
-                                username,
-                            date:
-                                new Date()
-                        });
-
-                    // ------------------------------------------------------
-                    // MARK ORDER READY
-                    // ------------------------------------------------------
-                    order.status =
-                        'Ready';
-
-                    order.readyAt =
-                        new Date();
-
-                    if (
-                        order.readyBy ===
-                        undefined ||
-                        order.readyBy ===
-                        null
-                    ) {
-                        order.readyBy =
-                            username;
-                    }
-
-                    await order.save();
-
-                    await writeAuditLog({
-                        action:
-                            "Kitchen Order Marked Ready by AI Copilot",
-                        success: true,
-                        details: {
-                            orderId:
-                                order._id,
-                            item:
-                                order.item,
-                            quantity:
-                                orderQuantity,
-                            saleId:
-                                sale._id
-                        }
-                    });
-
-                    return {
-                        success: true,
-                        message:
-                            `Kitchen order for "${order.item}" is now Ready.`,
-                        order: {
-                            id:
-                                order._id,
-                            item:
-                                order.item,
-                            quantity:
-                                orderQuantity,
-                            status:
-                                order.status,
-                            readyAt:
-                                order.readyAt
-                        },
-                        sale: {
-                            id:
-                                sale._id,
-                            total,
-                            profit
-                        },
-                        inventory:
-                            updatedInventory
-                                ? {
-                                      item:
-                                          updatedInventory.item,
-                                      availableQuantity:
-                                          getAvailableStock(
-                                              updatedInventory
-                                          )
-                                  }
-                                : null
-                    };
-
-                } catch (error) {
-                    console.error(
-                        "AI mark kitchen order ready error:",
-                        error
-                    );
-
-                    return {
-                        success: false,
-                        reason:
-                            "KITCHEN_READY_ERROR",
-                        message:
-                            "Kitchen order could not be marked Ready.",
-                        error:
-                            error.message
-                    };
-                }
-            };
-
-        // =================================================================
-        // AUTONOMOUS FUNCTION: MARK KITCHEN ORDER SERVED
-        // =================================================================
-        const markKitchenOrderServedTool =
-            async ({ orderId }) => {
-                try {
-                    if (!orderId) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_ID_REQUIRED",
-                            message:
-                                "Kitchen order ID is required."
-                        };
-                    }
-
-                    const order =
-                        await KitchenOrder.findOne({
-                            _id: orderId,
-                            hotelId
-                        });
-
-                    if (!order) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_NOT_FOUND",
-                            message:
-                                "Kitchen order was not found for this hotel."
-                        };
-                    }
-
-                    if (
-                        order.status ===
-                        'Served'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ALREADY_SERVED",
-                            message:
-                                "This kitchen order is already Served."
-                        };
-                    }
-
-                    // Only Ready orders should be served.
-                    if (
-                        order.status !==
-                        'Ready'
-                    ) {
-                        return {
-                            success: false,
-                            reason:
-                                "ORDER_NOT_READY",
-                            message:
-                                `Order cannot be served because its current status is "${order.status}". Only Ready orders can be Served.`
-                        };
-                    }
-
-                    // IMPORTANT:
-                    // We mark Served instead of deleting.
-                    //
-                    // Your existing waiter endpoint already uses:
-                    //
-                    // status: { $ne: 'Served' }
-                    //
-                    // Therefore the order automatically disappears
-                    // from the active preparation list.
-                    order.status =
-                        'Served';
-
-                    order.servedAt =
-                        new Date();
-
-                    if (
-                        order.servedBy ===
-                        undefined ||
-                        order.servedBy ===
-                        null
-                    ) {
-                        order.servedBy =
-                            username;
-                    }
-
-                    await order.save();
-
-                    await writeAuditLog({
-                        action:
-                            "Kitchen Order Served by AI Copilot",
-                        success: true,
-                        details: {
-                            orderId:
-                                order._id,
-                            item:
-                                order.item
-                        }
-                    });
-
-                    return {
-                        success: true,
-                        message:
-                            `Kitchen order "${order.item}" has been marked Served and removed from the active preparation list.`,
-                        order: {
-                            id:
-                                order._id,
-                            item:
-                                order.item,
-                            quantity:
-                                order.quantity,
-                            status:
-                                order.status,
-                            servedAt:
-                                order.servedAt
-                        }
-                    };
-
-                } catch (error) {
-                    console.error(
-                        "AI mark kitchen order served error:",
-                        error
-                    );
-
-                    return {
-                        success: false,
-                        reason:
-                            "KITCHEN_SERVED_ERROR",
-                        message:
-                            "Kitchen order could not be marked Served.",
-                        error:
-                            error.message
-                    };
-                }
-            };
-
-        // =================================================================
-        // READ-ONLY TENANT-ISOLATED DATA TOOLS
-        // =================================================================
-
-        const searchBookingsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await Booking.find(
-                    filter
-                )
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchRoomsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await Room.find(
-                    filter
-                )
-                    .populate(
-                        'roomTypeId'
+                ? guideSections
+                    .map(sec =>
+                        `### ${sec.title} (${sec.moduleKey})\n${sec.content}`
                     )
-                    .lean();
-            };
+                    .join('\n\n---\n\n')
+
+                : "No SOP user guide sections have been uploaded yet.";
+
+
+        // ============================================================
+        // 4. YOUR EXISTING HELPER FUNCTIONS
+        // ============================================================
+
+        // KEEP your existing:
+        //
+        // getAvailableStock
+        // normalizeItemName
+        // checkInventoryAvailability
+        // writeAuditLog
+        //
+        // exactly as they currently exist.
+
+
+        // ============================================================
+        // 5. YOUR EXISTING AUTONOMOUS FUNCTIONS
+        // ============================================================
+
+        // KEEP your existing:
+        //
+        // createSaleTool
+        // createOrUpdateInventoryItemTool
+        // adjustInventoryStockTool
+        // markKitchenOrderPreparingTool
+        // markKitchenOrderReadyTool
+        // markKitchenOrderServedTool
+        //
+        // exactly as they currently exist.
+
+
+        // ============================================================
+        // 6. YOUR EXISTING READ-ONLY FUNCTIONS
+        // ============================================================
+
+        // KEEP all your existing functions:
+        //
+        // searchBookingsTool
+        // searchRoomsTool
+        // searchStatusReportsTool
+        // searchCashJournalTool
+        // searchInventoryTool
+        // searchSalesTool
+        // searchExpensesTool
+        // searchChecklistsTool
+        // searchRoomTypesTool
+        // searchUsersTool
+        // searchAuditLogsTool
+        // searchKitchenOrdersTool
+        // searchGatewaysTool
+        // searchPaymentTransactionsTool
+        // searchIncidentalChargesTool
+        // searchClientAccountsTool
+        // searchCentralStoreTool
+        // searchDepartmentStockTool
+        // searchStockTransfersTool
+        // searchFunctionSpacesTool
+        // searchBanquetEventsTool
+        // searchEmployeesTool
+        // searchAttendanceTool
+        // searchHotelAssetsTool
+        // searchWorkOrdersTool
+        // searchGuestFeedbackTool
+        // searchUserGuideTool
+
+
+        // ============================================================
+        // 7. CREATE OPERATIONAL FUNCTION REGISTRY
+        // ============================================================
 
-        const searchStatusReportsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await StatusReport.find(
-                    filter
-                )
-                    .populate(
-                        'roomId'
-                    )
-                    .sort({
-                        dateTime:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchCashJournalTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await CashJournal.find(
-                    filter
-                )
-                    .sort({
-                        date:
-                            -1
-                    })
-                    .limit(30)
-                    .lean();
-            };
-
-        const searchInventoryTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.item
-                ) {
-                    filter.item = {
-                        $regex:
-                            filter.item,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await Inventory.find(
-                    filter
-                )
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchSalesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.item
-                ) {
-                    filter.item = {
-                        $regex:
-                            filter.item,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await Sale.find(
-                    filter
-                )
-                    .sort({
-                        date:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchExpensesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await Expense.find(
-                    filter
-                )
-                    .sort({
-                        date:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchChecklistsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await Checklist.find(
-                    filter
-                )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(30)
-                    .lean();
-            };
-
-        const searchRoomTypesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.name
-                ) {
-                    filter.name = {
-                        $regex:
-                            filter.name,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await RoomType.find(
-                    filter
-                )
-                    .lean();
-            };
-
-        const searchUsersTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await User.find(
-                    filter
-                )
-                    .select(
-                        '-password'
-                    )
-                    .lean();
-            };
-
-        const searchAuditLogsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.action
-                ) {
-                    filter.action = {
-                        $regex:
-                            filter.action,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await AuditLog.find(
-                    filter
-                )
-                    .sort({
-                        timestamp:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchKitchenOrdersTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.item
-                ) {
-                    filter.item = {
-                        $regex:
-                            filter.item,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await KitchenOrder.find(
-                    filter
-                )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchGatewaysTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await Gateway.find(
-                    filter
-                )
-                    .select(
-                        '-consumerKey -consumerSecret'
-                    )
-                    .lean();
-            };
-
-        const searchPaymentTransactionsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await PaymentTransaction.find(
-                    filter
-                )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        const searchIncidentalChargesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.guestName
-                ) {
-                    filter.guestName = {
-                        $regex:
-                            filter.guestName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await IncidentalCharge.find(
-                    filter
-                )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .lean();
-            };
-
-        const searchClientAccountsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.guestName
-                ) {
-                    filter.guestName = {
-                        $regex:
-                            filter.guestName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await ClientAccount.find(
-                    filter
-                )
-                    .sort({
-                        updatedAt:
-                            -1
-                    })
-                    .lean();
-            };
-
-        // ================================================================
-        // CENTRAL STORE
-        // ================================================================
-        const searchCentralStoreTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.sku
-                ) {
-                    filter.sku = {
-                        $regex:
-                            filter.sku,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.itemName
-                ) {
-                    filter.itemName = {
-                        $regex:
-                            filter.itemName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await CentralStore.find(
-                    filter
-                )
-                    .sort({
-                        itemName:
-                            1
-                    })
-                    .limit(100)
-                    .lean();
-            };
-
-        // ================================================================
-        // DEPARTMENT STOCK
-        // ================================================================
-        const searchDepartmentStockTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                return await DepartmentStock.find(
-                    filter
-                )
-                    .populate(
-                        'itemId'
-                    )
-                    .sort({
-                        department:
-                            1
-                    })
-                    .limit(100)
-                    .lean();
-            };
-
-        // ================================================================
-        // STOCK TRANSFERS
-        // ================================================================
-        const searchStockTransfersTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.requisitionNumber
-                ) {
-                    filter.requisitionNumber = {
-                        $regex:
-                            filter.requisitionNumber,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.requestedBy
-                ) {
-                    filter.requestedBy = {
-                        $regex:
-                            filter.requestedBy,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await StockTransfer.find(
-                    filter
-                )
-                    .populate(
-                        'itemId'
-                    )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        // ================================================================
-        // FUNCTION SPACES
-        // ================================================================
-        const searchFunctionSpacesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.spaceName
-                ) {
-                    filter.spaceName = {
-                        $regex:
-                            filter.spaceName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.code
-                ) {
-                    filter.code = {
-                        $regex:
-                            filter.code,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await FunctionSpace.find(
-                    filter
-                )
-                    .sort({
-                        spaceName:
-                            1
-                    })
-                    .lean();
-            };
-
-        // ================================================================
-        // BANQUET EVENTS
-        // ================================================================
-        const searchBanquetEventsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.beoNumber
-                ) {
-                    filter.beoNumber = {
-                        $regex:
-                            filter.beoNumber,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.clientName
-                ) {
-                    filter.clientName = {
-                        $regex:
-                            filter.clientName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.companyName
-                ) {
-                    filter.companyName = {
-                        $regex:
-                            filter.companyName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.eventTitle
-                ) {
-                    filter.eventTitle = {
-                        $regex:
-                            filter.eventTitle,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await BanquetEventModel.find(
-                    filter
-                )
-                    .populate(
-                        'functionSpaceId'
-                    )
-                    .sort({
-                        eventDate:
-                            1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        // ================================================================
-        // EMPLOYEES
-        // ================================================================
-        const searchEmployeesTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.employeeId
-                ) {
-                    filter.employeeId = {
-                        $regex:
-                            filter.employeeId,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.name
-                ) {
-                    filter.$or = [
-                        {
-                            firstName:
-                                {
-                                    $regex:
-                                        filter.name,
-                                    $options:
-                                        'i'
-                                }
-                        },
-                        {
-                            lastName:
-                                {
-                                    $regex:
-                                        filter.name,
-                                    $options:
-                                        'i'
-                                }
-                        }
-                    ];
-
-                    delete filter.name;
-                }
-
-                return await Employee.find(
-                    filter
-                )
-                    .select(
-                        '-baseSalary -emergencyContact'
-                    )
-                    .sort({
-                        department:
-                            1,
-                        firstName:
-                            1
-                    })
-                    .limit(100)
-                    .lean();
-            };
-
-        // ================================================================
-        // ATTENDANCE
-        // ================================================================
-        const searchAttendanceTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.workDate
-                ) {
-                    const start =
-                        new Date(
-                            `${filter.workDate}T00:00:00.000Z`
-                        );
-
-                    const end =
-                        new Date(
-                            `${filter.workDate}T23:59:59.999Z`
-                        );
-
-                    if (
-                        !isNaN(
-                            start.getTime()
-                        ) &&
-                        !isNaN(
-                            end.getTime()
-                        )
-                    ) {
-                        filter.workDate = {
-                            $gte:
-                                start,
-                            $lte:
-                                end
-                        };
-                    } else {
-                        delete filter.workDate;
-                    }
-                }
-
-                return await Attendance.find(
-                    filter
-                )
-                    .populate(
-                        'employeeId',
-                        'employeeId firstName lastName department position'
-                    )
-                    .sort({
-                        workDate:
-                            -1,
-                        createdAt:
-                            -1
-                    })
-                    .limit(100)
-                    .lean();
-            };
-
-        // ================================================================
-        // HOTEL ASSETS
-        // ================================================================
-        const searchHotelAssetsTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.assetCode
-                ) {
-                    filter.assetCode = {
-                        $regex:
-                            filter.assetCode,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.assetName
-                ) {
-                    filter.assetName = {
-                        $regex:
-                            filter.assetName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.location
-                ) {
-                    filter.location = {
-                        $regex:
-                            filter.location,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await HotelAsset.find(
-                    filter
-                )
-                    .sort({
-                        assetName:
-                            1
-                    })
-                    .limit(100)
-                    .lean();
-            };
-
-        // ================================================================
-        // WORK ORDERS
-        // ================================================================
-        const searchWorkOrdersTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.workOrderNumber
-                ) {
-                    filter.workOrderNumber = {
-                        $regex:
-                            filter.workOrderNumber,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.locationRoom
-                ) {
-                    filter.locationRoom = {
-                        $regex:
-                            filter.locationRoom,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.assignedTo
-                ) {
-                    filter.assignedTo = {
-                        $regex:
-                            filter.assignedTo,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await WorkOrder.find(
-                    filter
-                )
-                    .populate(
-                        'assetId'
-                    )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        // ================================================================
-        // GUEST FEEDBACK
-        // ================================================================
-        const searchGuestFeedbackTool =
-            async (queryFilter = {}) => {
-                const filter = {
-                    ...queryFilter,
-                    hotelId
-                };
-
-                if (
-                    filter.guestName
-                ) {
-                    filter.guestName = {
-                        $regex:
-                            filter.guestName,
-                        $options:
-                            'i'
-                    };
-                }
-
-                if (
-                    filter.roomNumber
-                ) {
-                    filter.roomNumber =
-                        String(
-                            filter.roomNumber
-                        );
-                }
-
-                if (
-                    filter.bookingCustomId
-                ) {
-                    filter.bookingCustomId = {
-                        $regex:
-                            filter.bookingCustomId,
-                        $options:
-                            'i'
-                    };
-                }
-
-                return await GuestFeedback.find(
-                    filter
-                )
-                    .sort({
-                        createdAt:
-                            -1
-                    })
-                    .limit(50)
-                    .lean();
-            };
-
-        // ================================================================
-        // USER GUIDE SEARCH
-        // ================================================================
-        const searchUserGuideTool =
-            async ({ moduleKey } = {}) => {
-
-                const filter = {};
-
-                if (
-                    moduleKey
-                ) {
-                    filter.moduleKey =
-                        String(
-                            moduleKey
-                        )
-                            .trim()
-                            .toLowerCase();
-                }
-
-                return await UserGuideSection.find(
-                    filter
-                )
-                    .sort({
-                        order:
-                            1,
-                        title:
-                            1
-                    })
-                    .lean();
-            };
-
-        // =================================================================
-        // INTERNAL FUNCTION REGISTRY
-        // =================================================================
         const operationalFunctions =
-    createAIOperationalFunctions({
-        hotelId,
-        username
-    });
+            createAIOperationalFunctions({
+                hotelId,
+                username
+            });
 
 
-const internalFunctions = {
+        // ============================================================
+        // 8. COMPLETE INTERNAL FUNCTION REGISTRY
+        // ============================================================
 
-    // EXISTING READ-ONLY FUNCTIONS
-    searchUserGuide,
-    searchBookings,
-    searchStatusReports,
-    searchRooms,
-    searchRoomTypes,
-    searchCashJournal,
-    searchInventory,
-    searchSales,
-    searchExpenses,
-    searchChecklists,
-    searchUsers,
-    searchAuditLogs,
-    searchKitchenOrders,
-    searchGateways,
-    searchIncidentalCharges,
-    searchClientAccounts,
-    searchCentralStore,
-    searchDepartmentStock,
-    searchStockTransfers,
-    searchFunctionSpaces,
-    searchBanquetEvents,
-    searchEmployees,
-    searchAttendance,
-    searchHotelAssets,
-    searchWorkOrders,
-    searchGuestFeedback,
+        const internalFunctions = {
+
+            // --------------------------------------------------------
+            // READ ONLY
+            // --------------------------------------------------------
+
+            searchUserGuide:
+                searchUserGuideTool,
+
+            searchBookings:
+                searchBookingsTool,
+
+            searchStatusReports:
+                searchStatusReportsTool,
+
+            searchRooms:
+                searchRoomsTool,
+
+            searchRoomTypes:
+                searchRoomTypesTool,
+
+            searchCashJournal:
+                searchCashJournalTool,
+
+            searchInventory:
+                searchInventoryTool,
+
+            searchSales:
+                searchSalesTool,
+
+            searchExpenses:
+                searchExpensesTool,
+
+            searchChecklists:
+                searchChecklistsTool,
+
+            searchUsers:
+                searchUsersTool,
+
+            searchAuditLogs:
+                searchAuditLogsTool,
+
+            searchKitchenOrders:
+                searchKitchenOrdersTool,
+
+            searchGateways:
+                searchGatewaysTool,
+
+            searchPaymentTransactions:
+                searchPaymentTransactionsTool,
+
+            searchIncidentalCharges:
+                searchIncidentalChargesTool,
+
+            searchClientAccounts:
+                searchClientAccountsTool,
+
+            searchCentralStore:
+                searchCentralStoreTool,
+
+            searchDepartmentStock:
+                searchDepartmentStockTool,
+
+            searchStockTransfers:
+                searchStockTransfersTool,
+
+            searchFunctionSpaces:
+                searchFunctionSpacesTool,
+
+            searchBanquetEvents:
+                searchBanquetEventsTool,
+
+            searchEmployees:
+                searchEmployeesTool,
+
+            searchAttendance:
+                searchAttendanceTool,
+
+            searchHotelAssets:
+                searchHotelAssetsTool,
+
+            searchWorkOrders:
+                searchWorkOrdersTool,
+
+            searchGuestFeedback:
+                searchGuestFeedbackTool,
 
 
-    // NEW OPERATIONAL FUNCTIONS
-    ...operationalFunctions
-};
+            // --------------------------------------------------------
+            // AUTONOMOUS OPERATIONAL AGENTS
+            // --------------------------------------------------------
 
-        // =================================================================
-        // DYNAMIC DATE CONTEXT
-        // =================================================================
+            ...operationalFunctions
+        };
+
+
+        // ============================================================
+        // 9. SYSTEM INSTRUCTION
+        // ============================================================
+
         const localTimeISO =
             new Date().toISOString();
 
         const localDateStr =
             localTimeISO.split('T')[0];
 
-        // =================================================================
-        // SYSTEM INSTRUCTION
-        // =================================================================
+
         const systemInstruction = `
 You are "Novus Copilot", the administrative and operational AI assistant for ${hotelName}.
 
-Current User: ${username} | Role: ${userRole}
+Current User: ${username}
+Role: ${userRole}
 
-CURRENT PROPERTY PROFILE CONTEXT:
-- Property Name: ${hotelName}
-- Location/Address: ${hotelLocation}
-- Support/Contact Phone: ${hotelContact}
+CURRENT PROPERTY PROFILE:
+Property Name: ${hotelName}
+Location: ${hotelLocation}
+Contact: ${hotelContact}
 
-CURRENT HOTEL TENANT:
-- hotelId: ${hotelId}
+CURRENT AUTHENTICATED HOTEL:
+hotelId: ${hotelId}
 
-CRITICAL TEMPORAL AWARENESS:
-- Today's date is strictly: ${localDateStr}
-- ISO Timestamp: ${localTimeISO}
-- If the user asks for "today", strictly target ${localDateStr}.
-- Do not silently use old records unless the user asks for historical information, trends, or another date.
+TODAY:
+${localDateStr}
 
-========================================================
-NOVUS COPILOT AUTONOMOUS OPERATIONS
-========================================================
-
-You are not only a reporting assistant.
-
-You can execute approved operational actions through the autonomous tools provided to you.
-
-However:
-
-THE DATABASE AND SERVER-SIDE BUSINESS RULES ARE ALWAYS THE AUTHORITY.
-
-Never invent inventory quantities.
-
-Never claim that a sale succeeded unless createSale returned:
-success: true
-
-Never claim that an inventory operation succeeded unless the inventory tool returned:
-success: true
-
-Never claim that a kitchen order is Ready unless markKitchenOrderReady returned:
-success: true
-
-Never claim that a kitchen order is Served unless markKitchenOrderServed returned:
-success: true
-
-Never override an operation because the user insists.
-
-If the server rejects an operation, report the rejection accurately and explain the reason returned by the server.
-
-========================================================
-SALES RULES
-========================================================
-
-When the user asks you to create, record, post, make, or enter a sale:
-
-1. Use createSale.
-2. Do NOT merely describe how to create the sale.
-3. The server will verify the inventory.
-4. If the item does not exist in inventory, the sale must be rejected.
-5. If inventory is insufficient, the sale must be rejected.
-6. Never invent stock.
-7. Never create a fake sale after an inventory rejection.
-8. Use the server-returned sale result as authoritative.
-9. The hotelId is always supplied by the authenticated server context.
-10. Never ask the user for hotelId.
-11. Do not allow a user-supplied hotelId to override the authenticated hotelId.
-
-For example, if the user says:
-
-"Sell 3 Coca Cola at 4000 each"
-
-you should call createSale with:
-
-item = Coca Cola
-quantity = 3
-sellingPrice = 4000
-department = the appropriate department
-
-If inventory does not contain Coca Cola, report that the sale could not be completed because Coca Cola is not registered in inventory.
-
-========================================================
-INVENTORY RULES
-========================================================
-
-When the user asks to create an inventory item:
-
-Use createOrUpdateInventoryItem.
-
-This tool can create a new inventory item or update inventory metadata.
-
-Metadata includes:
-
-- item
-- department
-- buying price
-- selling price
-- low-stock threshold
-- whether inventory tracking is enabled
-
-Do not silently overwrite historical sales, purchases, spoilage, or closing stock.
-
-When the user explicitly asks to add received stock, use adjustInventoryStock with adjustmentType "purchase" or "receive".
-
-When the user explicitly reports spoilage or waste, use adjustmentType "spoilage" or "waste".
-
-When the user asks to reduce stock manually, use "decrease" or "remove".
-
-Never change stock merely to make an otherwise rejected sale succeed.
-
-========================================================
-KITCHEN RULES
-========================================================
-
-Kitchen order lifecycle:
-
-Pending
-↓
-Preparing
-↓
-Ready
-↓
-Served
-
-Use markKitchenOrderPreparing to move an order into Preparing.
-
-Use markKitchenOrderReady to move an order into Ready.
-
-Before marking an order Ready, the server checks inventory.
-
-If stock is missing or insufficient, the order must not be marked Ready.
-
-Use markKitchenOrderServed to mark a Ready order as Served.
-
-Do not delete served orders unless a separate explicit administrative workflow exists.
-
-Your existing active waiter/preparation query excludes Served orders, so changing the status to Served removes it from the active preparation list.
-
-Never claim an order was removed from the active list unless the server successfully marked it Served.
-
-========================================================
-DOUBLE-SALE PROTECTION
-========================================================
-
-Do not create a second sale for a kitchen order merely because the user asks whether it is ready.
-
-Kitchen orders should only generate a sale when markKitchenOrderReady successfully performs that operation.
-
-Do not call createSale separately for the same kitchen order unless explicitly required by a different legitimate business workflow.
-
-========================================================
-USER GUIDE / SOP GROUNDING
-========================================================
-
-You have access to the complete global Novus CloudPMS User Guide below.
-
-When the user asks how to perform a workflow, navigate the UI, settle bills, check guests in/out, manage stock, configure room rates, manage staff, or use the system:
-
-Use the User Guide as the primary source.
-
-Do not invent UI buttons.
-
-Do not invent routes.
-
-Do not invent workflows.
-
-If the guide does not cover the requested workflow, say so clearly.
-
-========================================================
-MULTI-SOURCE DATA AGGREGATION
-========================================================
-
-You have access to:
-
-- reservations
-- rooms
-- room types
-- sales
-- inventory
-- expenses
-- cash journal
-- kitchen orders
-- client accounts
-- payment transactions
-- gateways
-- central store
-- department stock
-- stock transfers
-- function spaces
-- banquet events
-- employees
-- attendance
-- hotel assets
-- maintenance work orders
-- guest feedback
-- audit logs
-
-For complex questions, use multiple tools when necessary.
-
-For example:
-
-"Give me today's operational situation"
-
-may require checking:
-
-- bookings
-- rooms
-- sales
-- inventory
-- kitchen orders
-- maintenance
-- banquet events
-- cash journal
-
-Combine the results into a useful operational summary.
-
-OPERATIONAL AGENT RULES:
-
-You are the Novus CloudPMS Manager Agent.
-
-You are allowed to perform hotel operational actions through approved
-backend tools.
-
-You must NEVER modify MongoDB directly.
-
-You must use the appropriate operational tool.
+You are an operational AI assistant for Novus CloudPMS.
 
 The backend is the authoritative source of truth.
 
-Never claim an operation succeeded unless the backend tool returned
-success: true.
+Never invent:
+- bookings
+- guests
+- rooms
+- stock
+- prices
+- sales
+- payments
+- folio IDs
+- booking IDs
+- MongoDB IDs
 
-If an operational tool returns an error, clearly tell the user that
-the operation failed and explain the reason returned by the backend.
+Never claim an operation succeeded unless the corresponding
+backend tool returns success: true.
 
-Never invent MongoDB IDs.
+========================================================
+SALES
+========================================================
 
-Never invent guest folio IDs.
+When the user asks to create or record a sale:
 
-Never invent booking IDs.
+Use the appropriate sales operational tool.
 
-Never invent room numbers.
+The server must verify inventory.
 
-Never invent stock quantities.
+Never create a sale merely because the user wants it created.
 
-Never invent prices.
+Never create negative inventory.
 
-Never invent payment confirmations.
+If stock is insufficient, report the actual backend rejection.
 
-HOTEL ISOLATION:
+========================================================
+INVENTORY
+========================================================
 
-All operations automatically belong to the authenticated hotelId.
+Use the inventory operational tools for:
 
-Never attempt to supply, change or override hotelId based on user input.
+- creating inventory items
+- updating inventory metadata
+- receiving stock
+- recording purchases
+- recording spoilage
+- increasing stock
+- reducing stock
 
-SECURITY:
+Never manipulate stock simply to make a sale succeed.
 
-Do not expose credentials, secrets, passwords, payment gateway keys,
-API keys or other sensitive configuration.
+========================================================
+KITCHEN
+========================================================
 
-Do not reveal another hotel's records.
-
-FOLIO OPERATIONS:
-
-Before posting a charge to a guest folio, identify the correct
-ClientAccount.
-
-If multiple guests or folios match, do not guess.
-
-Ask the user to identify the guest or room.
-
-Do not post a charge to a closed folio.
-
-ROOM OPERATIONS:
-
-When asked to mark a room clean, use updateRoomStatus with:
-
-status = "clean"
-
-When asked to mark a room dirty, use:
-
-status = "dirty"
-
-For housekeeping work in progress:
-
-status = "In progress"
-
-For maintenance:
-
-status = "under-maintenance"
-
-For blocked rooms:
-
-status = "blocked"
-
-INVENTORY:
-
-Never allow a sale to create negative inventory.
-
-Never manipulate inventory simply to make a sale succeed.
-
-If stock is insufficient, report the insufficient stock.
-
-SALES:
-
-A sale must contain the item, quantity and selling price.
-
-If the user asks to charge the sale to a guest room, use
-paymentMethod = "Folio" and the correct ClientAccount accountId.
-
-KITCHEN:
-
-Kitchen orders use the following lifecycle:
+Kitchen lifecycle:
 
 Pending
 Preparing
 Ready
 Served
 
-Use the correct kitchen operation for each transition.
+Use the appropriate kitchen operational tool.
 
-FRONT DESK:
+Never claim that an order is Ready unless the backend confirms success.
 
-A guest can only be checked out when the backend confirms that the
-booking balance is zero.
+Never claim that an order is Served unless the backend confirms success.
 
-Do not bypass this rule.
-
-CONFIRMATION:
-
-For successful write operations, give a concise confirmation containing:
-
-- what happened
-- relevant guest/room/item
-- quantity or amount
-- resulting status/balance where available
-
-Do not claim that an operation happened before the tool returns success.
+Do not delete served kitchen orders unless a separate authorised workflow exists.
 
 ========================================================
-SECURITY AND TENANT ISOLATION
+FOLIOS
 ========================================================
 
-Every hotel operational query is restricted to:
+Before posting a guest charge:
+
+1. Identify the correct ClientAccount.
+2. If multiple guests match, do not guess.
+3. Do not post to a closed folio.
+4. Use the authenticated hotel context.
+5. Never accept hotelId from the AI as authority.
+
+========================================================
+ROOMS
+========================================================
+
+Valid room statuses include:
+
+clean
+In progress
+dirty
+under-maintenance
+blocked
+
+Use the room operational tool when changing room status.
+
+========================================================
+FRONT DESK
+========================================================
+
+A guest can only be checked out when the backend confirms that
+the booking balance is zero.
+
+Never bypass this rule.
+
+========================================================
+USER GUIDE
+========================================================
+
+The complete Novus CloudPMS User Guide is provided below.
+
+When answering questions about how to use the PMS:
+
+Use the documented procedures, button names and workflows.
+
+Do not invent UI buttons or procedures.
+
+If the guide does not contain the requested procedure, say so clearly.
+
+========================================================
+SECURITY
+========================================================
+
+All hotel operations are restricted to:
 
 hotelId = ${hotelId}
+
+The authenticated hotelId is authoritative.
+
+Never use a hotelId supplied by the AI.
 
 Never expose:
 
 - passwords
-- consumer secrets
-- payment credentials
 - API keys
+- gateway secrets
+- payment credentials
 - employee salaries
-- emergency contact information
+- emergency contacts
 - other sensitive credentials
-
-Never use records from another hotel.
-
-Never accept a hotelId supplied by the AI as authority.
-
-The authenticated server hotelId is authoritative.
 
 ========================================================
 USER GUIDE
@@ -14043,1399 +11597,47 @@ USER GUIDE
 ${userGuideText}
 `.trim();
 
-        // =================================================================
-        // GEMINI FUNCTION DECLARATIONS
-        // =================================================================
+
+        // ============================================================
+        // 10. GEMINI TOOL DECLARATIONS
+        // ============================================================
+
+        /*
+         * KEEP YOUR EXISTING toolsConfig ARRAY HERE.
+         *
+         * IMPORTANT:
+         * The names in toolsConfig MUST exactly match the keys
+         * in internalFunctions.
+         *
+         * Example:
+         *
+         * Gemini:
+         *     name: "searchUserGuide"
+         *
+         * Registry:
+         *     searchUserGuide: searchUserGuideTool
+         *
+         * Gemini:
+         *     name: "recordSale"
+         *
+         * Registry:
+         *     recordSale: operationalFunctions.recordSale
+         */
+
         const toolsConfig = [
             {
                 functionDeclarations: [
-                    // ============================================================
-// OPERATIONAL AI TOOLS
-// ============================================================
-
-{
-    name: "recordInventoryPurchase",
-
-    description:
-        "Records a purchase/restock of an inventory item. Use this only when the user explicitly asks to record stock received or purchased.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            item: {
-                type: "STRING",
-                description:
-                    "Inventory item name"
-            },
-
-            department: {
-                type: "STRING",
-                description:
-                    "Inventory department, for example Bar, Restaurant or Kitchen"
-            },
-
-            quantity: {
-                type: "NUMBER",
-                description:
-                    "Quantity purchased"
-            },
-
-            buyingprice: {
-                type: "NUMBER",
-                description:
-                    "Buying price per unit"
-            },
-
-            sellingprice: {
-                type: "NUMBER",
-                description:
-                    "Selling price per unit"
-            }
-
-        },
-
-        required: [
-            "item",
-            "quantity"
-        ]
-    }
-},
-
-
-{
-    name: "recordInventorySpoilage",
-
-    description:
-        "Records stock that has been spoiled, damaged or otherwise removed from usable inventory.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            item: {
-                type: "STRING"
-            },
-
-            department: {
-                type: "STRING"
-            },
-
-            quantity: {
-                type: "NUMBER"
-            }
-
-        },
-
-        required: [
-            "item",
-            "quantity"
-        ]
-    }
-},
-
-
-{
-    name: "recordSale",
-
-    description:
-        "Records a hotel POS sale. Can also post the sale to a guest folio when paymentMethod is Folio and accountId is supplied.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            department: {
-                type: "STRING",
-                description:
-                    "Bar, Restaurant or Kitchen"
-            },
-
-            item: {
-                type: "STRING"
-            },
-
-            number: {
-                type: "NUMBER",
-                description:
-                    "Quantity sold"
-            },
-
-            bp: {
-                type: "NUMBER",
-                description:
-                    "Buying price per unit"
-            },
-
-            sp: {
-                type: "NUMBER",
-                description:
-                    "Selling price per unit"
-            },
-
-            paymentMethod: {
-                type: "STRING",
-                description:
-                    "Cash, Card, MobileMoney, Folio, M-Pesa or Pesapal"
-            },
-
-            accountId: {
-                type: "STRING",
-                description:
-                    "MongoDB ClientAccount ID when charging the guest folio"
-            }
-
-        },
-
-        required: [
-            "department",
-            "item",
-            "number",
-            "sp"
-        ]
-    }
-},
-
-
-{
-    name: "searchGuestFolios",
-
-    description:
-        "Finds open guest folios using guest name or room number.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            guestName: {
-                type: "STRING"
-            },
-
-            roomNumber: {
-                type: "STRING"
-            }
-
-        }
-    }
-},
-
-
-{
-    name: "postGuestFolioCharge",
-
-    description:
-        "Posts a charge directly to an existing open guest folio. Use for laundry, spa, minibar, restaurant, bar or other guest charges.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            accountId: {
-                type: "STRING",
-                description:
-                    "MongoDB ClientAccount ID"
-            },
-
-            description: {
-                type: "STRING",
-                description:
-                    "Description of the guest charge"
-            },
-
-            amount: {
-                type: "NUMBER",
-                description:
-                    "Total charge amount"
-            },
-
-            quantity: {
-                type: "NUMBER"
-            },
-
-            type: {
-                type: "STRING",
-                description:
-                    "Bar, Restaurant or Other"
-            },
-
-            bp: {
-                type: "NUMBER"
-            },
-
-            sp: {
-                type: "NUMBER"
-            }
-
-        },
-
-        required: [
-            "accountId",
-            "description",
-            "amount"
-        ]
-    }
-},
-
-
-{
-    name: "postIncidentalCharge",
-
-    description:
-        "Posts an incidental charge against a guest booking. Use when a charge belongs to a booking but is not being recorded as a direct POS folio charge.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            bookingId: {
-                type: "STRING"
-            },
-
-            guestName: {
-                type: "STRING"
-            },
-
-            roomNumber: {
-                type: "STRING"
-            },
-
-            type: {
-                type: "STRING",
-                description:
-                    "Bar, Restaurant, Laundry, Spa or Other"
-            },
-
-            description: {
-                type: "STRING"
-            },
-
-            amount: {
-                type: "NUMBER"
-            }
-
-        },
-
-        required: [
-            "bookingId",
-            "description",
-            "amount"
-        ]
-    }
-},
-
-
-{
-    name: "updateRoomStatus",
-
-    description:
-        "Changes a room housekeeping/operational status. Valid statuses are clean, In progress, dirty, under-maintenance and blocked.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            roomNumber: {
-                type: "STRING",
-                description:
-                    "Room number"
-            },
-
-            status: {
-                type: "STRING",
-                description:
-                    "clean, In progress, dirty, under-maintenance or blocked"
-            }
-
-        },
-
-        required: [
-            "roomNumber",
-            "status"
-        ]
-    }
-},
-
-
-{
-    name: "searchRoomHistory",
-
-    description:
-        "Searches historical room status changes.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            roomNumber: {
-                type: "STRING"
-            },
-
-            status: {
-                type: "STRING"
-            }
-
-        }
-    }
-},
-
-
-{
-    name: "createKitchenOrder",
-
-    description:
-        "Creates a restaurant/kitchen order.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            item: {
-                type: "STRING"
-            },
-
-            number: {
-                type: "NUMBER"
-            },
-
-            department: {
-                type: "STRING"
-            },
-
-            waiter: {
-                type: "STRING"
-            },
-
-            tableNumber: {
-                type: "STRING"
-            },
-
-            accountId: {
-                type: "STRING",
-                description:
-                    "ClientAccount ID when the order is charged to a guest room"
-            },
-
-            bp: {
-                type: "NUMBER"
-            },
-
-            sp: {
-                type: "NUMBER"
-            }
-
-        },
-
-        required: [
-            "item",
-            "number"
-        ]
-    }
-},
-
-
-{
-    name: "updateKitchenOrderStatus",
-
-    description:
-        "Changes a kitchen order status to Pending, Preparing, Ready or Served.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            orderId: {
-                type: "STRING"
-            },
-
-            status: {
-                type: "STRING",
-                description:
-                    "Pending, Preparing, Ready or Served"
-            }
-
-        },
-
-        required: [
-            "orderId",
-            "status"
-        ]
-    }
-},
-
-
-{
-    name: "searchKitchenOrders",
-
-    description:
-        "Searches kitchen orders by status.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            status: {
-                type: "STRING",
-                description:
-                    "Pending, Preparing, Ready or Served"
-            }
-
-        }
-    }
-},
-
-
-{
-    name: "checkInGuest",
-
-    description:
-        "Checks an existing booking guest into the hotel.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            bookingId: {
-                type: "STRING",
-                description:
-                    "MongoDB Booking ID"
-            }
-
-        },
-
-        required: [
-            "bookingId"
-        ]
-    }
-},
-
-
-{
-    name: "checkOutGuest",
-
-    description:
-        "Checks a guest out only when the booking balance is zero.",
-
-    parameters: {
-        type: "OBJECT",
-
-        properties: {
-
-            bookingId: {
-                type: "STRING",
-                description:
-                    "MongoDB Booking ID"
-            }
-
-        },
-
-        required: [
-            "bookingId"
-        ]
-    }
-},
-
-                    // =====================================================
-                    // USER GUIDE
-                    // =====================================================
-
-                    {
-                        name: "searchUserGuide",
-                        description:
-                            "Retrieves global Novus CloudPMS user guide SOP sections available to all users.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                moduleKey: {
-                                    type: "STRING",
-                                    description:
-                                        "Optional module key such as login-access, inventory, sales, rooms, bookings, or staff"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // BOOKINGS
-                    // =====================================================
-                    {
-                        name: "searchBookings",
-                        description:
-                            "Queries hotel reservations and guest stay records for the current property.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                status: {
-                                    type: "STRING",
-                                    description:
-                                        "Booking or guest status filter"
-                                },
-                                room: {
-                                    type: "STRING",
-                                    description:
-                                        "Room number or identifier"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // STATUS REPORTS
-                    // =====================================================
-                    {
-                        name: "searchStatusReports",
-                        description:
-                            "Queries historical logs for housekeeping status updates, room remarks, maintenance flags, or blocked room justifications.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                roomId: {
-                                    type: "STRING",
-                                    description:
-                                        "MongoDB ObjectId of the specific room"
-                                },
-                                status: {
-                                    type: "STRING",
-                                    description:
-                                        "Filter by status: clean, dirty, In progress, under-maintenance, blocked"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // ROOMS
-                    // =====================================================
-                    {
-                        name: "searchRooms",
-                        description:
-                            "Queries the hotel rooms inventory and their current live states.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // ROOM TYPES
-                    // =====================================================
-                    {
-                        name: "searchRoomTypes",
-                        description:
-                            "Queries room categories configuration to check internal base prices or rates.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                name: {
-                                    type: "STRING",
-                                    description:
-                                        "Room category type such as Deluxe Room"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // CASH JOURNAL
-                    // =====================================================
-                    {
-                        name: "searchCashJournal",
-                        description:
-                            "Queries cash accounting journals to see cash at hand, banked funds, or mobile money balances.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                responsiblePerson: {
-                                    type: "STRING",
-                                    description:
-                                        "Username handling the cash log"
-                                },
-                                bankReceiptId: {
-                                    type: "STRING",
-                                    description:
-                                        "Explicit bank receipt confirmation identifier"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // INVENTORY
-                    // =====================================================
-                    {
-                        name: "searchInventory",
-                        description:
-                            "Queries inventory stock levels and inventory configuration for the current hotel.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                item: {
-                                    type: "STRING",
-                                    description:
-                                        "Name of the inventory stock item"
-                                },
-                                trackInventory: {
-                                    type: "BOOLEAN",
-                                    description:
-                                        "Filter based on inventory tracking"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // SALES
-                    // =====================================================
-                    {
-                        name: "searchSales",
-                        description:
-                            "Fetches historical itemized sales metrics broken down by revenue departments.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                department: {
-                                    type: "STRING",
-                                    description:
-                                        "Strict values: Bar, Restaurant, Kitchen"
-                                },
-                                item: {
-                                    type: "STRING",
-                                    description:
-                                        "Sold item name"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // EXPENSES
-                    // =====================================================
-                    {
-                        name: "searchExpenses",
-                        description:
-                            "Queries operational cash outflows and spending profiles logged by management.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                department: {
-                                    type: "STRING",
-                                    description:
-                                        "Department filter"
-                                },
-                                recordedBy: {
-                                    type: "STRING",
-                                    description:
-                                        "Username of logging associate"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // CHECKLISTS
-                    // =====================================================
-                    {
-                        name: "searchChecklists",
-                        description:
-                            "Fetches room inspection checklists and housekeeping task records.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                room: {
-                                    type: "STRING",
-                                    description:
-                                        "Target room number"
-                                },
-                                date: {
-                                    type: "STRING",
-                                    description:
-                                        "Date context YYYY-MM-DD"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // USERS
-                    // =====================================================
-                    {
-                        name: "searchUsers",
-                        description:
-                            "Queries registered hotel employee records and structural role assignments.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                role: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: chef, admin, bar, housekeeper, cashier, front office"
-                                },
-                                username: {
-                                    type: "STRING",
-                                    description:
-                                        "Staff member username"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // AUDIT LOGS
-                    // =====================================================
-                    {
-                        name: "searchAuditLogs",
-                        description:
-                            "Queries the system tracking trail for analytical action verification.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                user: {
-                                    type: "STRING",
-                                    description:
-                                        "Associate tracking username"
-                                },
-                                action: {
-                                    type: "STRING",
-                                    description:
-                                        "Action type"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // KITCHEN ORDERS
-                    // =====================================================
-                    {
-                        name: "searchKitchenOrders",
-                        description:
-                            "Queries kitchen display orders and processing states.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                status: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: Pending, Preparing, Ready, Served"
-                                },
-                                department: {
-                                    type: "STRING",
-                                    description:
-                                        "Originating dining point outlet"
-                                },
-                                tableNumber: {
-                                    type: "STRING",
-                                    description:
-                                        "Table identifier"
-                                },
-                                item: {
-                                    type: "STRING",
-                                    description:
-                                        "Kitchen item name"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // GATEWAYS
-                    // =====================================================
-                    {
-                        name: "searchGateways",
-                        description:
-                            "Inspects payment provider configuration without exposing access keys.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                gatewayId: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: pesapal, flutterwave"
-                                },
-                                environment: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: Sandbox, Live"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // PAYMENT TRANSACTIONS
-                    // =====================================================
-                    {
-                        name: "searchPaymentTransactions",
-                        description:
-                            "Searches integrated electronic payment transactions.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                status: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: Pending, Completed, Failed, Cancelled"
-                                },
-                                merchantReference: {
-                                    type: "STRING",
-                                    description:
-                                        "Unique tracking ID"
-                                },
-                                paymentMethod: {
-                                    type: "STRING",
-                                    description:
-                                        "Payment method such as Pesapal, Mobile Money, Visa"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // INCIDENTAL CHARGES
-                    // =====================================================
-                    {
-                        name: "searchIncidentalCharges",
-                        description:
-                            "Finds extra non-room add-on charges attached to room bookings.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                guestName: {
-                                    type: "STRING",
-                                    description:
-                                        "Guest name filter"
-                                },
-                                isPaid: {
-                                    type: "BOOLEAN",
-                                    description:
-                                        "Whether charge is paid"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // CLIENT ACCOUNTS
-                    // =====================================================
-                    {
-                        name: "searchClientAccounts",
-                        description:
-                            "Queries running billing summaries and customer account portfolios.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                guestName: {
-                                    type: "STRING",
-                                    description:
-                                        "Customer name"
-                                },
-                                isClosed: {
-                                    type: "BOOLEAN",
-                                    description:
-                                        "Active versus closed account"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // CENTRAL STORE
-                    // =====================================================
-                    {
-                        name: "searchCentralStore",
-                        description:
-                            "Queries the master central store catalog.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                sku: {
-                                    type: "STRING"
-                                },
-                                itemName: {
-                                    type: "STRING"
-                                },
-                                category: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // DEPARTMENT STOCK
-                    // =====================================================
-                    {
-                        name: "searchDepartmentStock",
-                        description:
-                            "Queries stock currently held by hotel departments.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                department: {
-                                    type: "STRING"
-                                },
-                                itemId: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // STOCK TRANSFERS
-                    // =====================================================
-                    {
-                        name: "searchStockTransfers",
-                        description:
-                            "Queries stock transfer and requisition audit records.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                requisitionNumber: {
-                                    type: "STRING"
-                                },
-                                department: {
-                                    type: "STRING"
-                                },
-                                actionType: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: issue_to_dept, return_to_store, direct_consumption"
-                                },
-                                status: {
-                                    type: "STRING",
-                                    description:
-                                        "Values: Pending, Approved, Rejected, Completed"
-                                },
-                                requestedBy: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // FUNCTION SPACES
-                    // =====================================================
-                    {
-                        name: "searchFunctionSpaces",
-                        description:
-                            "Queries banquet and conference venues.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                spaceName: {
-                                    type: "STRING"
-                                },
-                                code: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // BANQUET EVENTS
-                    // =====================================================
-                    {
-                        name: "searchBanquetEvents",
-                        description:
-                            "Queries Banquet Event Orders and event schedules.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                beoNumber: {
-                                    type: "STRING"
-                                },
-                                clientName: {
-                                    type: "STRING"
-                                },
-                                companyName: {
-                                    type: "STRING"
-                                },
-                                eventTitle: {
-                                    type: "STRING"
-                                },
-                                functionSpaceId: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // EMPLOYEES
-                    // =====================================================
-                    {
-                        name: "searchEmployees",
-                        description:
-                            "Queries HR employee profiles excluding salary and emergency contacts.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                employeeId: {
-                                    type: "STRING"
-                                },
-                                name: {
-                                    type: "STRING"
-                                },
-                                department: {
-                                    type: "STRING"
-                                },
-                                position: {
-                                    type: "STRING"
-                                },
-                                employmentType: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // ATTENDANCE
-                    // =====================================================
-                    {
-                        name: "searchAttendance",
-                        description:
-                            "Queries staff attendance records.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                employeeId: {
-                                    type: "STRING"
-                                },
-                                workDate: {
-                                    type: "STRING"
-                                },
-                                shift: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // HOTEL ASSETS
-                    // =====================================================
-                    {
-                        name: "searchHotelAssets",
-                        description:
-                            "Queries property equipment and engineering assets.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                assetCode: {
-                                    type: "STRING"
-                                },
-                                assetName: {
-                                    type: "STRING"
-                                },
-                                category: {
-                                    type: "STRING"
-                                },
-                                location: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // WORK ORDERS
-                    // =====================================================
-                    {
-                        name: "searchWorkOrders",
-                        description:
-                            "Queries maintenance work orders.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                workOrderNumber: {
-                                    type: "STRING"
-                                },
-                                assetId: {
-                                    type: "STRING"
-                                },
-                                locationRoom: {
-                                    type: "STRING"
-                                },
-                                priority: {
-                                    type: "STRING"
-                                },
-                                maintenanceType: {
-                                    type: "STRING"
-                                },
-                                assignedTo: {
-                                    type: "STRING"
-                                },
-                                status: {
-                                    type: "STRING"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // GUEST FEEDBACK
-                    // =====================================================
-                    {
-                        name: "searchGuestFeedback",
-                        description:
-                            "Queries guest satisfaction ratings and service recovery records.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                guestName: {
-                                    type: "STRING"
-                                },
-                                roomNumber: {
-                                    type: "STRING"
-                                },
-                                bookingCustomId: {
-                                    type: "STRING"
-                                },
-                                overallRating: {
-                                    type: "NUMBER"
-                                },
-                                isResolved: {
-                                    type: "BOOLEAN"
-                                }
-                            }
-                        }
-                    },
-
-                    // =====================================================
-                    // AUTONOMOUS SALE
-                    // =====================================================
-                    {
-                        name: "createSale",
-                        description:
-                            "Creates a hotel sale. The server MUST verify that the item exists in inventory and that sufficient stock is available before the sale is created. Never bypass inventory validation.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                item: {
-                                    type: "STRING",
-                                    description:
-                                        "Exact item being sold"
-                                },
-                                department: {
-                                    type: "STRING",
-                                    description:
-                                        "Revenue department: Bar, Restaurant, or Kitchen"
-                                },
-                                quantity: {
-                                    type: "NUMBER",
-                                    description:
-                                        "Quantity sold"
-                                },
-                                sellingPrice: {
-                                    type: "NUMBER",
-                                    description:
-                                        "Selling price per unit"
-                                },
-                                buyingPrice: {
-                                    type: "NUMBER",
-                                    description:
-                                        "Buying/cost price per unit if known"
-                                },
-                                accountId: {
-                                    type: "STRING",
-                                    description:
-                                        "Optional existing ClientAccount ID"
-                                }
-                            },
-                            required: [
-                                "item",
-                                "quantity",
-                                "sellingPrice"
-                            ]
-                        }
-                    },
-
-                    // =====================================================
-                    // CREATE / UPDATE INVENTORY
-                    // =====================================================
-                    {
-                        name: "createOrUpdateInventoryItem",
-                        description:
-                            "Creates a missing inventory item or updates an existing inventory item's metadata. Does not overwrite historical stock movements.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                item: {
-                                    type: "STRING",
-                                    description:
-                                        "Inventory item name"
-                                },
-                                department: {
-                                    type: "STRING",
-                                    description:
-                                        "Inventory department"
-                                },
-                                buyingprice: {
-                                    type: "NUMBER"
-                                },
-                                sellingprice: {
-                                    type: "NUMBER"
-                                },
-                                lowStock: {
-                                    type: "NUMBER"
-                                },
-                                trackInventory: {
-                                    type: "BOOLEAN"
-                                },
-                                opening: {
-                                    type: "NUMBER",
-                                    description:
-                                        "Opening stock only when creating a new item"
-                                }
-                            },
-                            required: [
-                                "item"
-                            ]
-                        }
-                    },
-
-                    // =====================================================
-                    // INVENTORY ADJUSTMENT
-                    // =====================================================
-                    {
-                        name: "adjustInventoryStock",
-                        description:
-                            "Adjusts inventory quantities for legitimate stock movements such as purchases, receiving, spoilage, waste, additions, or reductions.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                item: {
-                                    type: "STRING"
-                                },
-                                quantity: {
-                                    type: "NUMBER"
-                                },
-                                adjustmentType: {
-                                    type: "STRING",
-                                    description:
-                                        "purchase, receive, spoilage, waste, increase, add, decrease, remove"
-                                },
-                                department: {
-                                    type: "STRING"
-                                },
-                                reason: {
-                                    type: "STRING"
-                                }
-                            },
-                            required: [
-                                "item",
-                                "quantity",
-                                "adjustmentType"
-                            ]
-                        }
-                    },
-
-                    // =====================================================
-                    // KITCHEN PREPARING
-                    // =====================================================
-                    {
-                        name: "markKitchenOrderPreparing",
-                        description:
-                            "Moves a kitchen order to Preparing. The server verifies the order belongs to the current hotel.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                orderId: {
-                                    type: "STRING",
-                                    description:
-                                        "MongoDB ID of the kitchen order"
-                                }
-                            },
-                            required: [
-                                "orderId"
-                            ]
-                        }
-                    },
-
-                    // =====================================================
-                    // KITCHEN READY
-                    // =====================================================
-                    {
-                        name: "markKitchenOrderReady",
-                        description:
-                            "Marks a kitchen order Ready. The server verifies inventory before completing the operation and records the associated sale.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                orderId: {
-                                    type: "STRING",
-                                    description:
-                                        "MongoDB ID of the kitchen order"
-                                }
-                            },
-                            required: [
-                                "orderId"
-                            ]
-                        }
-                    },
-
-                    // =====================================================
-                    // KITCHEN SERVED
-                    // =====================================================
-                    {
-                        name: "markKitchenOrderServed",
-                        description:
-                            "Marks a Ready kitchen order as Served. The order is not deleted; changing its status to Served removes it from the active preparation list.",
-                        parameters: {
-                            type: "OBJECT",
-                            properties: {
-                                orderId: {
-                                    type: "STRING",
-                                    description:
-                                        "MongoDB ID of the kitchen order"
-                                }
-                            },
-                            required: [
-                                "orderId"
-                            ]
-                        }
-                    }
+                    // KEEP YOUR EXISTING 26 READ-ONLY DECLARATIONS
+                    // AND YOUR NEW OPERATIONAL DECLARATIONS HERE.
                 ]
             }
         ];
 
-        // =================================================================
-        // CONVERSATION HISTORY
-        // =================================================================
+
+        // ============================================================
+        // 11. CONVERSATION HISTORY
+        // ============================================================
+
         const formattedContents =
             Array.isArray(history)
                 ? [...history]
@@ -15445,25 +11647,28 @@ ${userGuideText}
             role: "user",
             parts: [
                 {
-                    text:
-                        message
+                    text: message
                 }
             ]
         });
 
-        // =================================================================
-        // GEMINI FUNCTION-CALL LOOP
-        // =================================================================
+
+        // ============================================================
+        // 12. GEMINI FUNCTION-CALL LOOP
+        // ============================================================
+
         let responseText = "";
+
         let loops = 0;
 
         const maxLoops = 5;
 
-        while (
-            loops < maxLoops
-        ) {
+
+        while (loops < maxLoops) {
+
             const aiResponse =
                 await ai.models.generateContent({
+
                     model:
                         "gemini-3.1-flash-lite",
 
@@ -15471,6 +11676,7 @@ ${userGuideText}
                         formattedContents,
 
                     config: {
+
                         systemInstruction:
                             systemInstruction,
 
@@ -15482,58 +11688,60 @@ ${userGuideText}
                     }
                 });
 
-            // =============================================================
-            // AI WANTS TO EXECUTE FUNCTIONS
-            // =============================================================
+
+            // ========================================================
+            // AI REQUESTED TOOL EXECUTION
+            // ========================================================
+
             if (
                 aiResponse.functionCalls &&
-                aiResponse.functionCalls.length >
-                    0
+                aiResponse.functionCalls.length > 0
             ) {
 
                 if (
                     aiResponse.candidates &&
                     aiResponse.candidates[0] &&
-                    aiResponse.candidates[0]
-                        .content
+                    aiResponse.candidates[0].content
                 ) {
+
                     formattedContents.push(
-                        aiResponse
-                            .candidates[0]
-                            .content
+                        aiResponse.candidates[0].content
                     );
                 }
 
+
                 for (
-                    const call of
-                        aiResponse.functionCalls
+                    const call of aiResponse.functionCalls
                 ) {
 
                     const toolName =
                         call.name;
 
                     const toolArgs =
-                        call.args ||
-                        {};
+                        call.args || {};
 
-                    // =====================================================
-                    // EXECUTE ONLY REGISTERED FUNCTIONS
-                    // =====================================================
+
+                    // =================================================
+                    // EXECUTE REGISTERED TOOL
+                    // =================================================
+
                     if (
-                        internalFunctions[
-                            toolName
-                        ]
+                        typeof internalFunctions[toolName] ===
+                        "function"
                     ) {
 
                         let toolResultData;
 
+
                         try {
+
                             toolResultData =
                                 await internalFunctions[
                                     toolName
                                 ](
                                     toolArgs
                                 );
+
                         } catch (
                             toolExecutionError
                         ) {
@@ -15544,80 +11752,103 @@ ${userGuideText}
                             );
 
                             toolResultData = {
+
                                 success:
                                     false,
+
                                 error:
                                     toolExecutionError.message,
+
                                 message:
-                                    `Tool ${toolName} failed to execute.`
+                                    `Tool "${toolName}" failed to execute.`
                             };
                         }
 
+
+                        // =================================================
+                        // RETURN TOOL RESULT TO GEMINI
+                        // =================================================
+
                         formattedContents.push({
+
                             role:
                                 "user",
 
                             parts: [
-                                {
-                                    functionResponse:
-                                        {
-                                            name:
-                                                toolName,
 
-                                            response:
-                                                {
-                                                    result:
-                                                        toolResultData
-                                                }
+                                {
+
+                                    functionResponse: {
+
+                                        name:
+                                            toolName,
+
+                                        response: {
+
+                                            result:
+                                                toolResultData
                                         }
+                                    }
                                 }
                             ]
                         });
 
+
                     } else {
 
                         // =================================================
-                        // UNKNOWN FUNCTION
+                        // UNKNOWN TOOL
                         // =================================================
+
+                        console.error(
+                            `AI attempted to call unregistered tool: ${toolName}`
+                        );
+
+
                         formattedContents.push({
+
                             role:
                                 "user",
 
                             parts: [
+
                                 {
-                                    functionResponse:
-                                        {
-                                            name:
-                                                toolName,
 
-                                            response:
-                                                {
-                                                    result:
-                                                        {
-                                                            success:
-                                                                false,
+                                    functionResponse: {
 
-                                                            error:
-                                                                "UNKNOWN_TOOL",
+                                        name:
+                                            toolName,
 
-                                                            message:
-                                                                `Tool "${toolName}" is not available.`
-                                                        }
-                                                }
+                                        response: {
+
+                                            result: {
+
+                                                success:
+                                                    false,
+
+                                                error:
+                                                    "UNKNOWN_TOOL",
+
+                                                message:
+                                                    `Tool "${toolName}" is not registered on the server.`
+                                            }
                                         }
+                                    }
                                 }
                             ]
                         });
                     }
                 }
 
+
                 loops++;
 
             } else {
 
-                // =========================================================
-                // NORMAL AI TEXT RESPONSE
-                // =========================================================
+                // ========================================================
+                // NORMAL AI RESPONSE
+                // ========================================================
+
                 responseText =
                     aiResponse.text;
 
@@ -15625,21 +11856,28 @@ ${userGuideText}
             }
         }
 
-        // =================================================================
+
+        // ============================================================
         // FALLBACK
-        // =================================================================
+        // ============================================================
+
         if (!responseText) {
+
             responseText =
                 "I gathered the operational records, but could not generate a complete summary within the allotted query steps. Please narrow your request and try again.";
         }
 
-        // =================================================================
-        // KEEP EXISTING ENDPOINT RESPONSE FORMAT
-        // =================================================================
-        res.json({
+
+        // ============================================================
+        // RESPONSE
+        // ============================================================
+
+        return res.json({
+
             reply:
                 responseText
         });
+
 
     } catch (error) {
 
@@ -15648,30 +11886,24 @@ ${userGuideText}
             error
         );
 
+
         const isRateLimit =
-            error.status ===
-                429 ||
-            error.code ===
-                429 ||
+            error.status === 429 ||
+            error.code === 429 ||
             (
                 error.message &&
-                error.message.includes(
-                    "429"
-                )
+                error.message.includes("429")
             ) ||
             (
                 error.message &&
-                error.message.includes(
-                    "RESOURCE_EXHAUSTED"
-                )
+                error.message.includes("RESOURCE_EXHAUSTED")
             );
 
-        if (
-            isRateLimit
-        ) {
-            return res.status(
-                429
-            ).json({
+
+        if (isRateLimit) {
+
+            return res.status(429).json({
+
                 status:
                     429,
 
@@ -15683,9 +11915,9 @@ ${userGuideText}
             });
         }
 
-        res.status(
-            500
-        ).json({
+
+        return res.status(500).json({
+
             status:
                 500,
 
